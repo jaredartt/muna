@@ -1,6 +1,6 @@
 # Muna – project status (read this first)
 
-_Last updated: 2026-10-01. Keep this file current: update it at the end of every work session._
+_Last updated: 2026-10-01 (Google Calendar, voice notes, filled icons, profile colour/icon added). Keep this file current: update it at the end of every work session._
 
 ## What Muna is
 A private "everything app" for **Jared and his wife**, installed on iPhone as a web app (Safari → Share → Add to Home Screen). Mainly a calendar + tasks. **Muna** is the mascot AND an AI assistant (Gemini) that chats, can use voice, and can change things inside the app (add / edit / complete / delete tasks, several at once).
@@ -14,8 +14,8 @@ The owner (Jared) does **not** code. Explain steps simply. Claude (you) does all
 | Hosting | GitHub Pages, repo `jaredartt/Muna`, deployed by `.github/workflows/deploy.yml` on push to `main` |
 | Backend | Supabase project `muna`, id `vlatdcjwxbflicomkbnr`, region eu-central-1, URL `https://vlatdcjwxbflicomkbnr.supabase.co` |
 | AI | Edge Function `muna-chat` (`supabase/functions/muna-chat/index.ts`), model **`gemini-3.1-flash-lite`** (cheapest stable Gemini with function calling as of Oct 2026; override with secret `GEMINI_MODEL`) |
-| Secrets | `GEMINI_API_KEY` is a Supabase Edge Function secret (set by Jared in the Supabase dashboard; never in code or chat) |
-| Icons | Tabler Icons (`@tabler/icons-react`) – https://tabler.io/icons |
+| Secrets | Supabase Edge Function secrets (set by Jared in the dashboard; never in code or chat): `GEMINI_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (same Google OAuth client used for login) |
+| Icons | Tabler Icons (`@tabler/icons-react`), **Filled** variants wherever one exists (names like `IconHomeFilled`); symbol-like icons (plus, check, x, chevrons, send, copy, logout, volume) have no filled version so the outline is used. https://tabler.io/icons |
 | Font | Quicksand via Google Fonts link in `index.html`. Titles weight **700**, everything else **400** (the owner asked for this) |
 | Design | Figma file "Muna", key `6g4NsB4slpWiiEeDXRLZT8` (frame "Main menu" node `2:2`). Figma connector must be signed in as **jaredartt@gmail.com** (the file is in that account). Only the home screen exists in Figma so far |
 
@@ -32,30 +32,40 @@ The owner (Jared) does **not** code. Explain steps simply. Claude (you) does all
 ## Database (Supabase, all tables have Row Level Security ON)
 Migrations are in `supabase/migrations/` (already applied; keep new ones there too AND apply with the connector).
 - `households` – a shared "home" (name, `invite_code`).
-- `profiles` – one per user (`id` = auth user id): `household_id`, `display_name`, `avatar`, `theme_pref`, `muna_personality`, `monthly_token_budget`. The app may only edit `display_name, avatar, theme_pref, muna_personality`.
-- `tasks` – `household_id, created_by, assigned_to, title, notes, due_date, start_time, end_time, icon, color, completed, completed_at`. Realtime is on.
+- `profiles` – one per user (`id` = auth user id): `household_id`, `display_name`, `avatar` (a Tabler filled icon name, e.g. `IconPawFilled`), `avatar_color` (mint/peach/lilac/sky/butter/rose), `theme_pref`, `muna_personality`, `monthly_token_budget`. The app may only edit `display_name, avatar, avatar_color, theme_pref, muna_personality`.
+- `tasks` – `household_id, created_by, assigned_to, title, notes, due_date, start_time, end_time, icon, color, completed, completed_at, sync_google` plus server-only `google_event_id, google_owner` (the app cannot write those; column-level grants).
+- `google_connections` – `user_id, refresh_token`. RLS on, NO policies: only the edge functions (service role) can read it. RPCs: `save_google_connection(token)`, `disconnect_google()`, `get_google_status()` (who in the home is connected; never exposes tokens). Realtime is on for `tasks`.
 - `chat_messages` – per-user chat history with Muna.
 - `ai_usage` – tokens used per user per month. RPCs: `get_ai_usage()`, `add_ai_usage()`.
 - `private.allowed_emails` – **guest list**. Only `jaredartt@gmail.com` and `limisan98@gmail.com` can sign up (trigger `handle_new_user` rejects everyone else) and both automatically share one household. To add/change someone, edit this table with SQL.
 - RPC `join_household(code)` is a fallback to join a partner's home by invite code.
-- Security advisor note: `join_household`, `add_ai_usage`, `get_ai_usage` are SECURITY DEFINER functions callable by signed-in users on purpose.
+- Security advisor note: `join_household`, `add_ai_usage`, `get_ai_usage`, `get_google_status`, `save_google_connection`, `disconnect_google` are SECURITY DEFINER functions callable by signed-in users on purpose; `google_connections` showing "RLS enabled, no policy" is also on purpose. Migrations 1-4 are in `supabase/migrations/` (3 = Google Calendar, 4 = profile colour + filled avatar icons).
 
 ## Muna (Gemini) – how it works
 1. Chat page calls `supabase.functions.invoke('muna-chat', { message, timezone })` (JWT required).
-2. The function checks the user, loads profile + personality + household tasks + last 20 messages, checks the monthly token budget, then loops with Gemini (max 5 tool rounds).
-3. Tools (all run with the user's own JWT, so RLS applies): `create_tasks` (many at once), `update_task`, `set_tasks_completed`, `delete_tasks`, `list_tasks`.
-4. It saves both chat messages, adds token usage, and returns `{ reply, changed, usage }`. If `changed`, the app reloads tasks.
+2. The function checks the user, loads profile + personality + household tasks + last 12 messages, checks the monthly token budget, then loops with Gemini (max 5 tool rounds).
+3. Tools (all run with the user's own JWT, so RLS applies): `create_tasks` (many at once), `update_task`, `set_tasks_completed`, `delete_tasks`, `list_tasks`, `list_calendar_events` (reads both people's Google Calendars via the `google-calendar` function).
+4. After tools run, changed tasks are mirrored to Google Calendar server-side. It saves both chat messages, adds token usage, and returns `{ reply, transcript?, changed, usage }`. If `changed`, the app reloads tasks.
 5. **To teach Muna a new ability** (e.g. recipes): create the table + RLS migration, add UI, then add an entry to the `TOOLS` array in the edge function (declaration + handler) and mention the capability in `buildSystemPrompt`. Redeploy with the Supabase connector (`verify_jwt: true`).
 6. `TASK_ICONS` / `TASK_COLORS` exist in BOTH `src/lib/icons.tsx` and the edge function – keep them in sync.
 7. Personality: free text in Profile → stored in `profiles.muna_personality` → injected into the system prompt.
-8. "Tokens left" in Profile = monthly allowance (default 1,000,000/person, change with SQL on `profiles.monthly_token_budget`) minus tokens counted from Gemini's `usageMetadata`. It is our own counter, not Google's billing balance. Suggest a Google Cloud budget alert for real spend.
-9. Voice: Chat page uses the browser Web Speech API (`SpeechRecognition` for listening, `speechSynthesis` for speaking). Works in Safari on iPhone; reliability inside the home-screen (standalone) app varies. A higher-quality voice (e.g. Gemini Live / native audio) is a possible later upgrade.
+8. Token numbers in Profile: **used** = exact count from Gemini's `usageMetadata` (prompt + output + thinking tokens) summed per user per month in `ai_usage`. **Limit** = a safety setting WE chose in `profiles.monthly_token_budget` (currently **1,000,000** per person; it is not a Google balance). Never change this number without asking Jared – he decides it. A typical chat turn uses roughly 4,000-5,000 tokens. Real spend only happens if the Gemini key is on a paid plan; the free AI Studio tier is used for now (a later switch to another provider like GPT is possible).
+9. **Voice = voice notes, not live speech recognition** (live recognition kept cutting off on iPhone). Tap the mic in Chat → `src/lib/recorder.ts` records, downsamples to 16 kHz mono WAV, base64 → edge function `muna-chat` sends it to Gemini only to transcribe (`inlineData` audio/wav), then runs the normal chat with that text. Audio is **never stored**; the transcript is saved as the chat message. Max ~60 s (client cap) / 4.5 MB base64 (server). Optional spoken replies use `speechSynthesis` (unlocked on a tap). Untested on a real iPhone as of writing: check mic permission and the home-screen app.
+
+## Google Calendar (two-way, both people see each other's events)
+- Connect button in Profile. `AuthContext.connectGoogle()` runs `signInWithOAuth` again with scope `https://www.googleapis.com/auth/calendar.events`, `access_type=offline`, `prompt=consent`; on return the app captures `session.provider_refresh_token` ONCE (sessionStorage flag `muna-connecting-google`) and saves it via RPC `save_google_connection`. Tokens live in `google_connections` and are only used by edge functions.
+- Edge function `google-calendar` (`supabase/functions/google-calendar/index.ts`, `verify_jwt: true`): action `list` returns events of every connected household member's **primary** calendar (Muna-created events are filtered out to avoid duplicates; flags `reconnect` / `api_disabled`); action `sync` creates / patches / deletes Google events for tasks. Owner of the event = assignee, else creator, else the acting user. Muna events carry `extendedProperties.private.muna_task_id`; completed tasks get a "✓ " title prefix.
+- Frontend: `src/lib/google.ts`, `src/hooks/useGoogleEvents.ts` (60 s cache, refetch on `TASKS_CHANGED`), `EventRow`, events shown in Calendar (blue ring dots) and Home's Today card. The task sheet has an "Add to Google Calendar" checkbox (`sync_google`).
+- Limits: only the primary calendar; edits made inside Google to Muna-created events are **not** read back (Google → Muna is only the read-only list); refresh token is stored as plain text in a locked table; while the Google Cloud app is in "Testing" refresh tokens expire after 7 days, so the app must be **published to production** (unverified-app warning is normal: Advanced → Go to Muna).
+
+## Profile colour + icon
+Each person picks a colour (`avatar_color`) and any Tabler **filled** icon (`avatar`) with a search bar (`src/components/IconPicker.tsx`; the full icon library is loaded lazily with `import('@tabler/icons-react')`). The same picker is used for task icons (Muna's own `icon` enum stays the 32 curated keys in `TASK_ICONS`). The partner's events in the calendar are tinted with their colour.
 
 ## Screens (done)
-Login (Google) · Home (dashboard like Figma) · Calendar (month grid, dots per day, day list, add task) · Chat with Muna (text + voice) · Profile (name, avatar, light/dark/system, Muna personality, tokens left, invite code, sign out). Task editor sheet (title, date, time, who, notes, colour, icon).
+Login (Google) · Home (dashboard like Figma) · Calendar (month grid, dots per day, Google events, day list, add task) · Chat with Muna (text + voice notes) · Profile (name, colour, filled icon with search, light/dark/system, Muna personality, tokens used, Google Calendar connect, invite code, sign out). Task editor sheet (title, date, time, who, notes, colour, icon).
 
 ## Known limits / not done yet
-- **Google Calendar sync is NOT built.** Profile shows a disabled "Connect (soon)" button. Plan: add the calendar scope to the Google login (or a second consent), store the Google refresh token server-side in an edge function, and sync two ways with the Calendar API. Needs the Google Cloud project (Calendar API enabled) – see setup below.
+- Google Calendar: see limits above. Sleep / Calories / Uni dashboard cards are still not built.
 - The first build could not be test-compiled by Claude (npm was blocked in its workspace). **If the first GitHub Action fails, read the error in the Actions tab and fix it.** After the first successful local `npm install`, commit `package-lock.json` and switch the workflow from `npm install` to `npm ci`.
 - No push notifications yet. Recipes, budget, etc. are future modules.
 - Muna's mascot artwork is an approximation of Figma's.
@@ -64,12 +74,13 @@ Login (Google) · Home (dashboard like Figma) · Calendar (month grid, dots per 
 - [x] Supabase project created, schema + RLS + guest list applied
 - [x] Edge function `muna-chat` deployed
 - [x] Frontend code written
-- [ ] Jared adds secret `GEMINI_API_KEY` (Supabase → Edge Functions → Secrets)
-- [ ] Google Cloud OAuth client created; Client ID + Secret pasted in Supabase → Authentication → Providers → Google
-- [ ] Supabase → Authentication → URL Configuration: Site URL `https://jaredartt.github.io/Muna/`, add the same as a Redirect URL (and `http://localhost:5173/` for local testing)
-- [ ] GitHub repo → Settings → Pages → Source = "GitHub Actions"
-- [ ] First `git push origin main` and green deploy
-- [ ] Both Jared and his wife sign in once; add to iPhone home screen
+- [x] Jared added `GEMINI_API_KEY`; Google login works; Pages deploy set up (verify with Jared if unsure)
+- [x] Edge functions deployed: `muna-chat` (v4, with voice transcription), `google-calendar` (v1)
+- [ ] Google Cloud: enable **Google Calendar API**; add scope `.../auth/calendar.events` (Data Access); **Publish app** (Audience → Publish) so refresh tokens do not expire
+- [ ] Supabase → Edge Functions → Secrets: add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
+- [ ] `git add . && git commit && git push origin main`; green run in the Actions tab
+- [ ] Each person: Profile → Connect Google Calendar
+- [ ] Test a voice note on the iPhone (mic permission)
 
 ## Working agreements
 - Keep answers simple and step-by-step for Jared; he does not code.

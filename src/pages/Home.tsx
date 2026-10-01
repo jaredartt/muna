@@ -1,10 +1,13 @@
-import { IconCalendar, IconCheck, IconPlus } from '@tabler/icons-react'
+import { IconCalendarEventFilled, IconCalendarFilled } from '@tabler/icons-react'
+import { IconCheck, IconPlus } from '@tabler/icons-react'
 import Muna from '../components/Muna'
 import Ring from '../components/Ring'
 import WeekChart from '../components/WeekChart'
 import { TaskIcon } from '../lib/icons'
 import { useAuth } from '../context/AuthContext'
 import { useTasksCtx } from '../context/TasksContext'
+import { useGoogleEvents } from '../hooks/useGoogleEvents'
+import { eventDays, eventSortKey, eventTimeLabel } from '../lib/google'
 import { toDateStr, todayStr } from '../lib/dates'
 import { navigate } from '../lib/router'
 
@@ -28,6 +31,14 @@ export default function Home() {
   const { tasks, loading, toggleTask, openEditor } = useTasksCtx()
   const today = todayStr()
 
+  // Today's Google Calendar events (read-only) sit next to the tasks
+  const dayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())
+  const dayEnd = new Date(dayStart.getTime() + 86400000)
+  const google = useGoogleEvents(dayStart, dayEnd)
+  const todaysEvents = google.events
+    .filter((e) => eventDays(e).includes(today))
+    .sort((a, b) => eventSortKey(a).localeCompare(eventSortKey(b)))
+
   const todays = tasks.filter((t) => t.due_date === today).sort((a, b) => Number(a.completed) - Number(b.completed) || (a.start_time ?? '99').localeCompare(b.start_time ?? '99'))
   const doneToday = todays.filter((t) => t.completed).length
   const todayPct = todays.length ? Math.round((doneToday / todays.length) * 100) : 0
@@ -50,6 +61,8 @@ export default function Home() {
         : `You have ${remaining === 1 ? 'a task' : 'some tasks'} today, you got this!`
 
   const shown = todays.slice(0, 4)
+  const shownEvents = todaysEvents.slice(0, Math.max(0, 4 - shown.length))
+  const hiddenCount = todays.length - shown.length + (todaysEvents.length - shownEvents.length)
 
   return (
     <div className="page home">
@@ -66,12 +79,12 @@ export default function Home() {
             <div className="card-head">
               <h3>Today&rsquo;s tasks</h3>
               <button className="plain-icon purple" onClick={() => navigate('/calendar')} aria-label="Open calendar">
-                <IconCalendar size={24} stroke={1.8} />
+                <IconCalendarFilled size={24} />
               </button>
             </div>
             <div className="mini-list">
               {loading && <p className="muted small">Loading…</p>}
-              {!loading && todays.length === 0 && <p className="muted small">Nothing yet.</p>}
+              {!loading && todays.length === 0 && todaysEvents.length === 0 && <p className="muted small">Nothing yet.</p>}
               {shown.map((t) => (
                 <div key={t.id} className={'mini-task' + (t.completed ? ' done' : '')}>
                   <button className={`tile c-${t.color}`} onClick={() => toggleTask(t)} aria-label={t.completed ? 'Mark as not done' : 'Mark as done'}>
@@ -82,7 +95,18 @@ export default function Home() {
                   </button>
                 </div>
               ))}
-              {todays.length > shown.length && (
+              {shownEvents.map((e) => (
+                <div key={e.id} className="mini-task">
+                  <span className="tile c-sky" aria-hidden="true">
+                    <IconCalendarEventFilled size={18} />
+                  </span>
+                  <span className="mini-title">
+                    {e.title}
+                    <small className="muted"> {eventTimeLabel(e)}</small>
+                  </span>
+                </div>
+              ))}
+              {hiddenCount > 0 && (
                 <button className="more" onClick={() => navigate('/calendar')} aria-label="See all tasks">
                   &hellip;
                 </button>

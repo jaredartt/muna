@@ -1,14 +1,17 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { TASKS_CHANGED } from '../lib/events'
+import { syncTasksToGoogle } from '../lib/google'
 import type { Task, TaskDraft } from '../lib/types'
 
 export function useTasks() {
-  const { profile } = useAuth()
+  const { profile, googleConnected } = useAuth()
   const householdId = profile?.household_id
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
+  const tasksRef = useRef<Task[]>([])
+  tasksRef.current = tasks
 
   const reload = useCallback(async () => {
     if (!householdId) return
@@ -39,14 +42,25 @@ export function useTasks() {
     }
   }, [householdId, reload])
 
+  // Mirror to Google Calendar in the background (only if this person connected it).
+  const mirror = useCallback(
+    (ids: string[], deletes: { event_id: string; owner: string }[] = []) => {
+      if (!googleConnected) return
+      void syncTasksToGoogle(ids, deletes).then(() => reload())
+    },
+    [googleConnected, reload],
+  )
+
   const addTask = useCallback(
     async (draft: TaskDraft) => {
-      if (!householdId) return
-      const { error } = await supabase.from('tasks').insert({ ...draft, household_id: householdId })
-      if (!error) await reload()
-      return error?.message ?? null
+      if (!householdId) return null
+      const { data, error } = await supabase.from('tasks').insert({ ...draft, household_id: householdId }).select('id').single()
+      if (error) return error.message
+      await reload()
+      if (data?.id) mirror([data.id as string])
+      return null
     },
-    [householdId, reload],
+    [householdId, reload, mirror],
   )
 
   const updateTask = useCallback(
@@ -54,9 +68,10 @@ export function useTasks() {
       setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)))
       const { error } = await supabase.from('tasks').update(patch).eq('id', id)
       if (error) await reload()
+      else mirror([id])
       return error?.message ?? null
     },
-    [reload],
+    [reload, mirror],
   )
 
   const toggleTask = useCallback(
@@ -70,12 +85,14 @@ export function useTasks() {
 
   const deleteTask = useCallback(
     async (id: string) => {
+      const old = tasksRef.current.find((t) => t.id === id)
       setTasks((prev) => prev.filter((t) => t.id !== id))
       const { error } = await supabase.from('tasks').delete().eq('id', id)
       if (error) await reload()
+      else if (old?.google_event_id && old.google_owner) mirror([], [{ event_id: old.google_event_id, owner: old.google_owner }])
       return error?.message ?? null
     },
-    [reload],
+    [reload, mirror],
   )
 
   return { tasks, loading, reload, addTask, updateTask, toggleTask, deleteTask }

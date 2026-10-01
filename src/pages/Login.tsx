@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { IconBrandGoogle } from '@tabler/icons-react'
+import { IconBrandGoogleFilled } from '@tabler/icons-react'
 import Muna from '../components/Muna'
 import { useAuth } from '../context/AuthContext'
 
@@ -21,7 +21,7 @@ export default function Login() {
         <h1>Muna</h1>
         <p className="muted">Our little everything app.</p>
         <button className="btn primary big" onClick={signInWithGoogle}>
-          <IconBrandGoogle size={20} /> Continue with Google
+          <IconBrandGoogleFilled size={20} /> Continue with Google
         </button>
         {problem && <p className="error">{problem}</p>}
       </div>

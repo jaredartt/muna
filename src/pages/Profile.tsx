@@ -1,19 +1,21 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
-import { IconBrandGoogle, IconCopy, IconDeviceDesktop, IconLogout, IconMoon, IconSun } from '@tabler/icons-react'
+import { IconBrandGoogleFilled, IconDeviceDesktopFilled, IconMoonFilled, IconSunFilled } from '@tabler/icons-react'
+import { IconCopy, IconLogout } from '@tabler/icons-react'
 import Avatar from '../components/Avatar'
-import { AVATARS } from '../lib/icons'
+import IconPicker from '../components/IconPicker'
+import { AVATAR_SUGGESTIONS, TASK_COLORS } from '../lib/icons'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import type { ThemePref } from '../lib/types'
 
-const THEMES: { value: ThemePref; label: string; Icon: typeof IconSun }[] = [
-  { value: 'light', label: 'Light', Icon: IconSun },
-  { value: 'dark', label: 'Dark', Icon: IconMoon },
-  { value: 'system', label: 'System', Icon: IconDeviceDesktop },
+const THEMES: { value: ThemePref; label: string; Icon: typeof IconSunFilled }[] = [
+  { value: 'light', label: 'Light', Icon: IconSunFilled },
+  { value: 'dark', label: 'Dark', Icon: IconMoonFilled },
+  { value: 'system', label: 'System', Icon: IconDeviceDesktopFilled },
 ]
 
 export default function Profile() {
-  const { profile, session, members, inviteCode, updateProfile, joinHousehold, signOut } = useAuth()
+  const { profile, session, members, inviteCode, googleStatus, googleConnected, updateProfile, joinHousehold, connectGoogle, disconnectGoogle, signOut } = useAuth()
   const [name, setName] = useState('')
   const [personality, setPersonality] = useState('')
   const [code, setCode] = useState('')
@@ -37,18 +39,27 @@ export default function Profile() {
   if (!profile) return null
 
   const partner = members.find((m) => m.id !== profile.id)
+  const partnerConnected = partner ? Boolean(googleStatus[partner.id]) : false
+
+  function flash(msg: string, ms = 2500) {
+    setNote(msg)
+    setTimeout(() => setNote(''), ms)
+  }
 
   async function save(patch: Parameters<typeof updateProfile>[0], okMsg = 'Saved') {
     const err = await updateProfile(patch)
-    setNote(err ?? okMsg)
-    setTimeout(() => setNote(''), 2500)
+    flash(err ?? okMsg)
   }
 
   async function join() {
     const err = await joinHousehold(code.trim())
-    setNote(err ?? 'Joined! You now share tasks together.')
+    flash(err ?? 'Joined! You now share tasks together.', 3500)
     if (!err) setCode('')
-    setTimeout(() => setNote(''), 3500)
+  }
+
+  async function disconnect() {
+    const err = await disconnectGoogle()
+    flash(err ?? 'Google Calendar disconnected')
   }
 
   return (
@@ -59,18 +70,11 @@ export default function Profile() {
 
       <section className="card">
         <div className="profile-top">
-          <Avatar name={profile.avatar} size={72} />
+          <Avatar name={profile.avatar} color={profile.avatar_color} size={72} />
           <div>
             <h3>{profile.display_name || 'You'}</h3>
             <p className="muted small">{session?.user.email}</p>
           </div>
-        </div>
-        <div className="avatar-grid">
-          {Object.keys(AVATARS).map((a) => (
-            <button key={a} className={'avatar-choice' + (profile.avatar === a ? ' selected' : '')} onClick={() => save({ avatar: a })} aria-label={a}>
-              <Avatar name={a} size={44} />
-            </button>
-          ))}
         </div>
         <label className="field">
           <span>Your name</span>
@@ -79,6 +83,24 @@ export default function Profile() {
         <button className="btn soft" onClick={() => save({ display_name: name.trim() })} disabled={name.trim() === profile.display_name}>
           Save name
         </button>
+        <div className="field">
+          <span>Your colour</span>
+          <div className="swatches">
+            {TASK_COLORS.map((c) => (
+              <button
+                key={c}
+                className={`swatch c-${c}` + (profile.avatar_color === c ? ' selected' : '')}
+                onClick={() => save({ avatar_color: c }, 'Colour saved')}
+                aria-label={c}
+                aria-pressed={profile.avatar_color === c}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="field">
+          <span>Your icon</span>
+          <IconPicker value={profile.avatar} onChange={(a) => save({ avatar: a }, 'Icon saved')} suggestions={AVATAR_SUGGESTIONS} colorClass={`c-${profile.avatar_color}`} />
+        </div>
       </section>
 
       <section className="card">
@@ -118,9 +140,9 @@ export default function Profile() {
               <i style={{ width: `${Math.min(100, (usage.used / Math.max(1, usage.budget)) * 100)}%` }} />
             </div>
             <p>
-              <strong>{Math.max(0, usage.budget - usage.used).toLocaleString()}</strong> <span className="muted">of {usage.budget.toLocaleString()} tokens left this month</span>
+              <strong>{usage.used.toLocaleString()}</strong> <span className="muted">tokens used this month, of a limit of {usage.budget.toLocaleString()}</span>
             </p>
-            <p className="muted small">Every chat with Muna uses a few tokens. Your allowance refills on the 1st of each month.</p>
+            <p className="muted small">The used number is counted exactly from what Gemini reports. The limit is a safety setting we chose, not a Google balance. It resets on the 1st of each month.</p>
           </>
         ) : (
           <p className="muted small">Loading…</p>
@@ -128,13 +150,43 @@ export default function Profile() {
       </section>
 
       <section className="card">
+        <h3>Google Calendar</h3>
+        <p className="muted small">
+          Your Google events show up in Muna&rsquo;s calendar (yours and your partner&rsquo;s), and tasks with a date are added to your Google Calendar automatically.
+        </p>
+        <p>
+          <strong>You:</strong> <span className={googleConnected ? 'ok' : 'muted'}>{googleConnected ? 'Connected' : 'Not connected'}</span>
+        </p>
+        {partner && (
+          <p>
+            <strong>{partner.display_name || 'Partner'}:</strong> <span className={partnerConnected ? 'ok' : 'muted'}>{partnerConnected ? 'Connected' : 'Not connected yet'}</span>
+          </p>
+        )}
+        {googleConnected ? (
+          <div className="btn-row">
+            <button className="btn soft" onClick={() => void connectGoogle()}>
+              <IconBrandGoogleFilled size={18} /> Reconnect
+            </button>
+            <button className="btn ghost" onClick={() => void disconnect()}>
+              Disconnect
+            </button>
+          </div>
+        ) : (
+          <button className="btn primary" onClick={() => void connectGoogle()}>
+            <IconBrandGoogleFilled size={18} /> Connect Google Calendar
+          </button>
+        )}
+        <p className="muted small">Google may say the app is &ldquo;not verified&rdquo;. That is normal for a private app: tap Advanced, then &ldquo;Go to Muna&rdquo;.</p>
+      </section>
+
+      <section className="card">
         <h3>Our home</h3>
         <p className="muted small">
-          {partner ? `Sharing tasks with ${partner.display_name || 'your partner'}.` : 'Your partner joins by entering your invite code (Profile → Our home) after signing in with Google.'}
+          {partner ? `Sharing tasks with ${partner.display_name || 'your partner'}.` : 'Your partner joins automatically when they sign in with their invited Google account.'}
         </p>
         <div className="code-row">
           <code>{inviteCode}</code>
-          <button className="icon-btn" onClick={() => navigator.clipboard?.writeText(inviteCode).then(() => setNote('Code copied'))} aria-label="Copy invite code">
+          <button className="icon-btn" onClick={() => navigator.clipboard?.writeText(inviteCode).then(() => flash('Code copied'))} aria-label="Copy invite code">
             <IconCopy size={20} />
           </button>
         </div>
@@ -147,19 +199,15 @@ export default function Profile() {
         </button>
       </section>
 
-      <section className="card">
-        <h3>Google Calendar</h3>
-        <p className="muted small">Syncing with Google Calendar is coming soon.</p>
-        <button className="btn soft" disabled>
-          <IconBrandGoogle size={18} /> Connect (soon)
-        </button>
-      </section>
-
       <button className="btn ghost" onClick={signOut}>
         <IconLogout size={18} /> Sign out
       </button>
 
-      {note && <div className="toast" role="status">{note}</div>}
+      {note && (
+        <div className="toast" role="status">
+          {note}
+        </div>
+      )}
     </div>
   )
 }

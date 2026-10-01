@@ -1,6 +1,6 @@
 # Muna
 
-Our little everything app (calendar + tasks + Muna, the Gemini-powered assistant). React + Vite + Supabase, hosted on GitHub Pages.
+Our little everything app (calendar + tasks + Google Calendar sync + Muna, the Gemini-powered assistant with voice notes). React + Vite + Supabase, hosted on GitHub Pages.
 
 - Live app: https://jaredartt.github.io/Muna/
 - Supabase project: `muna` (`vlatdcjwxbflicomkbnr`, eu-central-1)

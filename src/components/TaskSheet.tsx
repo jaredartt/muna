@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { IconTrash, IconX } from '@tabler/icons-react'
-import { TASK_COLORS, TASK_ICONS, TaskIcon } from '../lib/icons'
+import { IconTrashFilled } from '@tabler/icons-react'
+import { IconX } from '@tabler/icons-react'
+import IconPicker from './IconPicker'
+import { TASK_COLORS, TASK_ICONS } from '../lib/icons'
 import { useAuth } from '../context/AuthContext'
 import type { Task, TaskDraft } from '../lib/types'
 
@@ -13,7 +15,7 @@ type Props = {
 }
 
 export default function TaskSheet({ task, defaultDate, onSave, onDelete, onClose }: Props) {
-  const { members, session } = useAuth()
+  const { members, session, googleConnected } = useAuth()
   const [title, setTitle] = useState(task?.title ?? '')
   const [notes, setNotes] = useState(task?.notes ?? '')
   const [date, setDate] = useState(task ? task.due_date ?? '' : defaultDate ?? '')
@@ -22,6 +24,7 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onClose
   const [icon, setIcon] = useState(task?.icon ?? 'checklist')
   const [color, setColor] = useState(task?.color ?? 'mint')
   const [assignee, setAssignee] = useState(task?.assigned_to ?? '')
+  const [syncGoogle, setSyncGoogle] = useState(task?.sync_google ?? true)
   const [saving, setSaving] = useState(false)
 
   async function save() {
@@ -37,6 +40,7 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onClose
         icon,
         color,
         assigned_to: assignee || null,
+        sync_google: syncGoogle,
       },
       task?.id,
     )
@@ -87,6 +91,13 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onClose
           </label>
         </div>
 
+        {googleConnected && (
+          <label className="check-row">
+            <input type="checkbox" checked={syncGoogle} onChange={(e) => setSyncGoogle(e.target.checked)} disabled={!date} />
+            <span>Add to Google Calendar{!date ? ' (pick a date first)' : ''}</span>
+          </label>
+        )}
+
         <label className="field">
           <span>Notes</span>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Anything to remember…" />
@@ -103,19 +114,13 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onClose
 
         <div className="field">
           <span>Icon</span>
-          <div className="icon-grid">
-            {Object.keys(TASK_ICONS).map((k) => (
-              <button key={k} className={`icon-choice c-${color}` + (icon === k ? ' selected' : '')} onClick={() => setIcon(k)} aria-label={k}>
-                <TaskIcon name={k} size={20} />
-              </button>
-            ))}
-          </div>
+          <IconPicker value={icon} onChange={setIcon} suggestions={Object.keys(TASK_ICONS)} colorClass={`c-${color}`} />
         </div>
 
         <div className="sheet-actions">
           {task && onDelete && (
             <button className="btn danger" onClick={() => onDelete(task.id)}>
-              <IconTrash size={18} /> Delete
+              <IconTrashFilled size={18} /> Delete
             </button>
           )}
           <button className="btn primary grow" onClick={save} disabled={!title.trim() || saving}>
