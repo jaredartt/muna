@@ -554,3 +554,7 @@ input[type='checkbox']:focus-visible { outline: none; box-shadow: 0 0 0 4px colo
 .card-tap .card-head { align-self: stretch; }
 .sl-days { display: flex; flex-wrap: wrap; gap: 6px; }
 input.sl-suggest { color: var(--muted); }
+
+/* ---------- Listen again button under Muna's messages ---------- */
+.listen-btn { display: flex; align-items: center; gap: 8px; margin-top: 10px; min-height: 42px; padding: 0 18px 0 14px; border-radius: 21px; background: var(--peach-bg); color: var(--peach-fg); font-size: 15px; font-weight: 600; }
+.listen-btn.on { background: var(--coral); color: #fff; }

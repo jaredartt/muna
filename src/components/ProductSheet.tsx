@@ -117,7 +117,9 @@ export default function ProductSheet({ householdId, initial, id, note, onClose }
           </button>
         </div>
         {note && <p className="prod-note">{note}</p>}
-        {initial.source === 'openfoodfacts' && !id && <p className="muted small">Found on Open Food Facts. Please check the numbers against the pack before you save.</p>}
+        {initial.source !== 'manual' && !id && (
+          <p className="muted small">Found on {({ openfoodfacts: 'Open Food Facts', openbeautyfacts: 'Open Beauty Facts', openproductsfacts: 'Open Products Facts', openpetfoodfacts: 'Open Pet Food Facts', upcitemdb: 'UPCitemdb' } as Record<string, string>)[initial.source] ?? 'a barcode database'}. Please check the numbers against the pack before you save.</p>
+        )}
 
         <label className="field">
           <span>Name</span>

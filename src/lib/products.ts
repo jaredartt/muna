@@ -25,7 +25,7 @@ export type Product = {
   gluten: Tri
   lactose: Tri
   image_url: string | null
-  source: 'openfoodfacts' | 'openbeautyfacts' | 'manual'
+  source: 'openfoodfacts' | 'openbeautyfacts' | 'openproductsfacts' | 'openpetfoodfacts' | 'upcitemdb' | 'manual'
   edc: Edc
   edc_note: string | null
   notes: string | null
@@ -212,22 +212,79 @@ type OffProduct = Record<string, unknown>
 const arr = (v: unknown): string[] => (Array.isArray(v) ? (v as string[]) : [])
 const str = (v: unknown): string => (typeof v === 'string' ? v : '')
 
-/** Looks a barcode up on Open Food Facts, then on Open Beauty Facts (perfume, soap, deodorant). Nothing is saved: the person checks the numbers first. */
+type OffSource = 'openfoodfacts' | 'openbeautyfacts' | 'openproductsfacts' | 'openpetfoodfacts'
+// The Open ... Facts family shares one API and one barcode list format. Food first, then cosmetics, other products, pet food.
+const OFF_SITES: { source: OffSource; host: string; label: string }[] = [
+  { source: 'openfoodfacts', host: 'world.openfoodfacts.org', label: 'Open Food Facts' },
+  { source: 'openbeautyfacts', host: 'world.openbeautyfacts.org', label: 'Open Beauty Facts' },
+  { source: 'openproductsfacts', host: 'world.openproductsfacts.org', label: 'Open Products Facts' },
+  { source: 'openpetfoodfacts', host: 'world.openpetfoodfacts.org', label: 'Open Pet Food Facts' },
+]
+const OFF_FIELDS = 'code,product_name,product_name_de,generic_name,brands,quantity,nutriments,allergens_tags,traces_tags,labels_tags,additives_tags,ingredients_text,ingredients_text_de,image_front_small_url'
+
+/** The same barcode is written in different lengths: UPC-A (12 digits) is EAN-13 with a leading 0, and some packs print the 13 digits without it. */
+function barcodeVariants(clean: string): string[] {
+  const v = [clean]
+  if (clean.length === 12) v.push('0' + clean)
+  if (clean.length === 13 && clean.startsWith('0')) v.push(clean.slice(1))
+  if (clean.length === 8) v.push('00000' + clean) // EAN-8 stored padded by some databases
+  return v
+}
+
+async function offFetch(host: string, code: string): Promise<OffProduct | null> {
+  try {
+    const r = await fetch(`https://${host}/api/v2/product/${code}.json?fields=${OFF_FIELDS}`)
+    if (!r.ok) return null
+    const j = (await r.json()) as { status?: number; product?: OffProduct }
+    return j.status === 1 && j.product ? j.product : null
+  } catch {
+    return null
+  }
+}
+
+/** Name, brand and size only (no nutrition): UPCitemdb, a free general product database. Limited to about 100 lookups a day. */
+async function upcItemDb(code: string): Promise<{ title: string; brand: string; size: string; image: string } | null> {
+  try {
+    const r = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`)
+    if (!r.ok) return null
+    const j = (await r.json()) as { items?: { title?: string; brand?: string; size?: string; images?: string[] }[] }
+    const it = j.items?.[0]
+    if (!it?.title) return null
+    return { title: it.title.slice(0, 160), brand: (it.brand ?? '').slice(0, 120), size: (it.size ?? '').slice(0, 60), image: it.images?.[0] && it.images[0].length <= 500 ? it.images[0] : '' }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Looks a barcode up in several free databases at the same time (Open Food Facts, Open Beauty Facts, Open Products Facts,
+ * Open Pet Food Facts) under each way of writing the barcode, and uses the first one that knows a name. If none does, UPCitemdb
+ * can still give the name and brand. Nothing is saved: the person checks the numbers first.
+ */
 export async function lookupBarcode(code: string): Promise<{ draft?: ProductDraft; error?: string }> {
   const clean = code.replace(/\D/g, '')
   if (clean.length < 6) return { error: 'A barcode has at least 6 digits.' }
-  const fields = 'code,product_name,product_name_de,generic_name,brands,quantity,nutriments,allergens_tags,traces_tags,labels_tags,additives_tags,ingredients_text,ingredients_text_de,image_front_small_url'
   try {
-    let source: 'openfoodfacts' | 'openbeautyfacts' = 'openfoodfacts'
-    let r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${clean}.json?fields=${fields}`)
-    let j = (await r.json()) as { status?: number; product?: OffProduct }
-    if (j.status !== 1 || !j.product) {
-      source = 'openbeautyfacts'
-      r = await fetch(`https://world.openbeautyfacts.org/api/v2/product/${clean}.json?fields=${fields}`)
-      j = (await r.json()) as { status?: number; product?: OffProduct }
+    const variants = barcodeVariants(clean)
+    const jobs = OFF_SITES.flatMap((site) => variants.map((v) => ({ site, v, run: offFetch(site.host, v) })))
+    const found = await Promise.all(jobs.map(async (j) => ({ ...j, p: await j.run })))
+    const hits = found.filter((f) => f.p)
+    const best = hits.find((f) => ((str(f.p!.product_name_de) || str(f.p!.product_name)).trim())) ?? hits[0]
+    if (!best) {
+      const u = (await Promise.all(variants.map(upcItemDb))).find(Boolean)
+      if (u) {
+        const draft = emptyDraft(clean)
+        draft.name = u.title
+        draft.brand = u.brand || null
+        draft.pack_size = u.size || null
+        draft.image_url = u.image || null
+        draft.source = 'upcitemdb'
+        return { draft, error: 'Found the name and brand on UPCitemdb, but it has no nutrition numbers. Please fill them in from the pack.' }
+      }
+      return { draft: emptyDraft(clean), error: 'None of the free barcode databases (Open Food Facts, Open Beauty Facts, Open Products Facts, Open Pet Food Facts, UPCitemdb) knows this barcode yet. Fill it in by hand; it takes a minute.' }
     }
-    const p = j.product
-    if (j.status !== 1 || !p) return { draft: emptyDraft(clean), error: 'Open Food Facts does not know this barcode yet. Fill it in by hand (it takes a minute).' }
+    const p = best.p as OffProduct
+    const source = best.site.source
     const nu = (p.nutriments ?? {}) as OffNutriments
     const kj = num(nu, 'energy-kj_100g') ?? num(nu, 'energy_100g')
     const kcal = num(nu, 'energy-kcal_100g') ?? (kj != null ? Math.round(kj / 4.184) : null)
@@ -276,6 +333,6 @@ export async function lookupBarcode(code: string): Promise<{ draft?: ProductDraf
     }
     return { draft }
   } catch {
-    return { error: 'Could not reach Open Food Facts. Check your internet and try again.' }
+    return { error: 'Could not reach the barcode databases. Check your internet and try again.' }
   }
 }

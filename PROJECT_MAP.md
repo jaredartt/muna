@@ -60,7 +60,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: MyIcons
   - imports: context/AuthContext.tsx, lib/customIcons.ts, lib/icons.tsx, lib/svgIcons.tsx
   - used by: pages/Profile.tsx
-- `src/components/ProductSheet.tsx` (204 lines)
+- `src/components/ProductSheet.tsx` (206 lines)
   - exports: ProductSheet
   - imports: hooks/useSheetScrollGuard.ts, lib/products.ts
   - used by: pages/Products.tsx
@@ -173,7 +173,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: PhosphorData, loadPhosphor, phosphorAvailable, usePhosphor
   - imports: lib/svgIcons.tsx
   - used by: components/IconPicker.tsx, lib/icons.tsx
-- `src/lib/products.ts` (281 lines) - The home's product list (table "products"). Kept in memory, cached on the phone, live through realtime.
+- `src/lib/products.ts` (338 lines) - The home's product list (table "products"). Kept in memory, cached on the phone, live through realtime.
   - exports: Tri, Edc, Product, ProductDraft, useProducts, productsReady, allProducts, startProductSync…
   - imports: lib/supabase.ts
   - used by: components/HomeRings.tsx, components/IconSync.tsx, components/ProductSheet.tsx, components/RecipePicker.tsx, components/RecipeSheet.tsx, lib/meals.ts, pages/Meals.tsx, pages/Pantry.tsx, pages/Products.tsx
@@ -204,7 +204,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: ThemePref, Place, Targets, Profile, Member, ChecklistItem, Category, Task…
   - imports: lib/recurrence.ts
   - used by: components/HomeRings.tsx, components/RecipePicker.tsx, components/RecipeSheet.tsx, components/TaskRow.tsx, components/TaskSheet.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useTasks.ts, lib/meals.ts, lib/theme.ts, lib/weather.ts, pages/CalendarPage.tsx, pages/Chat.tsx, pages/Profile.tsx
-- `src/lib/updates.tsx` (82 lines)
+- `src/lib/updates.tsx` (84 lines)
   - exports: UpdateEntry, UPDATES
   - used by: pages/Updates.tsx
 - `src/lib/weather.ts` (196 lines) - Weather from Open-Meteo (free, no key). One place for the whole home (set in Profile, default Berlin).
@@ -217,7 +217,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: CalendarPage
   - imports: components/DayView.tsx, components/WeekView.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useGoogleEvents.ts, lib/dates.ts, lib/dayItems.ts, lib/eventStyles.ts, lib/events.ts, lib/google.ts, lib/router.ts, lib/types.ts
   - used by: App.tsx
-- `src/pages/Chat.tsx` (389 lines)
+- `src/pages/Chat.tsx` (435 lines)
   - exports: Chat
   - imports: components/Muna.tsx, context/AuthContext.tsx, lib/draft.ts, lib/events.ts, lib/recorder.ts, lib/supabase.ts, lib/types.ts
   - used by: App.tsx

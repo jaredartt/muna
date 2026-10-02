@@ -92,6 +92,8 @@ export default function Chat() {
   const voiceRepliesRef = useRef(voiceReplies)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const speakId = useRef(0) // a newer reply cancels a slower older one
+  const voiceCache = useRef(new Map<string, Promise<string | null>>()) // speech already made, so listening again is instant
+  const [playing, setPlaying] = useState<string | null>(null) // id of the message being read aloud
 
   useEffect(() => {
     voiceRepliesRef.current = voiceReplies
@@ -157,6 +159,7 @@ export default function Chat() {
 
   const stopVoice = useCallback(() => {
     speakId.current++
+    setPlaying(null)
     audioRef.current?.pause()
     window.speechSynthesis?.cancel()
   }, [])
@@ -164,27 +167,46 @@ export default function Chat() {
   // Muna's voice comes from Google's Gemini text-to-speech (edge function muna-voice). To start fast, the reply is cut into
   // short pieces that are all requested at the same time; the first (short) one is ready after a moment and starts playing
   // while the others are still being made. If that fails, use the phone's own voice.
-  const speak = useCallback(async (reply: string) => {
+  const speak = useCallback(async (reply: string, opts: { force?: boolean; id?: string } = {}) => {
     const my = ++speakId.current
     audioRef.current?.pause()
     window.speechSynthesis?.cancel()
     const pieces = voiceChunks(reply)
-    if (!pieces.length) return
-    const jobs = pieces.map((t) =>
-      supabase.functions
-        .invoke('muna-voice', { body: { text: t } })
-        .then(({ data, error: err }) => (!err && data?.audio ? `data:${data.mime || 'audio/wav'};base64,${data.audio}` : null))
-        .catch(() => null),
-    )
-    const alive = () => my === speakId.current && voiceRepliesRef.current
+    if (!pieces.length) {
+      setPlaying(null)
+      return
+    }
+    setPlaying(opts.id ?? null)
+    const cache = voiceCache.current
+    const jobs = pieces.map((t) => {
+      let job = cache.get(t)
+      if (!job) {
+        job = supabase.functions
+          .invoke('muna-voice', { body: { text: t } })
+          .then(({ data, error: err }) => (!err && data?.audio ? `data:${data.mime || 'audio/wav'};base64,${data.audio}` : null))
+          .catch(() => null)
+        cache.set(t, job)
+        void job.then((v) => {
+          if (!v) cache.delete(t) // a failed piece is tried again next time
+        })
+        if (cache.size > 24) cache.delete(cache.keys().next().value as string)
+      }
+      return job
+    })
+    const alive = () => my === speakId.current && (opts.force || voiceRepliesRef.current)
+    const done = () => {
+      if (my === speakId.current) setPlaying(null)
+    }
     for (let i = 0; i < jobs.length; i++) {
       const src = await jobs[i]
       if (!alive()) return
       if (!src) {
         // this piece (and the rest) with the phone's voice
-        if (!('speechSynthesis' in window)) return
+        if (!('speechSynthesis' in window)) return done()
         const u = new SpeechSynthesisUtterance(pieces.slice(i).join(' '))
         u.lang = navigator.language
+        u.onend = done
+        u.onerror = done
         window.speechSynthesis.speak(u)
         return
       }
@@ -197,17 +219,28 @@ export default function Chat() {
           a.play().catch(reject)
         })
       } catch {
-        return
+        return done()
       } finally {
         a.onended = null
         a.onerror = null
       }
     }
+    done()
   }, [])
 
+  // The "Listen" button under each of Muna's messages: reads it again (also when spoken replies are off). Tap again to stop.
+  function replay(m: ChatMessage) {
+    if (playing === m.id) {
+      stopVoice()
+      return
+    }
+    unlockSpeech(true) // this tap wakes up the audio player (iPhone)
+    void speak(m.content, { force: true, id: m.id })
+  }
+
   // iPhone only lets a page play sound after a tap, so "wake up" the audio player and the phone voice during the tap that starts the exchange.
-  const unlockSpeech = useCallback(() => {
-    if (!voiceRepliesRef.current) return
+  const unlockSpeech = useCallback((force = false) => {
+    if (!force && !voiceRepliesRef.current) return
     const a = audioRef.current ?? (audioRef.current = new Audio())
     a.src = SILENT_WAV
     void a.play().catch(() => {})
@@ -216,12 +249,13 @@ export default function Chat() {
 
   const finish = useCallback(
     (data: { reply: string; transcript?: string; changed?: boolean }, placeholderId?: string) => {
+      const stamp = Date.now()
       setMessages((m) => {
         const next = placeholderId ? m.map((x) => (x.id === placeholderId ? { ...x, content: data.transcript || x.content } : x)) : m
-        return [...next, { id: 'a-' + Date.now(), role: 'assistant', content: data.reply, created_at: new Date().toISOString() }]
+        return [...next, { id: 'a-' + stamp, role: 'assistant', content: data.reply, created_at: new Date().toISOString() }]
       })
       if (data.changed) notifyTasksChanged()
-      if (voiceRepliesRef.current) void speak(data.reply)
+      if (voiceRepliesRef.current) void speak(data.reply, { id: 'a-' + stamp })
     },
     [speak],
   )
@@ -341,6 +375,18 @@ export default function Chat() {
         {messages.map((m) => (
           <div key={m.id} className={'bubble ' + m.role}>
             {m.content}
+            {m.role === 'assistant' && m.content.trim() && (
+              <button type="button" className={'listen-btn' + (playing === m.id ? ' on' : '')} onClick={() => replay(m)} aria-label={playing === m.id ? 'Stop listening' : 'Listen to this message'}>
+                {playing === m.id ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="5" y="5" width="14" height="14" rx="3" fill="currentColor" />
+                  </svg>
+                ) : (
+                  <IconVolume size={20} />
+                )}
+                <span>{playing === m.id ? 'Stop' : 'Listen'}</span>
+              </button>
+            )}
           </div>
         ))}
         {busy && (
