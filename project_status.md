@@ -139,3 +139,6 @@ Sheets (`.sheet`) and the icon grid had no `overscroll-behavior`, so at the end 
 
 ### Faster start (Oct 2)
 Home intro started late because it waited for 3 network answers (tasks, who connected Google, today's Google events). Now each is remembered on the phone and shown at once, then refreshed: `useTasks` (localStorage `muna.tasksCache.v1`, keyed by household), `useGoogleEvents` (`muna.googleEvents.v1`, shown as stale, refetched when older than 60 s), AuthContext (`muna.googleStatus.v1`). `loadProfile` no longer waits for members/household before the app shows. Fallback timeout for the intro is 1.2 s, steps 110 ms. First-ever open (no cache) still waits for the network.
+
+### Calendar hours 06:00-00:00 (Oct 2)
+`DAY_START = 360`, `DAY_END = 1440` in `src/lib/dayItems.ts` (change there to show other hours). Day and week grids show 18 hours; items before 06:00 are drawn at the top edge, dragging cannot drop before 06:00.

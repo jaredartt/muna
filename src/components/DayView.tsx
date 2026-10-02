@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { IconCheck, IconPlus } from '@tabler/icons-react'
 import { AppIcon } from '../lib/icons'
-import { HOUR_H, SNAP, fmtMin, layoutLanes, type DayItem } from '../lib/dayItems'
+import { DAY_START, HOURS_SHOWN, HOUR_H, SNAP, fmtMin, layoutLanes, yOf, type DayItem } from '../lib/dayItems'
 
 type Props = {
   label: string // "Today · Thu 2 Oct"
@@ -46,8 +46,8 @@ export default function DayView({ label, isToday, items, onMove, onAdd }: Props)
     const grid = gridRef.current
     if (!grid) return
     const d = new Date()
-    const target = isToday ? Math.max(0, d.getHours() + d.getMinutes() / 60 - 1.5) : 7
-    const top = grid.getBoundingClientRect().top + window.scrollY + target * HOUR_H - (stickyRef.current?.offsetHeight ?? 120) - 8
+    const target = isToday ? Math.max(DAY_START / 60, d.getHours() + d.getMinutes() / 60 - 1.5) : DAY_START / 60
+    const top = grid.getBoundingClientRect().top + window.scrollY + (target - DAY_START / 60) * HOUR_H - (stickyRef.current?.offsetHeight ?? 120) - 8
     window.scrollTo({ top: Math.max(0, top) })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -67,7 +67,7 @@ export default function DayView({ label, isToday, items, onMove, onAdd }: Props)
     if (allRect && y <= allRect.bottom) return { item, x, y, zone: 'all', min: 0 }
     const dur = item.allDay ? 60 : Math.max(SNAP, item.end - item.start)
     const top = gridRect ? y - grab - gridRect.top : 0
-    const min = Math.min(1440 - dur, Math.max(0, snap((top / HOUR_H) * 60)))
+    const min = Math.min(1440 - dur, Math.max(DAY_START, snap((top / HOUR_H) * 60 + DAY_START)))
     return { item, x, y, zone: 'grid', min }
   }
 
@@ -200,21 +200,22 @@ export default function DayView({ label, isToday, items, onMove, onAdd }: Props)
         </div>
       </div>
 
-      <div className="hours" ref={gridRef} style={{ height: 24 * HOUR_H }}>
-        {Array.from({ length: 24 }, (_, h) => (
-          <div key={h} className="hour" style={{ top: h * HOUR_H }}>
-            <span className="hour-label">{h === 0 ? '' : `${String(h).padStart(2, '0')}:00`}</span>
+      <div className="hours" ref={gridRef} style={{ height: HOURS_SHOWN * HOUR_H + 16 }}>
+        {Array.from({ length: HOURS_SHOWN + 1 }, (_, i) => (
+          <div key={i} className={'hour' + (i === HOURS_SHOWN ? ' last' : '')} style={{ top: i * HOUR_H }}>
+            <span className="hour-label">{`${String((DAY_START / 60 + i) % 24).padStart(2, '0')}:00`}</span>
           </div>
         ))}
         <div className="slots">
           {timed.map((it) => {
             const l = lanes.get(it.key) ?? { lane: 0, lanes: 1 }
-            const h = Math.max(26, ((it.end - it.start) / 60) * HOUR_H - 3)
+            const vs = Math.max(it.start, DAY_START)
+            const h = Math.max(26, ((Math.max(it.end, vs + 30) - vs) / 60) * HOUR_H - 3)
             return (
               <div
                 key={it.key}
                 className={`blk c-${it.color}` + (it.done ? ' done' : '') + (dragging === it.key ? ' lifted' : '') + (h < 44 ? ' short' : '')}
-                style={{ top: (it.start / 60) * HOUR_H + 1, height: h, left: `${(l.lane / l.lanes) * 100}%`, width: `calc(${100 / l.lanes}% - 4px)` }}
+                style={{ top: yOf(it.start, HOUR_H) + 1, height: h, left: `${(l.lane / l.lanes) * 100}%`, width: `calc(${100 / l.lanes}% - 4px)` }}
                 role="button"
                 tabIndex={0}
                 onPointerDown={(e) => onDown(e, it)}
@@ -232,15 +233,15 @@ export default function DayView({ label, isToday, items, onMove, onAdd }: Props)
             )
           })}
           {drag?.zone === 'grid' && (
-            <div className={`blk preview c-${drag.item.color}`} style={{ top: (drag.min / 60) * HOUR_H + 1, height: Math.max(26, (prevDur / 60) * HOUR_H - 3), left: 0, right: 4 }}>
+            <div className={`blk preview c-${drag.item.color}`} style={{ top: yOf(drag.min, HOUR_H) + 1, height: Math.max(26, (prevDur / 60) * HOUR_H - 3), left: 0, right: 4 }}>
               <span className="blk-text">
                 <span className="blk-title">{fmtMin(drag.min)}–{fmtMin(drag.min + prevDur)}</span>
               </span>
             </div>
           )}
         </div>
-        {isToday && (
-          <div className="now-line" style={{ top: (nowMin / 60) * HOUR_H }}>
+        {isToday && nowMin >= DAY_START && (
+          <div className="now-line" style={{ top: yOf(nowMin, HOUR_H) }}>
             <i />
           </div>
         )}

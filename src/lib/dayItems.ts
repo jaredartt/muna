@@ -16,6 +16,11 @@ export type DayItem = {
 
 export const HOUR_H = 56 // pixels per hour in the day view
 export const SNAP = 15 // minutes
+export const DAY_START = 360 // the day view and week view show 06:00 ...
+export const DAY_END = 1440 // ... until 00:00
+export const HOURS_SHOWN = (DAY_END - DAY_START) / 60 // 18
+/** Pixels from the top of the grid for a time (times before 06:00 are drawn at the top edge). */
+export const yOf = (min: number, perHour: number) => ((Math.max(min, DAY_START) - DAY_START) / 60) * perHour
 
 export const pad2 = (n: number) => String(n).padStart(2, '0')
 export const fmtMin = (m: number) => (m >= 1440 ? '24:00' : `${pad2(Math.floor(m / 60))}:${pad2(m % 60)}`)

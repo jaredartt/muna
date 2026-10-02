@@ -414,3 +414,4 @@ input[type='checkbox']:focus-visible { outline: none; box-shadow: 0 0 0 4px colo
 .wk-blk { position: absolute; border-radius: 9px; padding: 2px 4px; font-size: 10px; font-weight: 700; line-height: 1.15; overflow: hidden; text-align: left; display: flex; align-items: flex-start; }
 .wk-blk span { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
 .wk-blk.done { opacity: 0.45; }
+.hour.last::after { display: none; }

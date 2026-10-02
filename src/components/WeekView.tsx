@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { AppIcon } from '../lib/icons'
-import { fmtMin, layoutLanes, type DayItem } from '../lib/dayItems'
+import { DAY_START, HOURS_SHOWN, fmtMin, layoutLanes, yOf, type DayItem } from '../lib/dayItems'
 import { parseDateStr } from '../lib/dates'
 
 const WH = 40 // pixels per hour in the week view
@@ -38,10 +38,10 @@ export default function WeekView({ days, today, selected, itemsByDay, onPickDay 
           })}
         </div>
       </div>
-      <div className="wk-body" style={{ height: 24 * WH }}>
-        {Array.from({ length: 24 }, (_, h) => (
-          <div key={h} className="wk-hour" style={{ top: h * WH }}>
-            <span>{h === 0 ? '' : String(h).padStart(2, '0')}</span>
+      <div className="wk-body" style={{ height: HOURS_SHOWN * WH + 12 }}>
+        {Array.from({ length: HOURS_SHOWN + 1 }, (_, i) => (
+          <div key={i} className="wk-hour" style={{ top: i * WH }}>
+            <span>{String((DAY_START / 60 + i) % 24).padStart(2, '0')}</span>
           </div>
         ))}
         <div className="wk-cols">
@@ -51,12 +51,13 @@ export default function WeekView({ days, today, selected, itemsByDay, onPickDay 
                 .filter((i) => !i.allDay)
                 .map((it) => {
                   const l = lanes[di].get(it.key) ?? { lane: 0, lanes: 1 }
-                  const h = Math.max(20, ((it.end - it.start) / 60) * WH - 2)
+                  const vs = Math.max(it.start, DAY_START)
+                  const h = Math.max(20, ((Math.max(it.end, vs + 30) - vs) / 60) * WH - 2)
                   return (
                     <button
                       key={it.key}
                       className={`wk-blk c-${it.color}` + (it.done ? ' done' : '')}
-                      style={{ top: (it.start / 60) * WH + 1, height: h, left: `${(l.lane / l.lanes) * 100}%`, width: `calc(${100 / l.lanes}% - 2px)` }}
+                      style={{ top: yOf(it.start, WH) + 1, height: h, left: `${(l.lane / l.lanes) * 100}%`, width: `calc(${100 / l.lanes}% - 2px)` }}
                       onClick={(e) => {
                         e.stopPropagation()
                         it.open()
