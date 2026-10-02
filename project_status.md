@@ -145,3 +145,7 @@ Home intro started late because it waited for 3 network answers (tasks, who conn
 
 ### Visual project graph (Oct 2)
 `python3 tools/make_graph.py` builds `PROJECT_GRAPH.html` (open in a browser): every file, imports, database tables, database functions and the 2 server functions, with search, drag, zoom, tap-to-see details. Template: `tools/graph_template.html`. Regenerate after big changes (with `tools/make_map.py` for the text map).
+
+### Bug: 'ghost' class clash (Oct 2)
+The DayView drag pill used the CSS class `.ghost`, which `.btn.ghost` (Sign out, Disconnect) already uses, so those buttons became `position: fixed` at the top of the screen. Renamed the pill to `.drag-ghost`. Found by running JS in the in-app browser on the live Profile page (listing elements with a shadow near the top). RULE: before adding a generic CSS class name, grep styles.css for it.
+Same clash with `.chip` (Chat suggestion buttons vs the calendar's all-day pills): calendar pills are now `.ad-pill` (not `.day-chip`, which the repeat editor uses). A script check found no other class defined both before and after the calendar section of styles.css.

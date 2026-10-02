@@ -183,7 +183,7 @@ export default function DayView({ label, isToday, items, onMove, onAdd }: Props)
             {allItems.map((it) => (
               <div
                 key={it.key}
-                className={`chip c-${it.color}` + (it.done ? ' done' : '') + (dragging === it.key ? ' lifted' : '')}
+                className={`ad-pill c-${it.color}` + (it.done ? ' done' : '') + (dragging === it.key ? ' lifted' : '')}
                 role="button"
                 tabIndex={0}
                 onPointerDown={(e) => onDown(e, it)}
@@ -248,7 +248,7 @@ export default function DayView({ label, isToday, items, onMove, onAdd }: Props)
       </div>
 
       {drag && (
-        <div className={`ghost c-${drag.item.color}`} style={{ left: drag.x, top: drag.y }}>
+        <div className={`drag-ghost c-${drag.item.color}`} style={{ left: drag.x, top: drag.y }}>
           <AppIcon name={drag.item.icon} size={15} /> {drag.item.title}
         </div>
       )}

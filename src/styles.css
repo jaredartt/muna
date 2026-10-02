@@ -371,10 +371,10 @@ input[type='checkbox']:focus-visible { outline: none; box-shadow: 0 0 0 4px colo
 .allday-empty { font-size: 13px; color: var(--muted); }
 
 .dayview, .weekview { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-.chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 8px 6px 11px; border-radius: 999px; font-size: 14px; font-weight: 600; max-width: 100%; cursor: grab; transition: opacity 0.15s ease, transform 0.2s ease; }
+.ad-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 8px 6px 11px; border-radius: 999px; font-size: 14px; font-weight: 600; max-width: 100%; cursor: grab; transition: opacity 0.15s ease, transform 0.2s ease; }
 .chip-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
-.chip.done .chip-title, .blk.done .blk-title { text-decoration: line-through; opacity: 0.6; }
-.chip.lifted, .blk.lifted { opacity: 0.3; }
+.ad-pill.done .chip-title, .blk.done .blk-title { text-decoration: line-through; opacity: 0.6; }
+.ad-pill.lifted, .blk.lifted { opacity: 0.3; }
 .tick { flex: none; width: 19px; height: 19px; border-radius: 50%; border: 2px solid currentColor; display: grid; place-items: center; opacity: 0.6; margin-left: auto; }
 .tick.on { background: currentColor; opacity: 1; }
 .tick.on svg { color: var(--card); }
@@ -394,7 +394,7 @@ input[type='checkbox']:focus-visible { outline: none; box-shadow: 0 0 0 4px colo
 .blk.preview { pointer-events: none; outline: 2px dashed currentColor; outline-offset: -2px; box-shadow: 0 10px 24px rgba(120, 90, 40, 0.18); z-index: 5; }
 .now-line { position: absolute; left: 48px; right: 8px; height: 0; border-top: 2px solid var(--coral); z-index: 4; pointer-events: none; opacity: 0.85; }
 .now-line i { position: absolute; left: -5px; top: -6px; width: 10px; height: 10px; border-radius: 50%; background: var(--coral); }
-.ghost { position: fixed; transform: translate(-50%, -160%); z-index: 90; pointer-events: none; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; font-size: 14px; font-weight: 700; max-width: 72vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 12px 28px rgba(60, 40, 20, 0.22); }
+.drag-ghost { position: fixed; transform: translate(-50%, -160%); z-index: 90; pointer-events: none; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; font-size: 14px; font-weight: 700; max-width: 72vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 12px 28px rgba(60, 40, 20, 0.22); }
 
 .wk-head { display: grid; grid-template-columns: 30px repeat(7, 1fr); gap: 2px; padding: 8px 8px 10px; }
 .wk-dayhead { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0 5px; border-radius: 14px; }
