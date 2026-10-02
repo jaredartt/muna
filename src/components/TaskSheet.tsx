@@ -7,7 +7,7 @@ import { cleanRepeat, firstOccurrence, type Repeat } from '../lib/recurrence'
 import { TASK_COLORS, TASK_ICONS } from '../lib/icons'
 import { useAuth } from '../context/AuthContext'
 import { buyProduct } from '../lib/meals'
-import type { ChecklistItem, Task, TaskDraft } from '../lib/types'
+import type { Category, ChecklistItem, Task, TaskDraft } from '../lib/types'
 
 type Props = {
   task?: Task | null
@@ -31,6 +31,7 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onCheck
   const [color, setColor] = useState(task?.color ?? 'mint')
   const [assignee, setAssignee] = useState(task?.assigned_to ?? '')
   const [repeat, setRepeat] = useState<Repeat | null>(task?.repeat ?? null)
+  const [category, setCategory] = useState<Category | null>(task?.category ?? null)
   const [items, setItems] = useState<ChecklistItem[]>(task?.checklist ?? [])
   const [newItem, setNewItem] = useState('')
   const [saving, setSaving] = useState(false)
@@ -69,6 +70,7 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onCheck
         icon,
         color,
         assigned_to: assignee || null,
+        category,
         checklist: newItem.trim() ? [...items, { id: crypto.randomUUID(), text: newItem.trim().slice(0, 200), done: false }] : items,
         sync_google: true,
       },
@@ -119,6 +121,17 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onCheck
             <span>Ends</span>
             <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} disabled={!start} />
           </label>
+        </div>
+
+        <div className="field">
+          <span>Counts for</span>
+          <div className="segmented" role="radiogroup" aria-label="Category">
+            {([[null, 'Nothing'], ['uni', 'Uni'], ['goal', 'Goals']] as [Category | null, string][]).map(([v, label]) => (
+              <button key={label} type="button" role="radio" aria-checked={category === v} className={category === v ? 'active' : ''} onClick={() => setCategory(v)}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <RepeatEditor value={repeat} onChange={setRepeat} date={date} />

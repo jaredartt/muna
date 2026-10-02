@@ -521,3 +521,36 @@ input[type='checkbox']:focus-visible { outline: none; box-shadow: 0 0 0 4px colo
 .pt-slide input[type='range'] { width: 100%; accent-color: var(--coral); min-height: 32px; }
 .pt-quick { display: flex; gap: 6px; flex-wrap: wrap; }
 .pt-guess { margin: 0; }
+
+/* ---------- Weather ---------- */
+:root { --wx-cloud: #b9c4d6; }
+:root[data-theme='dark'] { --wx-cloud: #8f9bb0; }
+.wx-card { gap: 14px; }
+.wx-now { display: flex; align-items: center; gap: 14px; }
+.wx-temp { display: flex; flex-direction: column; line-height: 1.1; }
+.wx-temp strong { font-size: 34px; }
+.wx-temp span { font-size: 13px; color: var(--muted); }
+.wx-facts { display: flex; flex-direction: column; gap: 2px; margin-left: auto; text-align: right; }
+.wx-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.wx-day { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0 6px; border-radius: 14px; font-size: 12px; min-width: 0; }
+.wx-day.now { background: var(--butter-bg); }
+.wx-dn { font-size: 11px; color: var(--muted); }
+.wx-hi { font-weight: 700; }
+.wx-lo { font-size: 11px; }
+.wx-dot { width: 6px; height: 6px; border-radius: 50%; background: transparent; margin-top: 1px; }
+.wx-dot.bad { background: var(--danger); }
+.wx-warn { background: var(--rose-bg); color: var(--rose-fg); border-radius: 14px; padding: 10px 12px; font-size: 13px; line-height: 18px; }
+.wx-tip { background: var(--mint-bg); color: var(--mint-fg); border-radius: 14px; padding: 10px 12px; font-size: 13px; line-height: 18px; }
+.wx-search { display: flex; gap: 8px; }
+.wx-search input { flex: 1; min-width: 0; }
+.wx-result { text-align: left; padding: 12px 14px; border-radius: 14px; background: var(--bg); min-height: 44px; }
+
+/* ---------- Home rings (Sleep, Calories, Uni, Goals) ---------- */
+.plain-icon.green { color: var(--green); }
+.plain-icon.blue { color: var(--blue); }
+.plain-icon.yellow { color: var(--yellow); }
+.card.tap { padding: 0; }
+.card-tap { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; padding: 20px; text-align: left; border-radius: 20px; }
+.card-tap .card-head { align-self: stretch; }
+.sl-days { display: flex; flex-wrap: wrap; gap: 6px; }
+input.sl-suggest { color: var(--muted); }

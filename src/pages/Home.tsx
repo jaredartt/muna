@@ -3,14 +3,15 @@ import { IconCalendarFilled } from '@tabler/icons-react'
 import { IconCheck, IconPlus } from '@tabler/icons-react'
 import Muna from '../components/Muna'
 import Ring from '../components/Ring'
-import WeekChart from '../components/WeekChart'
+import { CaloriesCard, CategoryCard, SleepCard } from '../components/HomeRings'
+import WeatherCard, { type Plan } from '../components/WeatherCard'
 import { TaskIcon } from '../lib/icons'
 import { eventStyleKey, isEventDone, toggleEventDone, useEventDone, useEventStyles } from '../lib/eventStyles'
 import { useAuth } from '../context/AuthContext'
 import { useTasksCtx } from '../context/TasksContext'
 import { useGoogleEvents } from '../hooks/useGoogleEvents'
 import { eventDays, eventSortKey, eventTimeLabel } from '../lib/google'
-import { toDateStr, todayStr } from '../lib/dates'
+import { addDays, todayStr } from '../lib/dates'
 import { navigate } from '../lib/router'
 
 function greeting() {
@@ -21,13 +22,6 @@ function greeting() {
   return 'Evening'
 }
 
-/** Monday..Sunday date strings of the current week. */
-function currentWeek(): string[] {
-  const now = new Date()
-  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7))
-  return Array.from({ length: 7 }, (_, i) => toDateStr(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i)))
-}
-
 // The intro (cards fading in one after another) plays once per app start. Until the tasks and Google events have arrived the
 // cards stay invisible, so nobody sees them jump in height while the data loads.
 let introPlayed = false
@@ -36,7 +30,7 @@ export default function Home() {
   const { profile, googleReady } = useAuth()
   const eventStyles = useEventStyles()
   const eventDone = useEventDone()
-  const { tasks, loading, toggleTask, openEditor, openEvent, occurrencesOn } = useTasksCtx()
+  const { loading, toggleTask, openEditor, openEvent, occurrencesOn } = useTasksCtx()
   const today = todayStr()
   const [playing] = useState(() => !introPlayed) // decided once when the page opens, so the animation is never cut short
   const [timedOut, setTimedOut] = useState(false)
@@ -47,7 +41,7 @@ export default function Home() {
 
   // Today's Google Calendar events sit next to the tasks
   const dayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())
-  const dayEnd = new Date(dayStart.getTime() + 86400000)
+  const dayEnd = new Date(dayStart.getFullYear(), dayStart.getMonth(), dayStart.getDate() + 8) // a week ahead: the weather card looks at outdoor plans
   const google = useGoogleEvents(dayStart, dayEnd)
   const todaysEvents = google.events
     .filter((e) => eventDays(e).includes(today))
@@ -61,20 +55,12 @@ export default function Home() {
     className: !playing ? '' : ready ? ' reveal in' : ' reveal pre',
     style: { '--d': `${n * 110}ms` } as CSSProperties,
   })
-  const r0 = reveal(0), r1 = reveal(1), r2 = reveal(2), r3 = reveal(3), r4 = reveal(4)
+  const r0 = reveal(0), r1 = reveal(1), r2 = reveal(2), r3 = reveal(3), r4 = reveal(4), r5 = reveal(5), r6 = reveal(6), r7 = reveal(7)
 
   const todays = occurrencesOn(today).sort((a, b) => Number(a.completed) - Number(b.completed) || (a.start_time ?? '99').localeCompare(b.start_time ?? '99'))
   const doneToday = todays.filter((t) => t.completed).length
   const todayPct = todays.length ? Math.round((doneToday / todays.length) * 100) : 0
 
-  const week = currentWeek()
-  const weekCounts = week.map((d) => occurrencesOn(d).length)
-  const weekTotal = weekCounts.reduce((a, b) => a + b, 0)
-
-  const once = tasks.filter((t) => !t.repeat) // the 'All tasks' ring counts one-time tasks only
-  const open = once.filter((t) => !t.completed)
-  const overdue = open.filter((t) => t.due_date && t.due_date < today).length
-  const allPct = once.length ? Math.round(((once.length - open.length) / once.length) * 100) : 0
 
   const name = profile?.display_name?.split(' ')[0] || 'friend'
   const remaining = todays.length - doneToday
@@ -84,6 +70,14 @@ export default function Home() {
       : remaining === 0
         ? 'Everything is done for today. Proud of you!'
         : `You have ${remaining === 1 ? 'a task' : 'some tasks'} today, you got this!`
+
+  // Everything planned in the next 7 days (tasks and Google events), for the weather warnings
+  const plans: Plan[] = []
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(today, i)
+    for (const t of occurrencesOn(d)) if (!t.completed) plans.push({ title: t.title, date: d, text: `${t.title} ${t.notes ?? ''}` })
+    for (const e of google.events) if (eventDays(e).includes(d)) plans.push({ title: e.title, date: d, text: `${e.title} ${e.notes ?? ''}` })
+  }
 
   const shown = todays.slice(0, 4)
   const shownEvents = todaysEvents.slice(0, Math.max(0, 4 - shown.length))
@@ -98,9 +92,13 @@ export default function Home() {
         </p>
       </button>
 
+      <section className={'card wx-card' + r1.className} style={r1.style}>
+        <WeatherCard plans={plans} />
+      </section>
+
       <div className="masonry">
         <div className="col">
-          <section className={"card tasks-card" + r1.className} style={r1.style}>
+          <section className={"card tasks-card" + r2.className} style={r2.style}>
             <div className="card-head">
               <h3>Today&rsquo;s tasks</h3>
               <button className="plain-icon purple" onClick={() => navigate('/calendar')} aria-label="Open calendar">
@@ -146,38 +144,19 @@ export default function Home() {
             </button>
           </section>
 
+          <SleepCard anim={r4} />
+          <CategoryCard cat="goal" anim={r5} />
+        </div>
+
+        <div className="col">
           <section className={"card ring-card" + r3.className} style={r3.style}>
             <div className="card-head">
               <h3>Today</h3>
             </div>
             <Ring pct={todayPct} color="var(--yellow)" value={`${todayPct}%`} label="done" />
           </section>
-        </div>
-
-        <div className="col">
-          <section className={"card week-card" + r2.className} style={r2.style}>
-            <div className="card-head">
-              <h3>This week</h3>
-            </div>
-            <WeekChart counts={weekCounts} />
-            <div className="week-days" aria-hidden="true">
-              {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
-                <span key={i} className={week[i] === today ? 'now' : ''}>
-                  {d}
-                </span>
-              ))}
-            </div>
-            <p className="big-num">
-              <strong style={{ color: 'var(--orange)' }}>{weekTotal}</strong> <span>tasks</span>
-            </p>
-          </section>
-
-          <section className={"card ring-card" + r4.className} style={r4.style}>
-            <div className="card-head">
-              <h3>All tasks</h3>
-            </div>
-            <Ring pct={allPct} color="var(--blue)" value={`${allPct}%`} label={overdue ? `${overdue} overdue` : 'done'} />
-          </section>
+          <CaloriesCard anim={r6} />
+          <CategoryCard cat="uni" anim={r7} />
         </div>
       </div>
     </div>

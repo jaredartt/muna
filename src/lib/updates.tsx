@@ -16,6 +16,8 @@ import {
   IconShieldFilled,
   IconTimelineEventFilled,
   IconShoppingCartFilled,
+  IconSunFilled,
+  IconStarFilled,
 } from '@tabler/icons-react'
 
 export type UpdateEntry = {
@@ -29,6 +31,8 @@ export type UpdateEntry = {
 
 // Newest first. Add one entry here for every change we make (see "Working agreements" in project_status.md).
 export const UPDATES: UpdateEntry[] = [
+  { date: '2026-10-02', time: '18:03', title: 'Sleep, Calories, Goals and Uni on Home', text: 'Home now has four new blocks. Sleep: tap it and enter when you went to sleep and woke up (suggested 22:00-06:00, weekends 00:00-08:00, but only times you save count); it shows your 7-day average. Calories: today\'s meal plan against your target. Goals and Uni: how many of those tasks are done (choose \"Counts for\" inside a task, or tell Muna). The old All tasks and This week blocks are gone.', Icon: IconStarFilled, color: 'lilac' },
+  { date: '2026-10-02', time: '17:54', title: 'Weather', text: 'New weather card on Home: now, the next 7 days, and a red warning when an outdoor plan (volleyball, park, hike...) gets rain, storm, snow, cold, heat or wind, with a better day to move it to. Muna knows the forecast too and warns you in the chat. Set your city in Profile > Weather city (Berlin until you do).', Icon: IconSunFilled, color: 'butter' },
   { date: '2026-10-02', time: '16:20', title: 'Voice on by default, and faster', text: 'Muna\'s spoken replies are now on every time you open the chat (turn them off once and she remembers). She also starts talking much sooner: the first sentence is made on its own and plays while the rest is still being prepared. Your 20 recipes and their ingredients are already loaded in Meals.', Icon: IconMicrophoneFilled, color: 'lilac' },
   { date: '2026-10-02', time: '15:27', title: 'Fixes: build, recipes, chat header', text: 'The last build failed because of one icon (fixed). Load the plan now works (a database index was the cause). The chat header stays at the top again. Muna\'s energy counts today only and starts at 0 every day.', Icon: IconShieldFilled, color: 'rose' },
   { date: '2026-10-02', time: '15:27', title: 'A better voice for Muna', text: 'When spoken replies are on, Muna now talks with Google\'s Gemini voice (soft and friendly, English and Spanish) instead of the robotic phone voice. If it cannot load, she falls back to the old one.', Icon: IconMicrophoneFilled, color: 'lilac' },

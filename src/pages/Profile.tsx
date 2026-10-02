@@ -6,6 +6,7 @@ import { navigate } from '../lib/router'
 import Avatar from '../components/Avatar'
 import IconPicker from '../components/IconPicker'
 import MyIcons from '../components/MyIcons'
+import WeatherPlaceCard from '../components/WeatherPlaceCard'
 import { AVATAR_SUGGESTIONS, TASK_COLORS } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -132,6 +133,8 @@ export default function Profile() {
           ))}
         </div>
       </section>
+
+      <WeatherPlaceCard />
 
       <section className="card">
         <h3>Muna&rsquo;s personality</h3>

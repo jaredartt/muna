@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
-import type { Member, Profile } from '../lib/types'
+import type { Member, Place, Profile } from '../lib/types'
 import { applyTheme } from '../lib/theme'
 import { GOOGLE_CALENDAR_SCOPE } from '../lib/google'
 
@@ -15,6 +15,8 @@ type AuthState = {
   inviteCode: string
   munaPersonality: string // ONE text shared by everyone in the home
   saveMunaPersonality: (text: string) => Promise<string | null>
+  weatherPlace: Place | null // the home's weather city (null = default)
+  saveWeatherPlace: (place: Place) => Promise<string | null>
   googleStatus: Record<string, boolean> // user id -> has connected Google Calendar
   googleReady: boolean // the first answer about who connected Google has arrived
   googleConnected: boolean // me
@@ -25,6 +27,12 @@ type AuthState = {
   signOut: () => Promise<void>
   updateProfile: (patch: ProfilePatch) => Promise<string | null>
   joinHousehold: (code: string) => Promise<string | null>
+}
+
+/** The saved weather place (jsonb) -> Place, or null when nothing valid is saved. */
+function asPlace(v: unknown): Place | null {
+  const o = v as Partial<Place> | null
+  return o && typeof o.name === 'string' && typeof o.lat === 'number' && typeof o.lon === 'number' ? { name: o.name, country: typeof o.country === 'string' ? o.country : undefined, lat: o.lat, lon: o.lon } : null
 }
 
 const Ctx = createContext<AuthState | null>(null)
@@ -45,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [members, setMembers] = useState<Member[]>([])
   const [inviteCode, setInviteCode] = useState('')
   const [munaPersonality, setMunaPersonality] = useState('')
+  const [weatherPlace, setWeatherPlace] = useState<Place | null>(null)
   const [savedStatus] = useState(readGoogleStatus)
   const [googleStatus, setGoogleStatus] = useState<Record<string, boolean>>(savedStatus ?? {})
   const [googleReady, setGoogleReady] = useState(Boolean(savedStatus))
@@ -73,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           applyTheme(p.theme_pref)
           void Promise.all([
             supabase.from('profiles').select('id, display_name, avatar, avatar_color, targets').eq('household_id', p.household_id),
-            supabase.from('households').select('invite_code, muna_personality').eq('id', p.household_id).maybeSingle(),
+            supabase.from('households').select('invite_code, muna_personality, weather_place').eq('id', p.household_id).maybeSingle(),
           ]).then(([{ data: ms }, { data: hh }]) => {
           // Only replace what we show when the answer really arrived. On iPhones the network is often not ready
           // for a moment after the app wakes up; an empty answer must never wipe the text on screen.
@@ -81,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (hh) {
             setInviteCode(hh.invite_code ?? '')
             if (typeof hh.muna_personality === 'string') setMunaPersonality(hh.muna_personality)
+            setWeatherPlace(asPlace(hh.weather_place))
           }
           })
           void loadGoogleStatus()
@@ -158,14 +168,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!householdId) return
     const refresh = async () => {
-      const { data } = await supabase.from('households').select('muna_personality').eq('id', householdId).maybeSingle()
+      const { data } = await supabase.from('households').select('muna_personality, weather_place').eq('id', householdId).maybeSingle()
       if (data && typeof data.muna_personality === 'string') setMunaPersonality(data.muna_personality)
+      if (data) setWeatherPlace(asPlace(data.weather_place))
     }
     const channel = supabase
       .channel('household-' + householdId)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'households', filter: `id=eq.${householdId}` }, (payload) => {
         const v = (payload.new as { muna_personality?: unknown }).muna_personality
         if (typeof v === 'string') setMunaPersonality(v)
+        setWeatherPlace(asPlace((payload.new as { weather_place?: unknown }).weather_place))
       })
       .subscribe()
     // Backup for iPhones that pause the live connection while the app is in the background.
@@ -186,6 +198,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.rpc('set_household_personality', { p_text: clean })
     if (error) return error.message
     setMunaPersonality(clean)
+    return null
+  }, [])
+
+  const saveWeatherPlace = useCallback(async (place: Place) => {
+    const { error } = await supabase.rpc('set_household_weather_place', { p_place: place })
+    if (error) return error.message
+    setWeatherPlace(place)
     return null
   }, [])
 
@@ -256,6 +275,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       members,
       munaPersonality,
       saveMunaPersonality,
+      weatherPlace,
+      saveWeatherPlace,
       inviteCode,
       googleStatus,
       googleReady,
@@ -268,7 +289,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateProfile,
       joinHousehold,
     }),
-    [loading, session, profile, members, inviteCode, munaPersonality, saveMunaPersonality, googleStatus, googleReady, googleConnected, anyGoogleConnected, signInWithGoogle, connectGoogle, disconnectGoogle, signOut, updateProfile, joinHousehold],
+    [loading, session, profile, members, inviteCode, munaPersonality, saveMunaPersonality, weatherPlace, saveWeatherPlace, googleStatus, googleReady, googleConnected, anyGoogleConnected, signInWithGoogle, connectGoogle, disconnectGoogle, signOut, updateProfile, joinHousehold],
   )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

@@ -4,6 +4,7 @@ import { startCustomIconSync } from '../lib/customIcons'
 import { startEventStyleSync } from '../lib/eventStyles'
 import { startProductSync } from '../lib/products'
 import { startMealSync } from '../lib/meals'
+import { startSleepSync } from '../lib/sleep'
 
 // Keeps the home's uploaded icons and the look of Google events loaded and live (renders nothing).
 export default function IconSync() {
@@ -15,11 +16,13 @@ export default function IconSync() {
     const stopStyles = startEventStyleSync(householdId)
     const stopProducts = startProductSync(householdId)
     const stopMeals = startMealSync(householdId)
+    const stopSleep = startSleepSync(householdId)
     return () => {
       stopIcons()
       stopStyles()
       stopProducts()
       stopMeals()
+      stopSleep()
     }
   }, [householdId])
   return null
