@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { IconX } from '@tabler/icons-react'
-import { AppIcon, allIconNames, filledIconNames, iconSearchName, useTablerLib } from '../lib/icons'
+import { AppIcon, allIconNames, iconSearchName, useTablerLib } from '../lib/icons'
 
 type Props = {
   value: string
@@ -10,15 +10,14 @@ type Props = {
   colorClass?: string
 }
 
-const MAX_RESULTS = 72
+const MAX_RESULTS = 96
 
-/** Icon grid with a search bar over all of Tabler's filled icons (https://tabler.io/icons). */
+/** Icon grid with a search bar over all of Tabler’s icons, filled and outline mixed (https://tabler.io/icons). */
 export default function IconPicker({ value, onChange, suggestions, colorClass = '' }: Props) {
   const [q, setQ] = useState('')
-  const [outline, setOutline] = useState(false) // also search Tabler's outline icons (cat, dog, … have no filled version)
   const query = q.trim().toLowerCase().replace(/\s+/g, '-')
-  const lib = useTablerLib(query.length > 0 || outline)
-  const all = useMemo(() => (lib ? (outline ? allIconNames(lib) : filledIconNames(lib)) : []), [lib, outline])
+  const lib = useTablerLib(query.length > 0)
+  const all = useMemo(() => (lib ? allIconNames(lib) : []), [lib]) // filled and outline icons, mixed together
 
   const results = useMemo(() => {
     if (!query || !all.length) return []
@@ -29,8 +28,7 @@ export default function IconPicker({ value, onChange, suggestions, colorClass = 
       if (k.startsWith(query)) starts.push(n)
       else if (k.includes(query)) contains.push(n)
     }
-    const filledFirst = (a: string, b: string) => Number(b.endsWith('Filled')) - Number(a.endsWith('Filled'))
-    return [...starts.sort(filledFirst), ...contains.sort(filledFirst)].slice(0, MAX_RESULTS)
+    return [...starts, ...contains].slice(0, MAX_RESULTS)
   }, [query, all])
 
   const shown = query ? results : suggestions
@@ -69,13 +67,9 @@ export default function IconPicker({ value, onChange, suggestions, colorClass = 
           </button>
         ))}
       </div>
-      <label className="check-row small">
-        <input type="checkbox" checked={outline} onChange={(e) => setOutline(e.target.checked)} />
-        <span>Include outline icons (for things like cat or dog)</span>
-      </label>
       {query && !lib && <p className="muted small">Loading all icons…</p>}
-      {query && lib && results.length === 0 && <p className="muted small">No filled icon called “{q}”. Try another word.</p>}
-      {!query && <p className="muted small">Type to search all {lib ? all.length : 'of Tabler’s'} {outline ? '' : 'filled '}icons.</p>}
+      {query && lib && results.length === 0 && <p className="muted small">No icon called “{q}”. Try another word.</p>}
+      {!query && <p className="muted small">Type to search all {lib ? all.length : 'of Tabler’s'} icons.</p>}
     </div>
   )
 }
