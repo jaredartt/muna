@@ -129,3 +129,10 @@ Sheets (`.sheet`) and the icon grid had no `overscroll-behavior`, so at the end 
 
 ### Home intro + no height jumps (Oct 2)
 `Home.tsx`: the hero and 4 cards stay invisible (`.reveal.pre`) until tasks, the Google status (`googleReady` in AuthContext) and today's Google events (`loaded` in `useGoogleEvents`) have arrived, or 2.5 s passed; then `.reveal.in` fades them in with 130 ms steps (hero, Today's tasks, This week, Today, All tasks). Plays once per app start (module flag `introPlayed`), not on every tab change. Reduced-motion users get no animation. Home's event rows now use the event's icon, colour and tick.
+
+### New calendar: day / week / month (Oct 2)
+- `CalendarPage.tsx` has 3 views, switched by the Day/Week/Month control in the header (default Day). It builds `DayItem`s (`src/lib/dayItems.ts`) from tasks (incl. repeat days) and Google events; the views know nothing else.
+- `DayView.tsx`: hour grid (56 px/hour, 15-min snap), sticky all-day strip (items without a time), press-and-hold (touch, 320 ms) or drag (mouse) to move, drop on an hour = gets a time (1 h long, or keeps its length), drop on the strip = all-day. Page auto-scrolls near the screen edges; `touchmove` is blocked only while dragging. Overlapping blocks sit side by side (`layoutLanes`). A repeating task keeps ONE time for all repeats (moving changes the series). A Google event moved by hand changes only that day (scope 'one'); multi-day events can be opened but not dragged.
+- `WeekView.tsx`: 7 columns, tap a day or block (no dragging yet). Month: tap a day to open it in the Day view.
+- Look is a first cosy version; Jared will hand over the Figma design later and Claude must then replicate it exactly (keep logic and styling separate, styles are in the last section of styles.css).
+- Untested on a real iPhone: the long-press drag, auto-scroll and the sticky strip.
