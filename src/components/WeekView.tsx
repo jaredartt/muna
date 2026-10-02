@@ -4,6 +4,7 @@ import { DAY_START, HOURS_SHOWN, fmtMin, layoutLanes, yOf, type DayItem } from '
 import { parseDateStr } from '../lib/dates'
 
 const WH = 40 // pixels per hour in the week view
+const WPAD = 12 // breathing space above the first hour line
 const LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
 type Props = {
@@ -38,13 +39,13 @@ export default function WeekView({ days, today, selected, itemsByDay, onPickDay 
           })}
         </div>
       </div>
-      <div className="wk-body" style={{ height: HOURS_SHOWN * WH + 12 }}>
+      <div className="wk-body" style={{ height: HOURS_SHOWN * WH + 2 * WPAD }}>
         {Array.from({ length: HOURS_SHOWN + 1 }, (_, i) => (
-          <div key={i} className="wk-hour" style={{ top: i * WH }}>
+          <div key={i} className="wk-hour" style={{ top: WPAD + i * WH }}>
             <span>{i === 0 || i === HOURS_SHOWN ? '' : String((DAY_START / 60 + i) % 24).padStart(2, '0')}</span>
           </div>
         ))}
-        <div className="wk-cols">
+        <div className="wk-cols" style={{ top: WPAD }}>
           {days.map((d, di) => (
             <div key={d} className={'wk-col' + (d === today ? ' today' : '')} onClick={() => onPickDay(d)}>
               {(itemsByDay.get(d) ?? [])

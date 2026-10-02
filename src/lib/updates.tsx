@@ -27,6 +27,8 @@ export type UpdateEntry = {
 
 // Newest first. Add one entry here for every change we make (see "Working agreements" in project_status.md).
 export const UPDATES: UpdateEntry[] = [
+  { date: '2026-10-02', time: '12:22', title: 'Drag up scrolls too', text: 'When you drag a task towards the top of the calendar, the page now scrolls up by itself, just like it already did going down.', Icon: IconCalendarFilled, color: 'mint' },
+  { date: '2026-10-02', time: '12:22', title: 'Space above 06:00', text: 'The calendar now has a little breathing room above the first hour line, just like it has below the last one.', Icon: IconCalendarFilled, color: 'sky' },
   { date: '2026-10-02', time: '12:01', title: 'Sign out is back', text: 'The weird shadow at the top of Profile was the Sign out button, pushed there by a naming mix-up with the calendar drag. It is back at the bottom, and the same fix returns the Disconnect button too.', Icon: IconShieldFilled, color: 'rose' },
   { date: '2026-10-02', time: '11:40', title: 'Day from 06:00 to 00:00', text: 'The day and week views now show 06:00 until midnight, so there is less scrolling. A task set before 06:00 sits at the very top.', Icon: IconCalendarFilled, color: 'butter' },
   { date: '2026-10-02', time: '11:38', title: 'Faster start', text: 'Muna now remembers your last tasks and events on the phone, so the home screen animation starts straight away when you open the app, and the fresh data fills in a moment later.', Icon: IconHeartFilled, color: 'mint' },

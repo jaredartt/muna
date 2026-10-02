@@ -15,6 +15,7 @@ export type DayItem = {
 }
 
 export const HOUR_H = 56 // pixels per hour in the day view
+export const TOP_PAD = 16 // breathing space above the first hour line (the grid has the same space below the last one)
 export const SNAP = 15 // minutes
 export const DAY_START = 360 // the day view and week view show 06:00 ...
 export const DAY_END = 1440 // ... until 00:00

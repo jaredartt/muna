@@ -151,3 +151,7 @@ The DayView drag pill used the CSS class `.ghost`, which `.btn.ghost` (Sign out,
 Same clash with `.chip` (Chat suggestion buttons vs the calendar's all-day pills): calendar pills are now `.ad-pill` (not `.day-chip`, which the repeat editor uses). A script check found no other class defined both before and after the calendar section of styles.css.
 
 The first (06:00) and last (00:00) hour labels are hidden in day and week views because they were half covered (the lines stay).
+
+A small gap (`TOP_PAD` = 16 px in `src/lib/dayItems.ts`, `WPAD` = 12 px in WeekView) sits above the first hour line, mirroring the gap below the last one. In DayView it offsets the hour lines, the `.slots` layer, the now-line and the drag maths (`compute` subtracts it).
+
+Drag auto-scroll up: zone is the 130 px under the sticky all-day strip (was 50 px, too small to hit because the drag pill floats above the finger); speed grows nearer the strip. Down zone is the last 150 px of the screen.

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { IconCheck, IconPlus } from '@tabler/icons-react'
 import { AppIcon } from '../lib/icons'
-import { DAY_START, HOURS_SHOWN, HOUR_H, SNAP, fmtMin, layoutLanes, yOf, type DayItem } from '../lib/dayItems'
+import { DAY_START, HOURS_SHOWN, HOUR_H, SNAP, TOP_PAD, fmtMin, layoutLanes, yOf, type DayItem } from '../lib/dayItems'
 
 type Props = {
   label: string // "Today · Thu 2 Oct"
@@ -47,7 +47,7 @@ export default function DayView({ label, isToday, items, onMove, onAdd }: Props)
     if (!grid) return
     const d = new Date()
     const target = isToday ? Math.max(DAY_START / 60, d.getHours() + d.getMinutes() / 60 - 1.5) : DAY_START / 60
-    const top = grid.getBoundingClientRect().top + window.scrollY + (target - DAY_START / 60) * HOUR_H - (stickyRef.current?.offsetHeight ?? 120) - 8
+    const top = grid.getBoundingClientRect().top + window.scrollY + (target > DAY_START / 60 ? TOP_PAD : 0) + (target - DAY_START / 60) * HOUR_H - (stickyRef.current?.offsetHeight ?? 120) - 8
     window.scrollTo({ top: Math.max(0, top) })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -66,7 +66,7 @@ export default function DayView({ label, isToday, items, onMove, onAdd }: Props)
     const gridRect = gridRef.current?.getBoundingClientRect()
     if (allRect && y <= allRect.bottom) return { item, x, y, zone: 'all', min: 0 }
     const dur = item.allDay ? 60 : Math.max(SNAP, item.end - item.start)
-    const top = gridRect ? y - grab - gridRect.top : 0
+    const top = gridRect ? y - grab - gridRect.top - TOP_PAD : 0
     const min = Math.min(1440 - dur, Math.max(DAY_START, snap((top / HOUR_H) * 60 + DAY_START)))
     return { item, x, y, zone: 'grid', min }
   }
@@ -144,7 +144,7 @@ export default function DayView({ label, isToday, items, onMove, onAdd }: Props)
         const stickyBottom = stickyRef.current?.getBoundingClientRect().bottom ?? 0
         let dy = 0
         if (p.y > window.innerHeight - 150) dy = Math.min(14, (p.y - (window.innerHeight - 150)) / 6 + 3)
-        else if (p.y > stickyBottom + 2 && p.y < stickyBottom + 50) dy = -6
+        else if (p.y > stickyBottom + 2 && p.y < stickyBottom + 130) dy = -Math.min(14, (130 - (p.y - stickyBottom)) / 6 + 3)
         if (dy) {
           window.scrollBy(0, dy)
           const d = compute(p.item, p.x, p.y, p.grab)
@@ -200,13 +200,13 @@ export default function DayView({ label, isToday, items, onMove, onAdd }: Props)
         </div>
       </div>
 
-      <div className="hours" ref={gridRef} style={{ height: HOURS_SHOWN * HOUR_H + 16 }}>
+      <div className="hours" ref={gridRef} style={{ height: HOURS_SHOWN * HOUR_H + 2 * TOP_PAD }}>
         {Array.from({ length: HOURS_SHOWN + 1 }, (_, i) => (
-          <div key={i} className={'hour' + (i === HOURS_SHOWN ? ' last' : '')} style={{ top: i * HOUR_H }}>
+          <div key={i} className={'hour' + (i === HOURS_SHOWN ? ' last' : '')} style={{ top: TOP_PAD + i * HOUR_H }}>
             <span className="hour-label">{i === 0 || i === HOURS_SHOWN ? '' : `${String((DAY_START / 60 + i) % 24).padStart(2, '0')}:00`}</span>
           </div>
         ))}
-        <div className="slots">
+        <div className="slots" style={{ top: TOP_PAD }}>
           {timed.map((it) => {
             const l = lanes.get(it.key) ?? { lane: 0, lanes: 1 }
             const vs = Math.max(it.start, DAY_START)
@@ -241,7 +241,7 @@ export default function DayView({ label, isToday, items, onMove, onAdd }: Props)
           )}
         </div>
         {isToday && nowMin >= DAY_START && (
-          <div className="now-line" style={{ top: yOf(nowMin, HOUR_H) }}>
+          <div className="now-line" style={{ top: TOP_PAD + yOf(nowMin, HOUR_H) }}>
             <i />
           </div>
         )}
