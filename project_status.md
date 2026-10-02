@@ -116,3 +116,13 @@ Login (Google) · Home (dashboard like Figma) · Calendar (month grid, dots per 
 
 ### Personality blank bug - real cause (Oct 2)
 In `Profile.tsx` the sync effect read `lastSaved.current` INSIDE the `setPersonality(fn)` updater; React runs that later, after `lastSaved.current` was already overwritten, so the textarea stayed empty (only sometimes, which is why it came back). Fix: copy the old value into a local `before` first. The DB text was never lost. Also: Gemini 503 retry (`geminiFetch`, muna-chat v15).
+
+### Google events = same features as tasks (Oct 2, rule from Jared: always keep them equal)
+- Tables `event_styles(household_id, event_key, icon, color)` and `event_done(household_id, event_key, day)` (migrations 8 and 9, RLS by household, realtime). `event_key` = `<owner id>:<Google event id>`; for repeating events the `_<date>` ending is cut off so all repeats share one look (`eventStyleKey` in `src/lib/eventStyles.ts`).
+- `EventRow`: tap icon to edit, tick to mark done (per day). `EventSheet`: colour, icon (same unified IconPicker), notes (= Google description, sent only when changed), reset-to-default button. `IconSync` starts the live sync.
+- google-calendar v9: `list` returns `notes`, `update_event` accepts `notes`.
+- RULE: whenever Muna tasks get a new feature, Google events should get it too.
+- Not yet: Muna (the chat) cannot change an event's icon/colour/tick.
+
+### Scroll leaking out of sheets (Oct 2)
+Sheets (`.sheet`) and the icon grid had no `overscroll-behavior`, so at the end of their scroll the page behind scrolled (iOS). Fix in `styles.css`: `overscroll-behavior: contain` on `.sheet` and `.icon-grid`, and `html/body:has(.sheet-backdrop){overflow:hidden}`. Untested on a real iPhone.

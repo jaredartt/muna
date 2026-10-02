@@ -15,6 +15,7 @@ export type GoogleEvent = {
   start: string // YYYY-MM-DD (all day) or ISO date-time
   end: string
   link: string | null
+  notes?: string
 }
 
 export type ListResult = { events: GoogleEvent[]; reconnect: string[]; apiDisabled: boolean; failed: boolean }
@@ -33,7 +34,7 @@ export async function fetchGoogleEvents(from: Date, to: Date): Promise<ListResul
 }
 
 export type EventScope = 'all' | 'one' // repeating events: every repeat, or only this day
-export type EventEdit = { scope: EventScope; title: string; all_day: boolean; date: string; end_date: string; start_time: string; end_time: string }
+export type EventEdit = { scope: EventScope; title: string; notes?: string; all_day: boolean; date: string; end_date: string; start_time: string; end_time: string }
 export type EventResult = { ok: boolean; message?: string; reconnect?: boolean }
 
 /** Change a Google event on either person's calendar (the server checks both are in the same home). */

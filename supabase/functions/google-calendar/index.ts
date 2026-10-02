@@ -270,6 +270,7 @@ Deno.serve(async (req) => {
               start: ev.start?.dateTime ?? ev.start?.date,
               end: ev.end?.dateTime ?? ev.end?.date,
               link: ev.htmlLink ?? null,
+              notes: String(ev.description ?? '').replace(/\n*\(Added from Muna\)\s*$/, '').slice(0, 2000),
             })
           }
         } catch (e) {
@@ -422,6 +423,7 @@ Deno.serve(async (req) => {
           if (!t) return json({ ok: false, error: 'bad_title', message: 'The title cannot be empty.' })
           patch.summary = t
         }
+        if (typeof body.notes === 'string') patch.description = body.notes.slice(0, 2000)
         if (allDay) {
           patch.start = { date, dateTime: null, timeZone: null }
           patch.end = { date: addDaysStr(endDate, 1), dateTime: null, timeZone: null }

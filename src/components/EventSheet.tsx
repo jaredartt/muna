@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { IconExternalLink, IconTrashFilled, IconX } from '@tabler/icons-react'
 import { useAuth } from '../context/AuthContext'
 import { addDays, pad, toDateStr } from '../lib/dates'
+import IconPicker from './IconPicker'
+import { TASK_COLORS, TASK_ICONS } from '../lib/icons'
+import { eventStyleKey, saveEventStyle, useEventStyles } from '../lib/eventStyles'
 import { deleteGoogleEvent, updateGoogleEvent, type EventScope, type GoogleEvent } from '../lib/google'
 
 const hm = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`
@@ -14,7 +17,14 @@ export default function EventSheet({ event, onDone, onClose }: Props) {
   const owner = members.find((m) => m.id === event.owner_id)
   const who = event.owner_id === session?.user.id ? 'your' : `${owner?.display_name || event.owner_name || 'your partner'}'s`
 
+  const saved = useEventStyles()[eventStyleKey(event)]
+  const [color, setColor] = useState<string | null>(saved?.color ?? null)
+  const [icon, setIcon] = useState<string | null>(saved?.icon ?? null)
+  const shownColor = color ?? owner?.avatar_color ?? 'sky'
+  const looks = (color ?? '') !== (saved?.color ?? '') || (icon ?? '') !== (saved?.icon ?? '')
+
   const [title, setTitle] = useState(event.title === '(no title)' ? '' : event.title)
+  const [notes, setNotes] = useState(event.notes ?? '')
   const [allDay, setAllDay] = useState(event.all_day)
   const [date, setDate] = useState(event.all_day ? event.start : toDateStr(new Date(event.start)))
   const [endDate, setEndDate] = useState(event.all_day ? addDays(event.end, -1) : toDateStr(new Date(new Date(event.end).getTime() - 1)))
@@ -39,9 +49,17 @@ export default function EventSheet({ event, onDone, onClose }: Props) {
     if (!title.trim() || !date || busy) return
     setBusy(true)
     setError('')
+    if (looks) {
+      const e = await saveEventStyle(event, { icon, color })
+      if (e) {
+        setBusy(false)
+        return setError(e)
+      }
+    }
     const r = await updateGoogleEvent(event, {
       scope: event.recurring ? scope : 'one',
       title: title.trim(),
+      notes: notes !== (event.notes ?? '') ? notes : undefined,
       all_day: allDay,
       date,
       end_date: endDate < date ? date : endDate,
@@ -92,6 +110,11 @@ export default function EventSheet({ event, onDone, onClose }: Props) {
           <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={300} placeholder="Event title" />
         </label>
 
+        <label className="field">
+          <span>Notes</span>
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={2000} placeholder="Anything to remember…" />
+        </label>
+
         <label className="check-row">
           <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
           <span>All day</span>
@@ -125,11 +148,31 @@ export default function EventSheet({ event, onDone, onClose }: Props) {
           </div>
         )}
 
+        <div className="field">
+          <span>Colour</span>
+          <div className="swatches">
+            {TASK_COLORS.map((c) => (
+              <button type="button" key={c} className={`swatch c-${c}` + (shownColor === c ? ' selected' : '')} onClick={() => setColor(c)} aria-label={c} />
+            ))}
+          </div>
+        </div>
+
+        <div className="field">
+          <span>Icon</span>
+          <IconPicker value={icon ?? 'IconCalendarEventFilled'} onChange={setIcon} suggestions={Object.keys(TASK_ICONS)} colorClass={`c-${shownColor}`} />
+          {(icon || color) && (
+            <button type="button" className="btn soft" onClick={() => { setIcon(null); setColor(null) }}>
+              Back to the default look
+            </button>
+          )}
+        </div>
+
         {event.link && (
           <a className="soft-link" href={event.link} target="_blank" rel="noreferrer">
             <IconExternalLink size={16} /> Open in Google Calendar
           </a>
         )}
+        {event.recurring && <p className="muted small">The icon and colour apply to all repeats.</p>}
         {series && <p className="muted small">The days follow the repeat, so only the title and time change. Pick “Only this day” to move a single day.</p>}
         {error && <p className="notice">{error}</p>}
 
