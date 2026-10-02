@@ -5,13 +5,13 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 ## Most connected files (change these carefully)
 
 - `src/context/AuthContext.tsx`: used by 13 files
-- `src/lib/google.ts`: used by 8 files
-- `src/lib/types.ts`: used by 8 files
-- `src/lib/icons.tsx`: used by 7 files
+- `src/lib/icons.tsx`: used by 11 files
+- `src/lib/google.ts`: used by 9 files
+- `src/lib/types.ts`: used by 9 files
+- `src/lib/dates.ts`: used by 7 files
+- `src/lib/supabase.ts`: used by 7 files
 - `src/lib/router.ts`: used by 6 files
-- `src/lib/dates.ts`: used by 6 files
-- `src/lib/supabase.ts`: used by 6 files
-- `src/components/Muna.tsx`: used by 4 files
+- `src/lib/eventStyles.ts`: used by 5 files
 
 ## Source files (src/)
 
@@ -27,21 +27,24 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: BottomNav
   - imports: lib/router.ts
   - used by: App.tsx
-- `src/components/EventRow.tsx` (23 lines) - A Google Calendar event shown next to Muna tasks. Tap it to edit (works for both people's events).
-  - exports: EventRow
-  - imports: context/AuthContext.tsx, lib/google.ts
+- `src/components/DayView.tsx` (257 lines)
+  - exports: DayView
+  - imports: lib/dayItems.ts, lib/icons.tsx
   - used by: pages/CalendarPage.tsx
-- `src/components/EventSheet.tsx` (164 lines) - Edit or delete a Google Calendar event (yours or your partner's) without leaving Muna.
+- `src/components/EventRow.tsx` (35 lines) - A Google Calendar event shown next to Muna tasks. Tap it to edit (works for both people's events).
+  - exports: EventRow
+  - imports: context/AuthContext.tsx, lib/eventStyles.ts, lib/google.ts, lib/icons.tsx
+- `src/components/EventSheet.tsx` (207 lines)
   - exports: EventSheet
-  - imports: context/AuthContext.tsx, lib/dates.ts, lib/google.ts
+  - imports: components/IconPicker.tsx, context/AuthContext.tsx, lib/dates.ts, lib/eventStyles.ts, lib/google.ts, lib/icons.tsx
   - used by: context/TasksContext.tsx
 - `src/components/IconPicker.tsx` (108 lines)
   - exports: IconPicker
   - imports: lib/customIcons.ts, lib/icons.tsx, lib/phosphor.ts
-  - used by: components/TaskSheet.tsx, pages/Profile.tsx
-- `src/components/IconSync.tsx` (14 lines) - Keeps the home's uploaded icons loaded and live (renders nothing).
+  - used by: components/EventSheet.tsx, components/TaskSheet.tsx, pages/Profile.tsx
+- `src/components/IconSync.tsx` (20 lines) - Keeps the home's uploaded icons and the look of Google events loaded and live (renders nothing).
   - exports: IconSync
-  - imports: context/AuthContext.tsx, lib/customIcons.ts
+  - imports: context/AuthContext.tsx, lib/customIcons.ts, lib/eventStyles.ts
   - used by: App.tsx
 - `src/components/Muna.tsx` (52 lines) - Muna, the mascot: a soft amber "toast" face with a little speech bubble, drawn
   - exports: MunaMood, Muna
@@ -60,7 +63,6 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/components/TaskRow.tsx` (41 lines)
   - exports: TaskRow
   - imports: lib/dates.ts, lib/icons.tsx, lib/types.ts
-  - used by: pages/CalendarPage.tsx
 - `src/components/TaskSheet.tsx` (133 lines)
   - exports: TaskSheet
   - imports: components/IconPicker.tsx, components/RepeatEditor.tsx, context/AuthContext.tsx, lib/icons.tsx, lib/recurrence.ts, lib/types.ts
@@ -68,7 +70,11 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/components/WeekChart.tsx` (26 lines) - Smooth area chart of tasks per weekday (like the Sleep card in the Figma design).
   - exports: WeekChart
   - used by: pages/Home.tsx
-- `src/context/AuthContext.tsx` (260 lines)
+- `src/components/WeekView.tsx` (77 lines)
+  - exports: WeekView
+  - imports: lib/dates.ts, lib/dayItems.ts, lib/icons.tsx
+  - used by: pages/CalendarPage.tsx
+- `src/context/AuthContext.tsx` (280 lines)
   - exports: AuthProvider, useAuth
   - imports: lib/google.ts, lib/supabase.ts, lib/theme.ts, lib/types.ts
   - used by: App.tsx, components/EventRow.tsx, components/EventSheet.tsx, components/IconSync.tsx, components/MyIcons.tsx, components/TaskSheet.tsx, hooks/useGoogleEvents.ts, hooks/useTasks.ts, pages/CalendarPage.tsx, pages/Chat.tsx, pages/Home.tsx, pages/Login.tsx, pages/Profile.tsx
@@ -76,11 +82,11 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: TasksProvider, useTasksCtx
   - imports: components/EventSheet.tsx, components/TaskSheet.tsx, hooks/useTasks.ts, lib/events.ts, lib/google.ts, lib/types.ts
   - used by: App.tsx, pages/CalendarPage.tsx, pages/Home.tsx
-- `src/hooks/useGoogleEvents.ts` (49 lines)
+- `src/hooks/useGoogleEvents.ts` (69 lines) - What we saw last time is shown at once (as "old"), then refreshed from Google.
   - exports: useGoogleEvents
   - imports: context/AuthContext.tsx, lib/events.ts, lib/google.ts
   - used by: pages/CalendarPage.tsx, pages/Home.tsx
-- `src/hooks/useTasks.ts` (157 lines)
+- `src/hooks/useTasks.ts` (177 lines)
   - exports: useTasks
   - imports: context/AuthContext.tsx, lib/dates.ts, lib/events.ts, lib/google.ts, lib/recurrence.ts, lib/supabase.ts, lib/types.ts
   - used by: context/TasksContext.tsx
@@ -90,21 +96,28 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - used by: components/IconPicker.tsx, components/IconSync.tsx, components/MyIcons.tsx, lib/icons.tsx
 - `src/lib/dates.ts` (50 lines)
   - exports: pad, toDateStr, todayStr, parseDateStr, addDays, formatTime, formatDateNice, WEEKDAYS_MON_FIRST…
-  - used by: components/EventSheet.tsx, components/TaskRow.tsx, hooks/useTasks.ts, lib/google.ts, pages/CalendarPage.tsx, pages/Home.tsx
+  - used by: components/EventSheet.tsx, components/TaskRow.tsx, components/WeekView.tsx, hooks/useTasks.ts, lib/google.ts, pages/CalendarPage.tsx, pages/Home.tsx
+- `src/lib/dayItems.ts` (59 lines) - What the day and week views draw: one small description per task or Google event, so the views know nothing about either.
+  - exports: DayItem, HOUR_H, SNAP, DAY_START, DAY_END, HOURS_SHOWN, yOf, pad2…
+  - used by: components/DayView.tsx, components/WeekView.tsx, pages/CalendarPage.tsx
 - `src/lib/draft.ts` (20 lines) - Remembers the message you were typing to Muna (but have not sent), on THIS phone only.
   - exports: loadDraft, saveDraft
   - used by: pages/Chat.tsx
+- `src/lib/eventStyles.ts` (157 lines) - The icon and colour you picked for Google Calendar events (table event_styles). Same idea as customIcons.ts:
+  - exports: EventStyle, eventStyleKey, useEventStyles, eventDay, useEventDone, isEventDone, toggleEventDone, startEventStyleSync…
+  - imports: lib/google.ts, lib/supabase.ts
+  - used by: components/EventRow.tsx, components/EventSheet.tsx, components/IconSync.tsx, pages/CalendarPage.tsx, pages/Home.tsx
 - `src/lib/events.ts` (5 lines) - Lets the chat tell the task list "something changed, please reload".
   - exports: TASKS_CHANGED, notifyTasksChanged
-  - used by: context/TasksContext.tsx, hooks/useGoogleEvents.ts, hooks/useTasks.ts, pages/Chat.tsx
-- `src/lib/google.ts` (118 lines) - Only what Muna needs: read and write events on your own calendar.
+  - used by: context/TasksContext.tsx, hooks/useGoogleEvents.ts, hooks/useTasks.ts, pages/CalendarPage.tsx, pages/Chat.tsx
+- `src/lib/google.ts` (119 lines) - Only what Muna needs: read and write events on your own calendar.
   - exports: GOOGLE_CALENDAR_SCOPE, GoogleEvent, ListResult, fetchGoogleEvents, EventScope, EventEdit, EventResult, updateGoogleEvent…
   - imports: lib/dates.ts, lib/supabase.ts
-  - used by: components/EventRow.tsx, components/EventSheet.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useGoogleEvents.ts, hooks/useTasks.ts, pages/CalendarPage.tsx, pages/Home.tsx
+  - used by: components/EventRow.tsx, components/EventSheet.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useGoogleEvents.ts, hooks/useTasks.ts, lib/eventStyles.ts, pages/CalendarPage.tsx, pages/Home.tsx
 - `src/lib/icons.tsx` (157 lines)
   - exports: IconCmp, TASK_ICONS, AVATAR_SUGGESTIONS, TASK_COLORS, loadTablerLib, useTablerLib, filledIconNames, allIconNames…
   - imports: lib/customIcons.ts, lib/phosphor.ts, lib/svgIcons.tsx
-  - used by: components/Avatar.tsx, components/IconPicker.tsx, components/MyIcons.tsx, components/TaskRow.tsx, components/TaskSheet.tsx, pages/Home.tsx, pages/Profile.tsx
+  - used by: components/Avatar.tsx, components/DayView.tsx, components/EventRow.tsx, components/EventSheet.tsx, components/IconPicker.tsx, components/MyIcons.tsx, components/TaskRow.tsx, components/TaskSheet.tsx, components/WeekView.tsx, pages/Home.tsx, pages/Profile.tsx
 - `src/lib/phosphor.ts` (44 lines) - Phosphor "Fill" icons (MIT licence, https://phosphoricons.com). They live in the repo as one JSON file
   - exports: PhosphorData, loadPhosphor, phosphorAvailable, usePhosphor
   - imports: lib/svgIcons.tsx
@@ -120,7 +133,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - used by: App.tsx, components/BottomNav.tsx, pages/CalendarPage.tsx, pages/Home.tsx, pages/Profile.tsx, pages/Updates.tsx
 - `src/lib/supabase.ts` (11 lines) - These two values are PUBLIC by design (they are safe to be in the browser).
   - exports: supabase
-  - used by: context/AuthContext.tsx, hooks/useTasks.ts, lib/customIcons.ts, lib/google.ts, pages/Chat.tsx, pages/Profile.tsx
+  - used by: context/AuthContext.tsx, hooks/useTasks.ts, lib/customIcons.ts, lib/eventStyles.ts, lib/google.ts, pages/Chat.tsx, pages/Profile.tsx
 - `src/lib/svgIcons.tsx` (130 lines) - A tiny, safe description of an SVG icon: a list of shapes. We never store or show raw SVG text,
   - exports: SvgNode, SvgIconData, MAX_ICON_BYTES, parseSvgIcon, SvgGlyph
   - used by: components/MyIcons.tsx, lib/customIcons.ts, lib/icons.tsx, lib/phosphor.ts
@@ -131,29 +144,29 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/lib/types.ts` (47 lines)
   - exports: ThemePref, Profile, Member, Task, Occurrence, TaskDraft, ChatMessage
   - imports: lib/recurrence.ts
-  - used by: components/TaskRow.tsx, components/TaskSheet.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useTasks.ts, lib/theme.ts, pages/Chat.tsx, pages/Profile.tsx
-- `src/lib/updates.tsx` (55 lines)
+  - used by: components/TaskRow.tsx, components/TaskSheet.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useTasks.ts, lib/theme.ts, pages/CalendarPage.tsx, pages/Chat.tsx, pages/Profile.tsx
+- `src/lib/updates.tsx` (62 lines)
   - exports: UpdateEntry, UPDATES
   - used by: pages/Updates.tsx
 - `src/main.tsx` (13 lines)
   - imports: App.tsx, lib/theme.ts
-- `src/pages/CalendarPage.tsx` (137 lines)
+- `src/pages/CalendarPage.tsx` (260 lines)
   - exports: CalendarPage
-  - imports: components/EventRow.tsx, components/TaskRow.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useGoogleEvents.ts, lib/dates.ts, lib/google.ts, lib/router.ts
+  - imports: components/DayView.tsx, components/WeekView.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useGoogleEvents.ts, lib/dates.ts, lib/dayItems.ts, lib/eventStyles.ts, lib/events.ts, lib/google.ts, lib/router.ts, lib/types.ts
   - used by: App.tsx
 - `src/pages/Chat.tsx` (292 lines)
   - exports: Chat
   - imports: components/Muna.tsx, context/AuthContext.tsx, lib/draft.ts, lib/events.ts, lib/recorder.ts, lib/supabase.ts, lib/types.ts
   - used by: App.tsx
-- `src/pages/Home.tsx` (157 lines)
+- `src/pages/Home.tsx` (185 lines)
   - exports: Home
-  - imports: components/Muna.tsx, components/Ring.tsx, components/WeekChart.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useGoogleEvents.ts, lib/dates.ts, lib/google.ts, lib/icons.tsx, lib/router.ts
+  - imports: components/Muna.tsx, components/Ring.tsx, components/WeekChart.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useGoogleEvents.ts, lib/dates.ts, lib/eventStyles.ts, lib/google.ts, lib/icons.tsx, lib/router.ts
   - used by: App.tsx
 - `src/pages/Login.tsx` (30 lines) - Supabase sends sign-in problems back in the URL (e.g. an account that is not on the guest list).
   - exports: Login
   - imports: components/Muna.tsx, context/AuthContext.tsx
   - used by: App.tsx
-- `src/pages/Profile.tsx` (230 lines)
+- `src/pages/Profile.tsx` (233 lines)
   - exports: Profile
   - imports: components/Avatar.tsx, components/IconPicker.tsx, components/MyIcons.tsx, context/AuthContext.tsx, lib/icons.tsx, lib/router.ts, lib/supabase.ts, lib/types.ts
   - used by: App.tsx
@@ -174,9 +187,11 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - table `google_connections` (first in 20261001000003_google_calendar.sql)
 - table `task_completions` (first in 20261002000006_repeating_tasks.sql)
 - table `custom_icons` (first in 20261002000007_custom_icons.sql)
+- table `event_styles` (first in 20261002000008_event_styles.sql)
+- table `event_done` (first in 20261002000009_event_done.sql)
 
 ## Server functions (supabase/functions)
 
-- `google-calendar` (449 lines) - actions: delete_event, list, sync, update_event
-- `muna-chat` (678 lines) - Muna tools: create_tasks, update_task, set_tasks_completed, delete_tasks, list_tasks, list_calendar_events, update_calendar_event, delete_calendar_event
+- `google-calendar` (451 lines) - actions: delete_event, list, sync, update_event
+- `muna-chat` (690 lines) - Muna tools: create_tasks, update_task, set_tasks_completed, delete_tasks, list_tasks, list_calendar_events, update_calendar_event, delete_calendar_event
 - `recurrence.ts` exists in THREE places (src/lib, google-calendar, muna-chat): keep the copies in sync.

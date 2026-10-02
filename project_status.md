@@ -142,3 +142,6 @@ Home intro started late because it waited for 3 network answers (tasks, who conn
 
 ### Calendar hours 06:00-00:00 (Oct 2)
 `DAY_START = 360`, `DAY_END = 1440` in `src/lib/dayItems.ts` (change there to show other hours). Day and week grids show 18 hours; items before 06:00 are drawn at the top edge, dragging cannot drop before 06:00.
+
+### Visual project graph (Oct 2)
+`python3 tools/make_graph.py` builds `PROJECT_GRAPH.html` (open in a browser): every file, imports, database tables, database functions and the 2 server functions, with search, drag, zoom, tap-to-see details. Template: `tools/graph_template.html`. Regenerate after big changes (with `tools/make_map.py` for the text map).
