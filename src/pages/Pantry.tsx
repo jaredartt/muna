@@ -65,7 +65,7 @@ function Item({ householdId, row, product, log }: { householdId: string; row: Pa
           <span>
             Open pack: <strong>{pct}% left</strong>
           </span>
-          <input type="range" min={0} max={100} step={5} value={pct} onChange={(e) => slide(Number(e.target.value))} aria-label={`How much is left of the open ${product.name}`} />
+          <input type="range" min={0} max={100} step={5} value={pct} style={{ '--p': pct / 100 } as React.CSSProperties} onChange={(e) => slide(Number(e.target.value))} aria-label={`How much is left of the open ${product.name}`} />
           <span className="pt-quick">
             <button type="button" className="ml-toggle" onClick={() => slide(Math.max(0, pct - 25))}>
               Used 25%

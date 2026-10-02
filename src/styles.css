@@ -518,7 +518,15 @@ input[type='checkbox']:focus-visible { outline: none; box-shadow: 0 0 0 4px colo
 .pt-stepper { display: inline-flex; align-items: center; gap: 2px; background: var(--bg); border-radius: 14px; }
 .pt-packs { min-width: 70px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
 .pt-slide { display: flex; flex-direction: column; gap: 6px; }
-.pt-slide input[type='range'] { width: 100%; accent-color: var(--coral); min-height: 32px; }
+/* The slider is drawn by hand: the phone's own one draws the fill and the knob out of step and cannot reach 100%.
+   --p is 0 to 1; the fill ends at the middle of the knob (knob 28px wide, so its middle travels from 14px to 100% - 14px). */
+.pt-slide input[type='range'] { -webkit-appearance: none; appearance: none; width: 100%; height: 32px; margin: 0; background: transparent; --p: 0; }
+.pt-slide input[type='range']:focus { outline: none; }
+.pt-slide input[type='range']::-webkit-slider-runnable-track { height: 10px; border-radius: 999px; background: linear-gradient(var(--coral), var(--coral)) 0 0 / calc(14px + (100% - 28px) * var(--p)) 100% no-repeat, rgba(142, 143, 158, 0.25); }
+.pt-slide input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 28px; height: 28px; margin-top: -9px; border-radius: 50%; background: #fff; border: 3px solid var(--coral); box-sizing: border-box; box-shadow: 0 2px 6px rgba(120, 90, 40, 0.25); }
+.pt-slide input[type='range']::-moz-range-track { height: 10px; border-radius: 999px; background: rgba(142, 143, 158, 0.25); }
+.pt-slide input[type='range']::-moz-range-progress { height: 10px; border-radius: 999px; background: var(--coral); }
+.pt-slide input[type='range']::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 3px solid var(--coral); box-sizing: border-box; box-shadow: 0 2px 6px rgba(120, 90, 40, 0.25); }
 .pt-quick { display: flex; gap: 6px; flex-wrap: wrap; }
 .pt-guess { margin: 0; }
 
