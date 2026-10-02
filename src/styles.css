@@ -566,3 +566,10 @@ input.sl-suggest { color: var(--muted); }
 /* ---------- Listen again button under Muna's messages ---------- */
 .listen-btn { display: flex; align-items: center; gap: 8px; margin-top: 10px; min-height: 42px; padding: 0 18px 0 14px; border-radius: 21px; background: var(--peach-bg); color: var(--peach-fg); font-size: 15px; font-weight: 600; }
 .listen-btn.on { background: var(--coral); color: #fff; }
+
+/* Buy again / one-time purchase switch in the product sheet */
+.rebuy { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rebuy-opt { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; padding: 12px 14px; border-radius: 18px; background: var(--bg); color: var(--muted); border: 2px solid transparent; }
+.rebuy-opt strong { font-weight: 700; font-size: 15px; }
+.rebuy-opt small { font-size: 12px; line-height: 1.3; }
+.rebuy-opt.on { background: var(--peach-bg); color: var(--peach-fg); border-color: var(--coral); }

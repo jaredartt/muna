@@ -29,12 +29,14 @@ export type Product = {
   edc: Edc
   edc_note: string | null
   notes: string | null
+  /** true = buy it again when it runs out (Muna lists it); false = a one-time purchase, never listed as "running low". */
+  rebuy: boolean
   created_at: string
 }
 export type ProductDraft = Omit<Product, 'id' | 'household_id' | 'created_at'>
 
 const COLS =
-  'id, household_id, barcode, name, brand, pack_size, unit, kcal_100, protein_100, carbs_100, sugar_100, fat_100, sat_fat_100, fibre_100, salt_100, gluten, lactose, image_url, source, notes, edc, edc_note, created_at'
+  'id, household_id, barcode, name, brand, pack_size, unit, kcal_100, protein_100, carbs_100, sugar_100, fat_100, sat_fat_100, fibre_100, salt_100, gluten, lactose, image_url, source, notes, edc, edc_note, rebuy, created_at'
 const CACHE_KEY = 'muna.products.v1'
 
 let items: Product[] = []
@@ -162,18 +164,18 @@ export function unbarcoded(hint = ''): { product: Product; likely: boolean }[] {
     .map(({ product, hits }) => ({ product, likely: hits > 0 }))
 }
 
-export async function saveProduct(householdId: string, draft: ProductDraft, id?: string): Promise<string | null> {
+export async function saveProduct(householdId: string, draft: ProductDraft, id?: string): Promise<{ error: string | null; product: Product | null }> {
   const row = { ...draft, name: draft.name.trim().slice(0, 160), updated_at: new Date().toISOString() }
   const q = id
     ? supabase.from('products').update(row).eq('id', id).select(COLS).single()
     : supabase.from('products').insert({ ...row, household_id: householdId }).select(COLS).single()
   const { data, error } = await q
   if (error || !data) {
-    if (error?.code === '23505') return 'This barcode is already in your list.'
-    return 'Could not save the product. Check your internet and try again.'
+    if (error?.code === '23505') return { error: 'This barcode is already in your list.', product: null }
+    return { error: 'Could not save the product. Check your internet and try again.', product: null }
   }
   upsertLocal(data as Product)
-  return null
+  return { error: null, product: data as Product }
 }
 
 export async function deleteProduct(id: string): Promise<boolean> {
@@ -206,6 +208,7 @@ export const emptyDraft = (barcode: string | null = null): ProductDraft => ({
   notes: null,
   edc: 'unknown',
   edc_note: null,
+  rebuy: true,
 })
 
 type OffNutriments = Record<string, unknown>
@@ -377,6 +380,7 @@ export async function lookupBarcode(code: string): Promise<LookupResult> {
       notes: null,
       edc: e.edc,
       edc_note: e.note,
+      rebuy: true,
     }
     return { draft }
   } catch {

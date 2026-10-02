@@ -1,14 +1,16 @@
 import { useRef, useState } from 'react'
-import { IconBarcode, IconTrashFilled, IconX } from '@tabler/icons-react'
+import { IconBarcode, IconRepeat, IconShoppingBag, IconTrashFilled, IconX } from '@tabler/icons-react'
 import BarcodeScanner from './BarcodeScanner'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
-import { deleteProduct, saveProduct, type Edc, type ProductDraft, type Tri } from '../lib/products'
+import { deleteProduct, saveProduct, type Edc, type Product, type ProductDraft, type Tri } from '../lib/products'
 
 type Props = {
   householdId: string
   initial: ProductDraft
   id?: string
   note?: string
+  /** Called once with the saved product (new or edited). */
+  onSaved?: (p: Product) => void
   onClose: () => void
 }
 
@@ -43,7 +45,7 @@ const toNum = (s: string): number | null | 'bad' => {
 }
 
 /** Check and fix the details of one product, then save it to the home's list. */
-export default function ProductSheet({ householdId, initial, id, note, onClose }: Props) {
+export default function ProductSheet({ householdId, initial, id, note, onSaved, onClose }: Props) {
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
   const [name, setName] = useState(initial.name)
@@ -56,6 +58,7 @@ export default function ProductSheet({ householdId, initial, id, note, onClose }
   const [lactose, setLactose] = useState<Tri>(initial.lactose)
   const [edc, setEdc] = useState<Edc>(initial.edc)
   const [notes, setNotes] = useState(initial.notes ?? '')
+  const [rebuy, setRebuy] = useState(initial.rebuy !== false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [scanning, setScanning] = useState(false)
@@ -92,11 +95,13 @@ export default function ProductSheet({ householdId, initial, id, note, onClose }
       edc,
       edc_note: initial.edc_note,
       notes: notes.trim() || null,
+      rebuy,
     }
     setBusy(true)
-    const err = await saveProduct(householdId, draft, id)
+    const res = await saveProduct(householdId, draft, id)
     setBusy(false)
-    if (err) return setError(err)
+    if (res.error || !res.product) return setError(res.error ?? 'Could not save the product.')
+    onSaved?.(res.product)
     onClose()
   }
 
@@ -152,6 +157,22 @@ export default function ProductSheet({ householdId, initial, id, note, onClose }
               <option value="ml">millilitres (ml)</option>
             </select>
           </label>
+        </div>
+
+        <div className="field">
+          <span>When it runs out</span>
+          <div className="rebuy" role="group" aria-label="Buy again or one-time purchase">
+            <button type="button" className={'rebuy-opt' + (rebuy ? ' on' : '')} aria-pressed={rebuy} onClick={() => setRebuy(true)}>
+              <IconRepeat size={22} />
+              <strong>Buy again</strong>
+              <small>Muna adds it to your shopping list</small>
+            </button>
+            <button type="button" className={'rebuy-opt' + (!rebuy ? ' on' : '')} aria-pressed={!rebuy} onClick={() => setRebuy(false)}>
+              <IconShoppingBag size={22} />
+              <strong>One-time purchase</strong>
+              <small>Muna will not list it again</small>
+            </button>
+          </div>
         </div>
 
         <h3 className="prod-h">Nutrition per 100 {unit}</h3>

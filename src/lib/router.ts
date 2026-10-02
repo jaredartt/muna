@@ -5,7 +5,7 @@ export type Route = '/' | '/calendar' | '/chat' | '/profile' | '/updates' | '/pr
 const ROUTES: Route[] = ['/', '/calendar', '/chat', '/profile', '/updates', '/products', '/meals', '/pantry']
 
 function current(): Route {
-  const h = window.location.hash.replace(/^#/, '') || '/'
+  const h = window.location.hash.replace(/^#/, '').split('?')[0] || '/'
   return (ROUTES.includes(h as Route) ? h : '/') as Route
 }
 
@@ -18,6 +18,7 @@ export function useRoute(): Route {
   return useSyncExternalStore(subscribe, current, () => '/' as Route)
 }
 
-export function navigate(to: Route) {
+/** `to` may carry a flag, e.g. '/products?house' (add what you scan to the pantry too). */
+export function navigate(to: Route | `${Route}?${string}`) {
   window.location.hash = to
 }

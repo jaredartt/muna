@@ -9,9 +9,9 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/lib/types.ts`: used by 14 files
 - `src/lib/icons.tsx`: used by 11 files
 - `src/lib/supabase.ts`: used by 11 files
+- `src/lib/meals.ts`: used by 10 files
 - `src/lib/products.ts`: used by 10 files
 - `src/lib/router.ts`: used by 9 files
-- `src/lib/google.ts`: used by 9 files
 
 ## Source files (src/)
 
@@ -64,7 +64,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: ProductPicker
   - imports: hooks/useSheetScrollGuard.ts, lib/products.ts
   - used by: pages/Products.tsx
-- `src/components/ProductSheet.tsx` (224 lines)
+- `src/components/ProductSheet.tsx` (245 lines)
   - exports: ProductSheet
   - imports: components/BarcodeScanner.tsx, hooks/useSheetScrollGuard.ts, lib/products.ts
   - used by: pages/Products.tsx
@@ -172,12 +172,12 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/lib/meals.ts` (404 lines) - ---------- Types ----------
   - exports: Slot, SLOTS, Ingredient, Recipe, RecipeDraft, PlanRow, PantryRow, PantryLog…
   - imports: lib/dates.ts, lib/liveTable.ts, lib/products.ts, lib/supabase.ts, lib/types.ts
-  - used by: components/HomeRings.tsx, components/IconSync.tsx, components/RecipePicker.tsx, components/RecipeSheet.tsx, components/ShoppingSync.tsx, components/TaskSheet.tsx, hooks/useShopping.ts, pages/Meals.tsx, pages/Pantry.tsx
+  - used by: components/HomeRings.tsx, components/IconSync.tsx, components/RecipePicker.tsx, components/RecipeSheet.tsx, components/ShoppingSync.tsx, components/TaskSheet.tsx, hooks/useShopping.ts, pages/Meals.tsx, pages/Pantry.tsx, pages/Products.tsx
 - `src/lib/phosphor.ts` (44 lines) - Phosphor "Fill" icons (MIT licence, https://phosphoricons.com). They live in the repo as one JSON file
   - exports: PhosphorData, loadPhosphor, phosphorAvailable, usePhosphor
   - imports: lib/svgIcons.tsx
   - used by: components/IconPicker.tsx, lib/icons.tsx
-- `src/lib/products.ts` (385 lines) - The home's product list (table "products"). Kept in memory, cached on the phone, live through realtime.
+- `src/lib/products.ts` (389 lines) - The home's product list (table "products"). Kept in memory, cached on the phone, live through realtime.
   - exports: Tri, Edc, Product, ProductDraft, useProducts, productsReady, allProducts, startProductSync…
   - imports: lib/supabase.ts
   - used by: components/HomeRings.tsx, components/IconSync.tsx, components/ProductPicker.tsx, components/ProductSheet.tsx, components/RecipePicker.tsx, components/RecipeSheet.tsx, lib/meals.ts, pages/Meals.tsx, pages/Pantry.tsx, pages/Products.tsx
@@ -187,7 +187,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/lib/recurrence.ts` (168 lines) - Repeating tasks. This file has NO imports on purpose: an identical copy lives next to the server code
   - exports: Repeat, addDaysStr, matchesPattern, isExcluded, occursOn, occurrencesBetween, firstOccurrence, lastOccurrence…
   - used by: components/RepeatEditor.tsx, components/TaskSheet.tsx, hooks/useTasks.ts, lib/types.ts
-- `src/lib/router.ts` (23 lines) - Tiny hash router (#/calendar). Hash routes work on GitHub Pages with no server config.
+- `src/lib/router.ts` (24 lines) - Tiny hash router (#/calendar). Hash routes work on GitHub Pages with no server config.
   - exports: Route, useRoute, navigate
   - used by: App.tsx, components/BottomNav.tsx, components/HomeRings.tsx, pages/CalendarPage.tsx, pages/Home.tsx, pages/Pantry.tsx, pages/Products.tsx, pages/Profile.tsx, pages/Updates.tsx
 - `src/lib/sleep.ts` (55 lines)
@@ -237,13 +237,13 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: Meals
   - imports: components/RecipePicker.tsx, components/RecipeSheet.tsx, context/AuthContext.tsx, hooks/useShopping.ts, lib/dates.ts, lib/meals.ts, lib/products.ts
   - used by: App.tsx
-- `src/pages/Pantry.tsx` (187 lines)
+- `src/pages/Pantry.tsx` (191 lines)
   - exports: Pantry
   - imports: context/AuthContext.tsx, lib/dates.ts, lib/meals.ts, lib/products.ts, lib/router.ts
   - used by: App.tsx
-- `src/pages/Products.tsx` (157 lines)
+- `src/pages/Products.tsx` (191 lines)
   - exports: Products
-  - imports: components/BarcodeScanner.tsx, components/ProductPicker.tsx, components/ProductSheet.tsx, context/AuthContext.tsx, lib/products.ts, lib/router.ts
+  - imports: components/BarcodeScanner.tsx, components/ProductPicker.tsx, components/ProductSheet.tsx, context/AuthContext.tsx, lib/meals.ts, lib/products.ts, lib/router.ts
   - used by: App.tsx
 - `src/pages/Profile.tsx` (247 lines)
   - exports: Profile

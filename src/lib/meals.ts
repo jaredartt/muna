@@ -348,7 +348,7 @@ export async function syncShopping(a: SyncArgs): Promise<string> {
     for (const row of pantryStore.all()) {
       if (!isLow(row) || need.has(row.product_id)) continue
       const p = prods.get(row.product_id)
-      if (!p) continue
+      if (!p || p.rebuy === false) continue // a one-time purchase is never bought again by itself
       const guess = predictRunOut(row, logStore.all())
       need.set(row.product_id, { product_id: row.product_id, name: p.name, unit: p.unit, grams: 0, first: guess?.date ?? addDays(today, 2) })
     }

@@ -22,7 +22,8 @@ function Item({ householdId, row, product, log }: { householdId: string; row: Pa
   useEffect(() => setPct(row.pct_left), [row.pct_left, row.packs])
   useEffect(() => () => window.clearTimeout(timer.current), [])
   const out = row.packs <= 0
-  const low = !out && isLow(row)
+  const again = product.rebuy !== false // false = one-time purchase: Muna never lists it again
+  const low = again && !out && isLow(row)
   const guess = out ? null : predictRunOut(row, log)
 
   // the slider is saved a moment after you stop moving it, so one use is remembered once
@@ -38,7 +39,7 @@ function Item({ householdId, row, product, log }: { householdId: string; row: Pa
         <span className="prod-thumb">{product.image_url ? <img src={product.image_url} alt="" loading="lazy" /> : <IconBarcode size={22} />}</span>
         <span className="prod-body">
           <strong>{product.name}</strong>
-          <span className="muted small">{[product.brand, product.pack_size].filter(Boolean).join(' · ') || 'No brand'}</span>
+          <span className="muted small">{[product.brand, product.pack_size, again ? '' : 'One-time purchase'].filter(Boolean).join(' · ') || 'No brand'}</span>
         </span>
         <button className="icon-btn" onClick={() => void removeFromPantry(row.product_id)} aria-label={`Remove ${product.name} from the house`}>
           <IconTrashFilled size={18} />
@@ -55,7 +56,8 @@ function Item({ householdId, row, product, log }: { householdId: string; row: Pa
             <IconPlus size={18} />
           </button>
         </div>
-        {out && <span className="ml-chip miss">Muna will list it</span>}
+        {out && again && <span className="ml-chip miss">Muna will list it</span>}
+        {out && !again && <span className="ml-chip ok">Finished</span>}
         {low && <span className="ml-chip miss">Running low</span>}
         {!out && !low && <span className="ml-chip ok">Enough</span>}
       </div>
@@ -79,7 +81,9 @@ function Item({ householdId, row, product, log }: { householdId: string; row: Pa
 
       <p className="muted small pt-guess">
         {out
-          ? 'None left. It goes on your next shopping list.'
+          ? again
+            ? 'None left. It goes on your next shopping list.'
+            : 'None left. It was a one-time purchase, so Muna will not list it again. You can take it out of the house.'
           : guess
             ? `About ${guess.daysLeft < 1 ? 'less than a day' : Math.round(guess.daysLeft) + ' day' + (Math.round(guess.daysLeft) === 1 ? '' : 's')} left (runs out around ${formatDateNice(guess.date)}), from how fast you use it.`
             : 'Move the slider when you use some. After a few times Muna learns when it runs out.'}
@@ -107,12 +111,12 @@ export default function Pantry() {
       .filter(({ row, product }) => {
         if (filter === 'food' && !isFood(product)) return false
         if (filter === 'other' && isFood(product)) return false
-        if (filter === 'low' && !(row.packs <= 0 || isLow(row))) return false
+        if (filter === 'low' && !(product.rebuy !== false && (row.packs <= 0 || isLow(row)))) return false
         return !t || `${product.name} ${product.brand ?? ''}`.toLowerCase().includes(t)
       })
       .sort((a, b) => remainingPacks(a.row) - remainingPacks(b.row) || a.product.name.localeCompare(b.product.name))
   }, [pantry, pmap, filter, q])
-  const lowCount = pantry.filter((r) => pmap.has(r.product_id) && (r.packs <= 0 || isLow(r))).length
+  const lowCount = pantry.filter((r) => pmap.get(r.product_id)?.rebuy !== false && pmap.has(r.product_id) && (r.packs <= 0 || isLow(r))).length
 
   const found = useMemo(() => {
     const t = adding.trim().toLowerCase()
@@ -153,8 +157,8 @@ export default function Pantry() {
             <IconPlus size={18} />
           </button>
         ))}
-        <button className="prod-manual" onClick={() => navigate('/products')}>
-          Not in the list? Scan it in Products
+        <button className="prod-manual" onClick={() => navigate('/products?house')}>
+          Not in the list? Scan it or add a new product
         </button>
       </section>
 

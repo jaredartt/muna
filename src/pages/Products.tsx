@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react'
 import { IconBarcode, IconChevronLeft, IconSearch } from '@tabler/icons-react'
 import { navigate } from '../lib/router'
+import { addToPantry, buyProduct, usePantry } from '../lib/meals'
 import { useAuth } from '../context/AuthContext'
 import BarcodeScanner from '../components/BarcodeScanner'
 import ProductSheet from '../components/ProductSheet'
 import ProductPicker from '../components/ProductPicker'
 import { emptyDraft, findByBarcode, lookupBarcode, unbarcoded, useProducts, type Edc, type LookupResult, type Product, type ProductDraft, type Tri } from '../lib/products'
 
-type Open = { initial: ProductDraft; id?: string; note?: string }
+type Open = { initial: ProductDraft; id?: string; note?: string; toHouse?: boolean }
 type Pick = { code: string; lookup: LookupResult | null }
 
 const triLabel = (v: Tri, word: string) =>
@@ -23,6 +24,9 @@ function macroLine(p: Product) {
 export default function Products() {
   const { profile } = useAuth()
   const products = useProducts()
+  const pantry = usePantry()
+  // opened from the Pantry ('#/products?house'): whatever you scan or add here also goes into the house
+  const toHouse = /[?&]house\b/.test(window.location.hash)
   const [scanning, setScanning] = useState(false)
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
@@ -44,6 +48,13 @@ export default function Products() {
     if (clean.length < 6) return setMsg('A barcode has at least 6 digits.')
     const have = findByBarcode(clean)
     if (have) {
+      if (toHouse && profile) {
+        const there = pantry.some((r) => r.product_id === have.id && r.packs > 0)
+        if (there) await buyProduct(profile.household_id, have.id, 1)
+        else await addToPantry(profile.household_id, have.id)
+        setCode('')
+        return setMsg(there ? `One more pack of "${have.name}" is in the house.` : `"${have.name}" is in the house now.`)
+      }
       setMsg('You already have this one. Here it is.')
       return setOpen({ initial: have, id: have.id })
     }
@@ -63,7 +74,7 @@ export default function Products() {
   function openNew(r: LookupResult) {
     if (r.draft) {
       setCode('')
-      setOpen({ initial: r.draft, note: r.error })
+      setOpen({ initial: r.draft, note: r.error, toHouse })
     } else setMsg(r.error ?? 'Something went wrong.')
   }
 
@@ -79,8 +90,12 @@ export default function Products() {
       </header>
 
       <section className="card">
-        <h3>Add a product</h3>
-        <p className="muted small">Scan the barcode on the pack. Muna looks up the calories, protein, carbs and fat for you, and you check them before saving.</p>
+        <h3>{toHouse ? 'Add something to the house' : 'Add a product'}</h3>
+        <p className="muted small">
+          {toHouse
+            ? 'Scan the barcode on the pack. Muna finds it in your list, or helps you add it, and puts it in your pantry.'
+            : 'Scan the barcode on the pack. Muna looks up the calories, protein, carbs and fat for you, and you check them before saving.'}
+        </p>
         <button className="btn primary" onClick={() => setScanning(true)}>
           <IconBarcode size={20} /> Scan a barcode
         </button>
@@ -96,10 +111,15 @@ export default function Products() {
             {busy ? 'Looking…' : 'Find'}
           </button>
         </form>
-        <button className="prod-manual" onClick={() => setOpen({ initial: emptyDraft() })}>
+        <button className="prod-manual" onClick={() => setOpen({ initial: emptyDraft(), toHouse })}>
           No barcode? Add it by hand
         </button>
         {msg && <p className="prod-note" role="status">{msg}</p>}
+        {toHouse && (
+          <button className="btn soft" onClick={() => navigate('/pantry')}>
+            Back to the Pantry
+          </button>
+        )}
       </section>
 
       <section className="card">
@@ -142,7 +162,8 @@ export default function Products() {
           onClose={() => setPick(null)}
           onLearned={(p) => {
             setPick(null)
-            setMsg(`Saved. "${p.name}" now has barcode ${pick.code}. Scanning it finds it straight away.`)
+            if (toHouse) void addToPantry(profile.household_id, p.id)
+            setMsg(`Saved. "${p.name}" now has barcode ${pick.code}. Scanning it finds it straight away.${toHouse ? ' It is in the house now.' : ''}`)
           }}
           onNew={() => {
             const r = pick.lookup
@@ -151,7 +172,20 @@ export default function Products() {
           }}
         />
       )}
-      {open && <ProductSheet householdId={profile.household_id} initial={open.initial} id={open.id} note={open.note} onClose={() => setOpen(null)} />}
+      {open && (
+        <ProductSheet
+          householdId={profile.household_id}
+          initial={open.initial}
+          id={open.id}
+          note={open.note}
+          onSaved={(p) => {
+            if (!open.toHouse || open.id) return // only a NEW product goes into the house
+            void addToPantry(profile.household_id, p.id)
+            setMsg(`"${p.name}" is saved and in the house now.`)
+          }}
+          onClose={() => setOpen(null)}
+        />
+      )}
     </div>
   )
 }

@@ -230,3 +230,7 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 - `findByBarcode` matches UPC-A (12 digits) and EAN-13 (13) as the same code. Online lookups now time out after 8 s.
 - `ProductSheet` has a camera button next to the Barcode field, to teach a barcode to an existing product by scanning it there.
 - No database change (no migration). Products that already have a barcode are not offered in the picker (one barcode per product).
+
+## One-time vs buy again, and "add to the house" (Oct 2)
+- `products.rebuy boolean not null default true` (migration 18, already applied). `false` = one-time purchase: `syncShopping` (`meals.ts`) never lists it as "running low", and the Pantry shows "Finished" / "One-time purchase" instead of "Muna will list it" and leaves it out of the "running low" count and filter. Recipe needs are not affected. Set with the two-button switch "When it runs out" in `ProductSheet`. Old cached rows without the field count as buy again (`rebuy !== false`).
+- Pantry's "Not in the list? Scan it or add a new product" opens `#/products?house` (the router ignores the `?...` part for the route). In that mode Products also puts into the pantry: a NEW product when it is saved, a product whose barcode you teach in the picker, and a scanned product already in the list (one pack, or one more pack if it is already at home). `saveProduct` now returns `{ error, product }`; `ProductSheet` has an `onSaved` callback.
