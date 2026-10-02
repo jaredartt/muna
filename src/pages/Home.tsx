@@ -1,9 +1,11 @@
-import { IconCalendarEventFilled, IconCalendarFilled } from '@tabler/icons-react'
+import { useEffect, useState, type CSSProperties } from 'react'
+import { IconCalendarFilled } from '@tabler/icons-react'
 import { IconCheck, IconPlus } from '@tabler/icons-react'
 import Muna from '../components/Muna'
 import Ring from '../components/Ring'
 import WeekChart from '../components/WeekChart'
 import { TaskIcon } from '../lib/icons'
+import { eventStyleKey, isEventDone, toggleEventDone, useEventDone, useEventStyles } from '../lib/eventStyles'
 import { useAuth } from '../context/AuthContext'
 import { useTasksCtx } from '../context/TasksContext'
 import { useGoogleEvents } from '../hooks/useGoogleEvents'
@@ -26,10 +28,22 @@ function currentWeek(): string[] {
   return Array.from({ length: 7 }, (_, i) => toDateStr(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i)))
 }
 
+// The intro (cards fading in one after another) plays once per app start. Until the tasks and Google events have arrived the
+// cards stay invisible, so nobody sees them jump in height while the data loads.
+let introPlayed = false
+
 export default function Home() {
-  const { profile } = useAuth()
+  const { profile, googleReady } = useAuth()
+  const eventStyles = useEventStyles()
+  const eventDone = useEventDone()
   const { tasks, loading, toggleTask, openEditor, openEvent, occurrencesOn } = useTasksCtx()
   const today = todayStr()
+  const [playing] = useState(() => !introPlayed) // decided once when the page opens, so the animation is never cut short
+  const [timedOut, setTimedOut] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setTimedOut(true), 2500) // never wait forever on a slow network
+    return () => clearTimeout(t)
+  }, [])
 
   // Today's Google Calendar events sit next to the tasks
   const dayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())
@@ -38,6 +52,16 @@ export default function Home() {
   const todaysEvents = google.events
     .filter((e) => eventDays(e).includes(today))
     .sort((a, b) => eventSortKey(a).localeCompare(eventSortKey(b)))
+
+  const ready = !playing || timedOut || (!loading && googleReady && google.loaded)
+  useEffect(() => {
+    if (ready) introPlayed = true
+  }, [ready])
+  const reveal = (n: number) => ({
+    className: !playing ? '' : ready ? ' reveal in' : ' reveal pre',
+    style: { '--d': `${n * 130}ms` } as CSSProperties,
+  })
+  const r0 = reveal(0), r1 = reveal(1), r2 = reveal(2), r3 = reveal(3), r4 = reveal(4)
 
   const todays = occurrencesOn(today).sort((a, b) => Number(a.completed) - Number(b.completed) || (a.start_time ?? '99').localeCompare(b.start_time ?? '99'))
   const doneToday = todays.filter((t) => t.completed).length
@@ -67,7 +91,7 @@ export default function Home() {
 
   return (
     <div className="page home">
-      <button className="hero" onClick={() => navigate('/chat')} aria-label="Chat with Muna">
+      <button className={"hero" + r0.className} style={r0.style} onClick={() => navigate('/chat')} aria-label="Chat with Muna">
         <Muna size={94} />
         <p className="hero-text">
           {greeting()}, {name}! {message}
@@ -76,7 +100,7 @@ export default function Home() {
 
       <div className="masonry">
         <div className="col">
-          <section className="card tasks-card">
+          <section className={"card tasks-card" + r1.className} style={r1.style}>
             <div className="card-head">
               <h3>Today&rsquo;s tasks</h3>
               <button className="plain-icon purple" onClick={() => navigate('/calendar')} aria-label="Open calendar">
@@ -96,17 +120,21 @@ export default function Home() {
                   </button>
                 </div>
               ))}
-              {shownEvents.map((e) => (
-                <div key={e.id} className="mini-task">
-                  <span className="tile c-sky" aria-hidden="true">
-                    <IconCalendarEventFilled size={18} />
-                  </span>
-                  <button className="mini-title" onClick={() => openEvent(e)}>
-                    {e.title}
-                    <small className="muted"> {eventTimeLabel(e)}</small>
-                  </button>
-                </div>
-              ))}
+              {shownEvents.map((e) => {
+                const st = eventStyles[eventStyleKey(e)]
+                const isDone = isEventDone(eventDone, e)
+                return (
+                  <div key={e.id} className={'mini-task' + (isDone ? ' done' : '')}>
+                    <button className={`tile c-${st?.color ?? 'sky'}`} onClick={() => void toggleEventDone(e)} aria-label={isDone ? 'Mark as not done' : 'Mark as done'}>
+                      {isDone ? <IconCheck size={18} stroke={2.6} /> : <TaskIcon name={st?.icon || 'IconCalendarEventFilled'} size={18} />}
+                    </button>
+                    <button className="mini-title" onClick={() => openEvent(e)}>
+                      {e.title}
+                      <small className="muted"> {eventTimeLabel(e)}</small>
+                    </button>
+                  </div>
+                )
+              })}
               {hiddenCount > 0 && (
                 <button className="more" onClick={() => navigate('/calendar')} aria-label="See all tasks">
                   &hellip;
@@ -118,7 +146,7 @@ export default function Home() {
             </button>
           </section>
 
-          <section className="card ring-card">
+          <section className={"card ring-card" + r3.className} style={r3.style}>
             <div className="card-head">
               <h3>Today</h3>
             </div>
@@ -127,7 +155,7 @@ export default function Home() {
         </div>
 
         <div className="col">
-          <section className="card week-card">
+          <section className={"card week-card" + r2.className} style={r2.style}>
             <div className="card-head">
               <h3>This week</h3>
             </div>
@@ -144,7 +172,7 @@ export default function Home() {
             </p>
           </section>
 
-          <section className="card ring-card">
+          <section className={"card ring-card" + r4.className} style={r4.style}>
             <div className="card-head">
               <h3>All tasks</h3>
             </div>

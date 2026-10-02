@@ -8,31 +8,31 @@ const TTL = 60_000
 
 /** Google Calendar events (everyone in the home who connected Google) between two moments. */
 export function useGoogleEvents(from: Date, to: Date) {
-  const { anyGoogleConnected } = useAuth()
+  const { anyGoogleConnected, googleReady } = useAuth()
   const key = `${from.getTime()}-${to.getTime()}`
   const [state, setState] = useState(() => {
     const hit = cache.get(key)
-    return { events: hit?.events ?? [], reconnect: hit?.reconnect ?? [], apiDisabled: hit?.apiDisabled ?? false, loading: false }
+    return { events: hit?.events ?? [], reconnect: hit?.reconnect ?? [], apiDisabled: hit?.apiDisabled ?? false, loading: false, loaded: Boolean(hit) }
   })
 
   const load = useCallback(
     async (force = false) => {
       if (!anyGoogleConnected) {
-        setState({ events: [], reconnect: [], apiDisabled: false, loading: false })
+        setState({ events: [], reconnect: [], apiDisabled: false, loading: false, loaded: googleReady })
         return
       }
       const hit = cache.get(key)
       if (!force && hit && Date.now() - hit.at < TTL) {
-        setState({ events: hit.events, reconnect: hit.reconnect, apiDisabled: hit.apiDisabled, loading: false })
+        setState({ events: hit.events, reconnect: hit.reconnect, apiDisabled: hit.apiDisabled, loading: false, loaded: true })
         return
       }
       setState((s) => ({ ...s, loading: true }))
       const r = await fetchGoogleEvents(from, to)
       if (!r.failed) cache.set(key, { at: Date.now(), events: r.events, reconnect: r.reconnect, apiDisabled: r.apiDisabled })
-      setState({ events: r.failed ? [] : r.events, reconnect: r.reconnect, apiDisabled: r.apiDisabled, loading: false })
+      setState({ events: r.failed ? [] : r.events, reconnect: r.reconnect, apiDisabled: r.apiDisabled, loading: false, loaded: true })
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [anyGoogleConnected, key],
+    [anyGoogleConnected, googleReady, key],
   )
 
   useEffect(() => {

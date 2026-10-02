@@ -16,6 +16,7 @@ type AuthState = {
   munaPersonality: string // ONE text shared by everyone in the home
   saveMunaPersonality: (text: string) => Promise<string | null>
   googleStatus: Record<string, boolean> // user id -> has connected Google Calendar
+  googleReady: boolean // the first answer about who connected Google has arrived
   googleConnected: boolean // me
   anyGoogleConnected: boolean // me or my partner
   signInWithGoogle: () => Promise<void>
@@ -37,12 +38,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [inviteCode, setInviteCode] = useState('')
   const [munaPersonality, setMunaPersonality] = useState('')
   const [googleStatus, setGoogleStatus] = useState<Record<string, boolean>>({})
+  const [googleReady, setGoogleReady] = useState(false)
 
   const loadGoogleStatus = useCallback(async () => {
     const { data } = await supabase.rpc('get_google_status')
     const map: Record<string, boolean> = {}
     for (const row of (data ?? []) as { user_id: string; connected: boolean }[]) map[row.user_id] = row.connected
     setGoogleStatus(map)
+    setGoogleReady(true)
   }, [])
 
   const loadProfile = useCallback(
@@ -126,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setMembers([])
         setMunaPersonality('')
         setGoogleStatus({})
+        setGoogleReady(false)
       }
     })
     return () => {
@@ -239,6 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       saveMunaPersonality,
       inviteCode,
       googleStatus,
+      googleReady,
       googleConnected,
       anyGoogleConnected,
       signInWithGoogle,
@@ -248,7 +253,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateProfile,
       joinHousehold,
     }),
-    [loading, session, profile, members, inviteCode, munaPersonality, saveMunaPersonality, googleStatus, googleConnected, anyGoogleConnected, signInWithGoogle, connectGoogle, disconnectGoogle, signOut, updateProfile, joinHousehold],
+    [loading, session, profile, members, inviteCode, munaPersonality, saveMunaPersonality, googleStatus, googleReady, googleConnected, anyGoogleConnected, signInWithGoogle, connectGoogle, disconnectGoogle, signOut, updateProfile, joinHousehold],
   )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

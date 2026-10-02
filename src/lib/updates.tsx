@@ -27,6 +27,7 @@ export type UpdateEntry = {
 
 // Newest first. Add one entry here for every change we make (see "Working agreements" in project_status.md).
 export const UPDATES: UpdateEntry[] = [
+  { date: '2026-10-02', time: '11:27', title: 'Smooth start', text: 'The home cards no longer jump in height while things load. They wait a moment, then softly appear one after another, left to right and top to bottom. Google events on Home now show their own icon, colour and tick too.', Icon: IconHeartFilled, color: 'peach' },
   { date: '2026-10-02', time: '11:22', title: 'Sheets no longer scroll the page behind', text: 'When you scrolled to the end of a task or event sheet, the screen behind it started moving too. Now only the sheet scrolls.', Icon: IconShieldFilled, color: 'sky' },
   { date: '2026-10-02', time: '11:21', title: 'Google events like tasks', text: 'Google Calendar events can now have their own icon and colour, a tick for done, and notes, just like Muna tasks. You both see the changes live, and a repeating event keeps one look on every repeat.', Icon: IconPaletteFilled, color: 'butter' },
   { date: '2026-10-02', time: '11:10', title: 'Personality fixed for good', text: 'Found the real mistake: the personality box could stay empty when you opened Profile. It now always shows the saved text. Muna also retries when Google is busy.', Icon: IconShieldFilled, color: 'rose' },

@@ -126,3 +126,6 @@ In `Profile.tsx` the sync effect read `lastSaved.current` INSIDE the `setPersona
 
 ### Scroll leaking out of sheets (Oct 2)
 Sheets (`.sheet`) and the icon grid had no `overscroll-behavior`, so at the end of their scroll the page behind scrolled (iOS). Fix in `styles.css`: `overscroll-behavior: contain` on `.sheet` and `.icon-grid`, and `html/body:has(.sheet-backdrop){overflow:hidden}`. Untested on a real iPhone.
+
+### Home intro + no height jumps (Oct 2)
+`Home.tsx`: the hero and 4 cards stay invisible (`.reveal.pre`) until tasks, the Google status (`googleReady` in AuthContext) and today's Google events (`loaded` in `useGoogleEvents`) have arrived, or 2.5 s passed; then `.reveal.in` fades them in with 130 ms steps (hero, Today's tasks, This week, Today, All tasks). Plays once per app start (module flag `introPlayed`), not on every tab change. Reduced-motion users get no animation. Home's event rows now use the event's icon, colour and tick.
