@@ -4,11 +4,13 @@ import { navigate } from '../lib/router'
 import { useAuth } from '../context/AuthContext'
 import BarcodeScanner from '../components/BarcodeScanner'
 import ProductSheet from '../components/ProductSheet'
-import { emptyDraft, findByBarcode, lookupBarcode, useProducts, type Product, type ProductDraft } from '../lib/products'
+import { emptyDraft, findByBarcode, lookupBarcode, useProducts, type Edc, type Product, type ProductDraft, type Tri } from '../lib/products'
 
 type Open = { initial: ProductDraft; id?: string; note?: string }
 
-const triLabel = (v: string, word: string) => (v === 'free' ? `${word}-free` : v === 'contains' ? `Contains ${word.toLowerCase()}` : '')
+const triLabel = (v: Tri, word: string) =>
+  v === 'free' ? `${word}-free` : v === 'contains' ? `Contains ${word.toLowerCase()}` : v === 'traces' ? `May contain ${word.toLowerCase()}` : `${word}: not checked`
+const edcLabel = (v: Edc) => (v === 'possible' ? 'Possible hormone disruptor' : v === 'none' ? 'No known disruptors' : 'Hormones: not checked')
 const val = (v: number | null) => (v == null ? '–' : String(v))
 
 function macroLine(p: Product) {
@@ -100,12 +102,11 @@ export default function Products() {
               <strong>{p.name}</strong>
               <span className="muted small">{[p.brand, p.pack_size].filter(Boolean).join(' · ') || 'No brand'}</span>
               <span className="prod-macros">{macroLine(p)}</span>
-              {(p.gluten !== 'unknown' || p.lactose !== 'unknown') && (
-                <span className="prod-badges">
-                  {p.gluten !== 'unknown' && <span className={'prod-badge ' + p.gluten}>{triLabel(p.gluten, 'Gluten')}</span>}
-                  {p.lactose !== 'unknown' && <span className={'prod-badge ' + p.lactose}>{triLabel(p.lactose, 'Lactose')}</span>}
-                </span>
-              )}
+              <span className="prod-badges">
+                <span className={'prod-badge ' + p.gluten}>{triLabel(p.gluten, 'Gluten')}</span>
+                <span className={'prod-badge ' + p.lactose}>{triLabel(p.lactose, 'Lactose')}</span>
+                <span className={'prod-badge edc-' + p.edc}>{edcLabel(p.edc)}</span>
+              </span>
             </span>
           </button>
         ))}

@@ -171,3 +171,10 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 - `src/pages/Products.tsx` (route `/products`, link card on Profile) and `src/components/ProductSheet.tsx` (check and edit).
 - Gluten/lactose come from Open Food Facts tags (allergens and labels). 'unknown' is common: always check the pack.
 - NOT verified on a real iPhone: camera permission inside the installed PWA and ZXing decoding. Next: pantry (stock per product), food log, restock prediction (see the nutrition document).
+
+### Product tags: gluten, lactose, hormone disruptors (Oct 2)
+- Migration `20261002000011_products_tags.sql` (applied): gluten/lactose now also allow 'traces'; new columns `edc` ('none' / 'possible' / 'unknown') and `edc_note`; source also 'openbeautyfacts'; existing products named "laktosefrei" were set to lactose = free.
+- Bug fixed: Open Food Facts keeps the `en:milk` allergen tag on lactose-free products, so they showed "Contains lactose". Now a lactose-free label or a "laktosefrei / lactose free / ohne Laktose" name wins.
+- `lookupBarcode` in `src/lib/products.ts` now reads the ingredient list too: cereal words -> gluten contains, milk words -> lactose contains, no hit with a list present -> free (the person still checks the pack). Traces tags -> 'traces'. Falls back to Open Beauty Facts when Open Food Facts does not know the barcode.
+- `edcCheck(text, additives)` compares ingredients with a short suspect list (parabens, triclosan, oxybenzone, octinoxate, homosalate, 4-MBC, BHA E320, BHT E321, siloxane D4, phthalates, bisphenols, PFAS, resorcinol, lilial) and treats "parfum" as possible (secret mix). It cannot see packaging (BPA/phthalates) or pesticide residues. Never claim "safe", only "no known suspects".
+- The product list always shows the three tags; grey means not checked.

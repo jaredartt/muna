@@ -27,6 +27,7 @@ export type UpdateEntry = {
 
 // Newest first. Add one entry here for every change we make (see "Working agreements" in project_status.md).
 export const UPDATES: UpdateEntry[] = [
+  { date: '2026-10-02', time: '14:40', title: 'Gluten, lactose and hormone tags', text: 'Every product now shows three tags: gluten, lactose and hormone disruptors (for your thyroid). Fixed: a lactose-free product was tagged Contains lactose. Muna now also reads the ingredient list, and finds perfume, soap and deodorant on Open Beauty Facts.', Icon: IconShieldFilled, color: 'lilac' },
   { date: '2026-10-02', time: '14:07', title: 'Products and barcode scanner', text: 'New Products list (Profile > Products). Scan a barcode and Muna fetches calories, protein, carbs and fat from Open Food Facts. You check the numbers and save. This is the base for recipes and the pantry.', Icon: IconPizzaFilled, color: 'mint' },
   { date: '2026-10-02', time: '14:04', title: 'Scrolling really fixed', text: 'The real cause of the stuck scrolling on trackpad and iPhone was one line of page styling. It is fixed now.', Icon: IconShieldFilled, color: 'mint' },
   { date: '2026-10-02', time: '13:57', title: 'Scrolling fixed', text: 'Scrolling could get stuck on the iPhone. I removed the page lock that I added for the task sheets and replaced it with a gentler one that only blocks the page behind an open sheet.', Icon: IconShieldFilled, color: 'peach' },

@@ -436,6 +436,10 @@ input[type='checkbox']:focus-visible { outline: none; box-shadow: 0 0 0 4px colo
 .prod-badge { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
 .prod-badge.free { background: var(--mint-bg); color: var(--mint-fg); }
 .prod-badge.contains { background: var(--rose-bg); color: var(--rose-fg); }
+.prod-badge.traces { background: var(--butter-bg); color: var(--butter-fg); }
+.prod-badge.unknown, .prod-badge.edc-unknown { background: var(--sand, rgba(120,100,90,.12)); color: var(--muted, #8a7f78); font-weight: 600; }
+.prod-badge.edc-none { background: var(--mint-bg); color: var(--mint-fg); }
+.prod-badge.edc-possible { background: var(--lilac-bg); color: var(--lilac-fg); }
 .prod-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .prod-h { font-size: 16px; margin-top: 4px; }
 .scan-backdrop { position: fixed; inset: 0; z-index: 80; background: #000; display: flex; align-items: center; justify-content: center; }

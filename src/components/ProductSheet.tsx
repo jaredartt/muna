@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { IconTrashFilled, IconX } from '@tabler/icons-react'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
-import { deleteProduct, saveProduct, type ProductDraft, type Tri } from '../lib/products'
+import { deleteProduct, saveProduct, type Edc, type ProductDraft, type Tri } from '../lib/products'
 
 type Props = {
   householdId: string
@@ -24,7 +24,13 @@ const NUMS: { key: keyof ProductDraft; label: string; max: number }[] = [
 const TRI: { value: Tri; label: string }[] = [
   { value: 'unknown', label: 'Not sure' },
   { value: 'free', label: 'Free' },
+  { value: 'traces', label: 'May contain traces' },
   { value: 'contains', label: 'Contains' },
+]
+const EDC: { value: Edc; label: string }[] = [
+  { value: 'unknown', label: 'Not checked' },
+  { value: 'none', label: 'No known suspects' },
+  { value: 'possible', label: 'Possible hormone disruptor' },
 ]
 
 const toStr = (v: unknown) => (v == null ? '' : String(v))
@@ -47,6 +53,7 @@ export default function ProductSheet({ householdId, initial, id, note, onClose }
   const [nums, setNums] = useState<Record<string, string>>(() => Object.fromEntries(NUMS.map((n) => [n.key, toStr(initial[n.key])])))
   const [gluten, setGluten] = useState<Tri>(initial.gluten)
   const [lactose, setLactose] = useState<Tri>(initial.lactose)
+  const [edc, setEdc] = useState<Edc>(initial.edc)
   const [notes, setNotes] = useState(initial.notes ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -80,6 +87,8 @@ export default function ProductSheet({ householdId, initial, id, note, onClose }
       salt_100: parsed.salt_100,
       gluten,
       lactose,
+      edc,
+      edc_note: initial.edc_note,
       notes: notes.trim() || null,
     }
     setBusy(true)
@@ -164,6 +173,15 @@ export default function ProductSheet({ householdId, initial, id, note, onClose }
             </select>
           </label>
         </div>
+        <label className="field">
+          <span>Hormone disruptors (for the thyroid)</span>
+          <select value={edc} onChange={(e) => setEdc(e.target.value as Edc)}>
+            {EDC.map((t) => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+        </label>
+        {initial.edc_note && <p className="muted small">{initial.edc_note}</p>}
         <label className="field">
           <span>Notes (optional)</span>
           <input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} placeholder="e.g. the blue pack, not the red one" />
