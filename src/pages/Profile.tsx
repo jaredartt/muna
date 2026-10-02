@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { IconBrandGoogleFilled, IconDeviceDesktopFilled, IconMoonFilled, IconSunFilled } from '@tabler/icons-react'
-import { IconCopy, IconLogout } from '@tabler/icons-react'
+import { IconChevronRight, IconCopy, IconLogout } from '@tabler/icons-react'
+import { IconTimelineEventFilled } from '@tabler/icons-react'
+import { navigate } from '../lib/router'
 import Avatar from '../components/Avatar'
 import IconPicker from '../components/IconPicker'
 import { AVATAR_SUGGESTIONS, TASK_COLORS } from '../lib/icons'
@@ -199,6 +201,17 @@ export default function Profile() {
           Join their home
         </button>
       </section>
+
+      <button className="card link-card" onClick={() => navigate('/updates')}>
+        <span className="task-icon c-sky">
+          <IconTimelineEventFilled size={22} />
+        </span>
+        <span className="link-text">
+          <strong>Update log</strong>
+          <small className="muted">Everything we changed in Muna</small>
+        </span>
+        <IconChevronRight size={20} />
+      </button>
 
       <button className="btn ghost" onClick={signOut}>
         <IconLogout size={18} /> Sign out

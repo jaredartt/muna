@@ -59,6 +59,10 @@ Migrations are in `supabase/migrations/` (already applied; keep new ones there t
 - Frontend: `src/lib/google.ts`, `src/hooks/useGoogleEvents.ts` (60 s cache, refetch on `TASKS_CHANGED`), `EventRow`, events shown in Calendar (blue ring dots) and Home's Today card. The task sheet has an "Add to Google Calendar" checkbox (`sync_google`).
 - Limits: only the primary calendar; edits made inside Google to Muna-created events are **not** read back (Google → Muna is only the read-only list); refresh token is stored as plain text in a locked table; while the Google Cloud app is in "Testing" refresh tokens expire after 7 days, so the app must be **published to production** (unverified-app warning is normal: Advanced → Go to Muna).
 
+## Small UX details
+- Chat draft: the unsent message is kept in the browser's `localStorage` (`muna-chat-draft:<user id>`, `src/lib/draft.ts`) so it survives tab switches AND closing the app. It is per phone, not synced, and uses no Supabase storage. If sending fails, the text is put back in the box.
+- Bottom nav: the active tab shows a white dot and its icon glides up 5px (and back down when you leave), animated in CSS in `src/styles.css` (`.nav-btn svg`, `.nav-dot`).
+
 ## Profile colour + icon
 Each person picks a colour (`avatar_color`) and any Tabler **filled** icon (`avatar`) with a search bar (`src/components/IconPicker.tsx`; the full icon library is loaded lazily with `import('@tabler/icons-react')`). The same picker is used for task icons (Muna's own `icon` enum stays the 32 curated keys in `TASK_ICONS`). The partner's events in the calendar are tinted with their colour.
 
@@ -87,3 +91,5 @@ Login (Google) · Home (dashboard like Figma) · Calendar (month grid, dots per 
 - Keep answers simple and step-by-step for Jared; he does not code.
 - Don't ask him for secrets in chat (no API keys, no tokens). Gemini key → Supabase secrets dashboard only.
 - Update this file after every change.
+- **Update log:** for EVERY change we make, add one entry at the top of `src/lib/updates.tsx` (date, short title, one or two simple sentences, a Tabler filled icon, a pastel colour). Jared reads it in Profile → Update log (`src/pages/Updates.tsx`, route `/updates`). Keep it very short and in simple words.
+- Icon picker: Tabler has no filled cat/dog (only outline). The picker has an "Include outline icons" checkbox so any Tabler icon can be chosen (Lidia asked for a cat). Uploading own SVG icons was discussed but NOT built (needs sanitising the SVG for safety and sharing it between phones).

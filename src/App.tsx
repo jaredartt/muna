@@ -7,6 +7,7 @@ import Home from './pages/Home'
 import CalendarPage from './pages/CalendarPage'
 import Chat from './pages/Chat'
 import Profile from './pages/Profile'
+import Updates from './pages/Updates'
 import { useRoute } from './lib/router'
 
 function Screens() {
@@ -18,6 +19,8 @@ function Screens() {
       return <Chat />
     case '/profile':
       return <Profile />
+    case '/updates':
+      return <Updates />
     default:
       return <Home />
   }

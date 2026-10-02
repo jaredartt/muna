@@ -132,10 +132,13 @@ textarea { resize: vertical; line-height: 1.45; }
   display: flex; align-items: center; justify-content: space-around; padding: 0 12px;
   box-shadow: 0 10px 30px rgba(227, 123, 88, 0.35); z-index: 20;
 }
-.nav-btn { position: relative; width: 52px; height: 52px; display: grid; place-items: center; color: #fff; opacity: 0.78; }
+.nav-btn { position: relative; width: 52px; height: 52px; display: grid; place-items: center; color: #fff; opacity: 0.78; transition: opacity 0.3s ease; }
 .nav-btn.active { opacity: 1; }
-.nav-dot { position: absolute; bottom: 0; left: 50%; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: #fff; opacity: 0; }
-.nav-btn.active .nav-dot { opacity: 1; }
+/* the icon glides up to make room for the dot, and back down when the dot goes away */
+.nav-btn svg { transition: transform 0.3s cubic-bezier(0.34, 1.4, 0.64, 1); }
+.nav-btn.active svg { transform: translateY(-5px); }
+.nav-dot { position: absolute; bottom: 4px; left: 50%; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: #fff; opacity: 0; transform: scale(0.3); transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.34, 1.4, 0.64, 1); }
+.nav-btn.active .nav-dot { opacity: 1; transform: scale(1); }
 
 /* ---------- Home ---------- */
 .home { padding-top: calc(env(safe-area-inset-top) + 56px); gap: 28px; }
@@ -270,3 +273,15 @@ textarea { resize: vertical; line-height: 1.45; }
 .rec-info { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; font-variant-numeric: tabular-nums; }
 .rec-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--danger); animation: pulse-rec 1.2s infinite ease-in-out; flex: none; }
 @keyframes pulse-rec { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.8); } }
+
+/* ---------- Update log ---------- */
+.link-card { flex-direction: row; align-items: center; gap: 14px; text-align: left; width: 100%; }
+.link-card .link-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.updates-title { display: flex; align-items: center; gap: 6px; }
+.update-day { margin: 6px 4px -6px; color: var(--muted); font-size: 14px; }
+.update-item { display: flex; align-items: flex-start; gap: 12px; }
+.update-item + .update-item { padding-top: 12px; border-top: 1px solid var(--line); }
+.update-item .task-icon { width: 40px; height: 40px; border-radius: 13px; }
+.update-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.update-body strong { font-weight: 700; }
+.update-date { font-size: 12px; color: var(--muted); }

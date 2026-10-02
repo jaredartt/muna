@@ -10,7 +10,8 @@ const ITEMS: { route: Route; label: string; Icon: typeof IconHomeFilled }[] = [
 
 // Floating coral pill, like the Figma design: home, calendar, chat, profile.
 export default function BottomNav() {
-  const route = useRoute()
+  const current = useRoute()
+  const route = current === '/updates' ? '/profile' : current // the update log lives inside Profile
   return (
     <nav className="bottom-nav" aria-label="Main">
       {ITEMS.map(({ route: r, label, Icon }) => (
