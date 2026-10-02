@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
 import { IconTrashFilled } from '@tabler/icons-react'
 import { IconX } from '@tabler/icons-react'
 import IconPicker from './IconPicker'
@@ -17,6 +18,8 @@ type Props = {
 }
 
 export default function TaskSheet({ task, defaultDate, onSave, onDelete, onClose }: Props) {
+  const backdropRef = useRef<HTMLDivElement>(null)
+  useSheetScrollGuard(backdropRef)
   const { members, session } = useAuth()
   const [title, setTitle] = useState(task?.title ?? '')
   const [notes, setNotes] = useState(task?.notes ?? '')
@@ -53,7 +56,7 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onClose
   }
 
   return (
-    <div className="sheet-backdrop" onClick={onClose}>
+    <div className="sheet-backdrop" ref={backdropRef} onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={task ? 'Edit task' : 'New task'}>
         <div className="sheet-head">
           <h2>{task ? 'Edit task' : 'New task'}</h2>

@@ -199,8 +199,7 @@ input[type='date']::-webkit-date-and-time-value, input[type='time']::-webkit-dat
 /* ---------- Task sheet ---------- */
 .sheet-backdrop { position: fixed; inset: 0; background: rgba(40, 30, 20, 0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 50; }
 .sheet { background: var(--card); width: 100%; max-width: 480px; max-height: 92dvh; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; touch-action: pan-y; box-sizing: border-box; border-radius: 28px 28px 0 0; padding: 20px 20px calc(env(safe-area-inset-bottom) + 20px); display: flex; flex-direction: column; gap: 14px; }
-/* while a sheet is open the page behind it must not scroll (it used to, when the sheet reached its top or bottom) */
-html:has(.sheet-backdrop), body:has(.sheet-backdrop) { overflow: hidden; }
+/* the page behind an open sheet is kept still by useSheetScrollGuard (no overflow tricks on html/body: on iPhone they could leave the app stuck) */
 .sheet-head { display: flex; align-items: center; justify-content: space-between; }
 .sheet-actions { display: flex; gap: 10px; margin-top: 4px; }
 .swatches { display: flex; gap: 10px; }

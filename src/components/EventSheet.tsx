@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
 import { IconExternalLink, IconTrashFilled, IconX } from '@tabler/icons-react'
 import { useAuth } from '../context/AuthContext'
 import { addDays, pad, toDateStr } from '../lib/dates'
@@ -13,6 +14,8 @@ type Props = { event: GoogleEvent; onDone: () => void; onClose: () => void }
 
 // Edit or delete a Google Calendar event (yours or your partner's) without leaving Muna.
 export default function EventSheet({ event, onDone, onClose }: Props) {
+  const backdropRef = useRef<HTMLDivElement>(null)
+  useSheetScrollGuard(backdropRef)
   const { session, members } = useAuth()
   const owner = members.find((m) => m.id === event.owner_id)
   const who = event.owner_id === session?.user.id ? 'your' : `${owner?.display_name || event.owner_name || 'your partner'}'s`
@@ -82,7 +85,7 @@ export default function EventSheet({ event, onDone, onClose }: Props) {
   }
 
   return (
-    <div className="sheet-backdrop" onClick={onClose}>
+    <div className="sheet-backdrop" ref={backdropRef} onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Edit calendar event">
         <div className="sheet-head">
           <h2>Edit event</h2>

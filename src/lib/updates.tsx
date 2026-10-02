@@ -27,6 +27,7 @@ export type UpdateEntry = {
 
 // Newest first. Add one entry here for every change we make (see "Working agreements" in project_status.md).
 export const UPDATES: UpdateEntry[] = [
+  { date: '2026-10-02', time: '13:57', title: 'Scrolling fixed', text: 'Scrolling could get stuck on the iPhone. I removed the page lock that I added for the task sheets and replaced it with a gentler one that only blocks the page behind an open sheet.', Icon: IconShieldFilled, color: 'peach' },
   { date: '2026-10-02', time: '12:25', title: '06:00 and 00:00 are back', text: 'The first and last hour labels are shown again, and the new breathing space above and below stays.', Icon: IconCalendarFilled, color: 'butter' },
   { date: '2026-10-02', time: '12:22', title: 'Drag up scrolls too', text: 'When you drag a task towards the top of the calendar, the page now scrolls up by itself, just like it already did going down.', Icon: IconCalendarFilled, color: 'mint' },
   { date: '2026-10-02', time: '12:22', title: 'Space above 06:00', text: 'The calendar now has a little breathing room above the first hour line, just like it has below the last one.', Icon: IconCalendarFilled, color: 'sky' },

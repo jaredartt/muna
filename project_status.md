@@ -157,3 +157,6 @@ A small gap (`TOP_PAD` = 16 px in `src/lib/dayItems.ts`, `WPAD` = 12 px in WeekV
 Drag auto-scroll up: zone is the 130 px under the sticky all-day strip (was 50 px, too small to hit because the drag pill floats above the finger); speed grows nearer the strip. Down zone is the last 150 px of the screen.
 
 The 06:00 and 00:00 labels are visible again (now that TOP_PAD / WPAD keep them clear of the edges). This replaces the earlier 'hidden first/last labels' note.
+
+### Bug: app could not scroll on iPhone (Oct 2)
+Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), body:has(.sheet-backdrop) { overflow: hidden }` in styles.css. iOS Safari can stay stuck after overflow:hidden on html/body is toggled. Replaced by `src/hooks/useSheetScrollGuard.ts` (touchmove guard on the sheet backdrop, used by TaskSheet and EventSheet). RULE: never lock scrolling by setting overflow on html/body.
