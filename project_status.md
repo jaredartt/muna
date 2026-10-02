@@ -163,3 +163,11 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 
 ### Bug: no wheel/trackpad scrolling (Oct 2) - REAL cause
 `body { overscroll-behavior-y: none }` combined with `html, body { overflow-x: hidden }`: body became a scroll container with overscroll-behavior none, so wheel/touch scrolling never chained up to the page (keyboard still worked). Found by testing in the in-app browser: injecting `body{overscroll-behavior-y:auto}` made wheel scrolling work. Fix: moved `overscroll-behavior-y: none` to `html`. RULE: never put overscroll-behavior on body.
+
+### Products + barcode scanner (Oct 2)
+- Table `products` (migration `20261002000010_products.sql`, applied through the connector): per household, barcode (unique per household), name, brand, pack_size, unit g/ml, kcal/protein/carbs/sugar/fat/sat fat/fibre/salt per 100, gluten + lactose (free / contains / unknown), image_url, source (openfoodfacts / manual), notes. RLS like the other tables, realtime on.
+- `src/lib/products.ts`: live store (`useProducts`, `startProductSync` started in IconSync), `lookupBarcode` (Open Food Facts API v2, CORS works from the browser, nothing saved until the person checks it), `saveProduct`, `deleteProduct`.
+- `src/components/BarcodeScanner.tsx`: uses the browser's BarcodeDetector when present (Chrome, Android). iPhone Safari has none, so it loads ZXing once from jsDelivr (`@zxing/library@0.21.3`, no npm dependency added). If the camera fails the person can type the barcode.
+- `src/pages/Products.tsx` (route `/products`, link card on Profile) and `src/components/ProductSheet.tsx` (check and edit).
+- Gluten/lactose come from Open Food Facts tags (allergens and labels). 'unknown' is common: always check the pack.
+- NOT verified on a real iPhone: camera permission inside the installed PWA and ZXing decoding. Next: pantry (stock per product), food log, restock prediction (see the nutrition document).

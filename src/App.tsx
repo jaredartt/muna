@@ -10,6 +10,7 @@ import CalendarPage from './pages/CalendarPage'
 import Chat from './pages/Chat'
 import Profile from './pages/Profile'
 import Updates from './pages/Updates'
+import Products from './pages/Products'
 import { useRoute } from './lib/router'
 
 function Screens() {
@@ -27,6 +28,8 @@ function Screens() {
       return <Profile />
     case '/updates':
       return <Updates />
+    case '/products':
+      return <Products />
     default:
       return <Home />
   }

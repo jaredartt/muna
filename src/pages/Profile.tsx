@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { IconBrandGoogleFilled, IconDeviceDesktopFilled, IconMoonFilled, IconSunFilled } from '@tabler/icons-react'
 import { IconChevronRight, IconCopy, IconLogout } from '@tabler/icons-react'
-import { IconTimelineEventFilled } from '@tabler/icons-react'
+import { IconBarcode, IconTimelineEventFilled } from '@tabler/icons-react'
 import { navigate } from '../lib/router'
 import Avatar from '../components/Avatar'
 import IconPicker from '../components/IconPicker'
@@ -207,6 +207,17 @@ export default function Profile() {
           Join their home
         </button>
       </section>
+
+      <button className="card link-card" onClick={() => navigate('/products')}>
+        <span className="task-icon c-mint">
+          <IconBarcode size={22} />
+        </span>
+        <span className="link-text">
+          <strong>Products</strong>
+          <small className="muted">Your food list, filled by scanning barcodes</small>
+        </span>
+        <IconChevronRight size={20} />
+      </button>
 
       <button className="card link-card" onClick={() => navigate('/updates')}>
         <span className="task-icon c-sky">
