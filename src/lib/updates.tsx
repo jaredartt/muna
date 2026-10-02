@@ -24,6 +24,7 @@ export type UpdateEntry = {
 
 // Newest first. Add one entry here for every change we make (see "Working agreements" in project_status.md).
 export const UPDATES: UpdateEntry[] = [
+  { date: '2026-10-02', title: 'Chat opens at the end', text: 'When you open the chat, you land on the latest message, like WhatsApp.', Icon: IconMessageCircleFilled, color: 'sky' },
   { date: '2026-10-02', title: 'Update log', text: 'This list! Every change we make to Muna will show up here.', Icon: IconTimelineEventFilled, color: 'sky' },
   { date: '2026-10-02', title: 'Cat and dog icons', text: 'In the icon search, tick “Include outline icons” to find cat, dog and many more.', Icon: IconPawFilled, color: 'peach' },
   { date: '2026-10-02', title: 'Menu animation', text: 'The icon now glides up when its dot appears, and back down when it leaves.', Icon: IconHomeFilled, color: 'lilac' },

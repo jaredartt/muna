@@ -95,6 +95,13 @@ export function filledIconNames(lib: Lib): string[] {
   return filledNames
 }
 
+let allNames: string[] | null = null
+/** Every Tabler icon (filled AND outline), for when the picker's "include outline icons" box is ticked. */
+export function allIconNames(lib: Lib): string[] {
+  if (!allNames) allNames = Object.keys(lib).filter((k) => /^Icon[A-Z0-9][A-Za-z0-9]*$/.test(k) && !/^Icons?(Props)?$/.test(k)).sort()
+  return allNames
+}
+
 /** IconToolsKitchenFilled -> tools-kitchen (what people search for). */
 export function iconSearchName(name: string): string {
   return name

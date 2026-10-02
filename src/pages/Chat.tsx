@@ -40,6 +40,7 @@ export default function Chat() {
   const [seconds, setSeconds] = useState(0)
   const [voiceReplies, setVoiceReplies] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
+  const justLoaded = useRef(false) // true right after the history is fetched: jump to the end instantly, like WhatsApp
   const recRef = useRef<WavRecorder | null>(null)
   const timerRef = useRef<number | null>(null)
   const busyRef = useRef(false)
@@ -61,11 +62,18 @@ export default function Chat() {
       .select('id, role, content, created_at')
       .order('created_at', { ascending: false })
       .limit(50)
-      .then(({ data }) => setMessages(((data ?? []) as ChatMessage[]).reverse()))
+      .then(({ data }) => {
+        justLoaded.current = true
+        setMessages(((data ?? []) as ChatMessage[]).reverse())
+      })
   }, [session])
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    const instant = justLoaded.current
+    justLoaded.current = false
+    // wait one frame so the messages are laid out, then show the newest one (instantly when the screen opens, smoothly afterwards)
+    const id = requestAnimationFrame(() => endRef.current?.scrollIntoView({ behavior: instant ? 'auto' : 'smooth', block: 'end' }))
+    return () => cancelAnimationFrame(id)
   }, [messages, busy, recording])
 
   // leaving the screen while recording: drop the recording and release the microphone
