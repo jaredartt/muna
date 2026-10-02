@@ -7,7 +7,6 @@ export type Profile = {
   avatar: string // a Tabler icon component name, e.g. "IconPawFilled"
   avatar_color: string // mint | peach | lilac | sky | butter | rose
   theme_pref: ThemePref
-  muna_personality: string
 }
 
 export type Member = Pick<Profile, 'id' | 'display_name' | 'avatar' | 'avatar_color'>

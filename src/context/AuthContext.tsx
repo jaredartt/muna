@@ -5,7 +5,7 @@ import type { Member, Profile } from '../lib/types'
 import { applyTheme } from '../lib/theme'
 import { GOOGLE_CALENDAR_SCOPE } from '../lib/google'
 
-type ProfilePatch = Partial<Pick<Profile, 'display_name' | 'avatar' | 'avatar_color' | 'theme_pref' | 'muna_personality'>>
+type ProfilePatch = Partial<Pick<Profile, 'display_name' | 'avatar' | 'avatar_color' | 'theme_pref'>>
 
 type AuthState = {
   loading: boolean
@@ -13,6 +13,8 @@ type AuthState = {
   profile: Profile | null
   members: Member[]
   inviteCode: string
+  munaPersonality: string // ONE text shared by everyone in the home
+  saveMunaPersonality: (text: string) => Promise<string | null>
   googleStatus: Record<string, boolean> // user id -> has connected Google Calendar
   googleConnected: boolean // me
   anyGoogleConnected: boolean // me or my partner
@@ -33,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [members, setMembers] = useState<Member[]>([])
   const [inviteCode, setInviteCode] = useState('')
+  const [munaPersonality, setMunaPersonality] = useState('')
   const [googleStatus, setGoogleStatus] = useState<Record<string, boolean>>({})
 
   const loadGoogleStatus = useCallback(async () => {
@@ -53,10 +56,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           applyTheme(p.theme_pref)
           const [{ data: ms }, { data: hh }] = await Promise.all([
             supabase.from('profiles').select('id, display_name, avatar, avatar_color').eq('household_id', p.household_id),
-            supabase.from('households').select('invite_code').eq('id', p.household_id).maybeSingle(),
+            supabase.from('households').select('invite_code, muna_personality').eq('id', p.household_id).maybeSingle(),
           ])
           setMembers((ms ?? []) as Member[])
           setInviteCode(hh?.invite_code ?? '')
+          setMunaPersonality(hh?.muna_personality ?? '')
           void loadGoogleStatus()
           return
         }
@@ -116,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setProfile(null)
         setMembers([])
+        setMunaPersonality('')
         setGoogleStatus({})
       }
     })
@@ -124,6 +129,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sub.subscription.unsubscribe()
     }
   }, [loadProfile, captureGoogleToken])
+
+  // Muna's personality is shared: when your partner saves it, this phone updates too.
+  const householdId = profile?.household_id
+  useEffect(() => {
+    if (!householdId) return
+    const refresh = async () => {
+      const { data } = await supabase.from('households').select('muna_personality').eq('id', householdId).maybeSingle()
+      if (data && typeof data.muna_personality === 'string') setMunaPersonality(data.muna_personality)
+    }
+    const channel = supabase
+      .channel('household-' + householdId)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'households', filter: `id=eq.${householdId}` }, (payload) => {
+        const v = (payload.new as { muna_personality?: unknown }).muna_personality
+        if (typeof v === 'string') setMunaPersonality(v)
+      })
+      .subscribe()
+    // Backup for iPhones that pause the live connection while the app is in the background.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void refresh()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+      void supabase.removeChannel(channel)
+    }
+  }, [householdId])
+
+  const saveMunaPersonality = useCallback(async (text: string) => {
+    const clean = text.trim().slice(0, 2000)
+    const { error } = await supabase.rpc('set_household_personality', { p_text: clean })
+    if (error) return error.message
+    setMunaPersonality(clean)
+    return null
+  }, [])
 
   const signInWithGoogle = useCallback(async () => {
     await supabase.auth.signInWithOAuth({
@@ -190,6 +231,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       profile,
       members,
+      munaPersonality,
+      saveMunaPersonality,
       inviteCode,
       googleStatus,
       googleConnected,
@@ -201,7 +244,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateProfile,
       joinHousehold,
     }),
-    [loading, session, profile, members, inviteCode, googleStatus, googleConnected, anyGoogleConnected, signInWithGoogle, connectGoogle, disconnectGoogle, signOut, updateProfile, joinHousehold],
+    [loading, session, profile, members, inviteCode, munaPersonality, saveMunaPersonality, googleStatus, googleConnected, anyGoogleConnected, signInWithGoogle, connectGoogle, disconnectGoogle, signOut, updateProfile, joinHousehold],
   )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

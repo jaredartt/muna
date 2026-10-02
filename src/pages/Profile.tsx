@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { IconBrandGoogleFilled, IconDeviceDesktopFilled, IconMoonFilled, IconSunFilled } from '@tabler/icons-react'
 import { IconCopy, IconLogout } from '@tabler/icons-react'
 import Avatar from '../components/Avatar'
@@ -15,26 +15,31 @@ const THEMES: { value: ThemePref; label: string; Icon: typeof IconSunFilled }[] 
 ]
 
 export default function Profile() {
-  const { profile, session, members, inviteCode, googleStatus, googleConnected, updateProfile, joinHousehold, connectGoogle, disconnectGoogle, signOut } = useAuth()
+  const { profile, session, members, inviteCode, munaPersonality, saveMunaPersonality, googleStatus, googleConnected, updateProfile, joinHousehold, connectGoogle, disconnectGoogle, signOut } = useAuth()
   const [name, setName] = useState('')
   const [personality, setPersonality] = useState('')
   const [code, setCode] = useState('')
   const [note, setNote] = useState('')
-  const [usage, setUsage] = useState<{ used: number; budget: number } | null>(null)
+  const [usage, setUsage] = useState<{ used: number } | null>(null)
 
   useEffect(() => {
     supabase.rpc('get_ai_usage').then(({ data }) => {
       const row = Array.isArray(data) ? data[0] : data
-      if (row) setUsage({ used: Number(row.used), budget: Number(row.budget) })
+      if (row) setUsage({ used: Number(row.used) })
     })
   }, [])
 
   useEffect(() => {
-    if (profile) {
-      setName(profile.display_name)
-      setPersonality(profile.muna_personality)
-    }
+    if (profile) setName(profile.display_name)
   }, [profile])
+
+  // The personality is shared by both of you. Show the saved text, but never overwrite
+  // something this person is in the middle of typing.
+  const lastSaved = useRef('')
+  useEffect(() => {
+    setPersonality((draft) => (draft === lastSaved.current ? munaPersonality : draft))
+    lastSaved.current = munaPersonality
+  }, [munaPersonality])
 
   if (!profile) return null
 
@@ -123,11 +128,10 @@ export default function Profile() {
       <section className="card">
         <h3>Muna&rsquo;s personality</h3>
         <p className="muted small">
-          Tell Muna who to be and how to help you. This only changes how Muna talks to you. For example: &ldquo;Be playful and short.
-          Remind me gently about my gym days. I work evenings, so mornings are for chores.&rdquo;
+          Tell Muna who to be and how to help you. This is <strong>one shared text</strong>: {partner ? `${partner.display_name || 'your partner'} and you` : 'everyone in your home'} see and edit the same thing, and it changes how Muna talks to both of you. For example: &ldquo;Be playful and short. Remind us gently about gym days.&rdquo;
         </p>
-        <textarea value={personality} onChange={(e) => setPersonality(e.target.value)} rows={6} maxLength={2000} placeholder="Write anything Muna should know about you…" />
-        <button className="btn soft" onClick={() => save({ muna_personality: personality.trim() }, 'Muna will remember')} disabled={personality.trim() === profile.muna_personality}>
+        <textarea value={personality} onChange={(e) => setPersonality(e.target.value)} rows={6} maxLength={2000} placeholder="Write anything Muna should know about both of you…" />
+        <button className="btn soft" onClick={async () => flash((await saveMunaPersonality(personality)) ?? 'Saved for both of you')} disabled={personality.trim() === munaPersonality}>
           Save personality
         </button>
       </section>
@@ -136,13 +140,10 @@ export default function Profile() {
         <h3>Muna&rsquo;s energy</h3>
         {usage ? (
           <>
-            <div className="meter" role="progressbar" aria-valuemin={0} aria-valuemax={usage.budget} aria-valuenow={Math.min(usage.used, usage.budget)} aria-label="Muna energy used this month">
-              <i style={{ width: `${Math.min(100, (usage.used / Math.max(1, usage.budget)) * 100)}%` }} />
-            </div>
             <p>
-              <strong>{usage.used.toLocaleString()}</strong> <span className="muted">tokens used this month, of a limit of {usage.budget.toLocaleString()}</span>
+              <strong>{usage.used.toLocaleString()}</strong> <span className="muted">tokens used this month</span>
             </p>
-            <p className="muted small">The used number is counted exactly from what Gemini reports. The limit is a safety setting we chose, not a Google balance. It resets on the 1st of each month.</p>
+            <p className="muted small">Counted exactly from what Gemini reports. There is no limit in the app: on the free plan Google only applies its own speed limits.</p>
           </>
         ) : (
           <p className="muted small">Loading…</p>
