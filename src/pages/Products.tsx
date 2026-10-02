@@ -4,9 +4,11 @@ import { navigate } from '../lib/router'
 import { useAuth } from '../context/AuthContext'
 import BarcodeScanner from '../components/BarcodeScanner'
 import ProductSheet from '../components/ProductSheet'
-import { emptyDraft, findByBarcode, lookupBarcode, useProducts, type Edc, type Product, type ProductDraft, type Tri } from '../lib/products'
+import ProductPicker from '../components/ProductPicker'
+import { emptyDraft, findByBarcode, lookupBarcode, unbarcoded, useProducts, type Edc, type LookupResult, type Product, type ProductDraft, type Tri } from '../lib/products'
 
 type Open = { initial: ProductDraft; id?: string; note?: string }
+type Pick = { code: string; lookup: LookupResult | null }
 
 const triLabel = (v: Tri, word: string) =>
   v === 'free' ? `${word}-free` : v === 'contains' ? `Contains ${word.toLowerCase()}` : v === 'traces' ? `May contain ${word.toLowerCase()}` : `${word}: not checked`
@@ -26,6 +28,7 @@ export default function Products() {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const [open, setOpen] = useState<Open | null>(null)
+  const [pick, setPick] = useState<Pick | null>(null)
   const [q, setQ] = useState('')
 
   const shown = useMemo(() => {
@@ -44,9 +47,20 @@ export default function Products() {
       setMsg('You already have this one. Here it is.')
       return setOpen({ initial: have, id: have.id })
     }
+    // Not in the list. Before making a new product, ask if it is one you already have without a barcode (the online lookup runs meanwhile).
+    if (unbarcoded().length > 0) {
+      setCode('')
+      setPick({ code: clean, lookup: null })
+      void lookupBarcode(clean).then((r) => setPick((cur) => (cur && cur.code === clean ? { ...cur, lookup: r } : cur)))
+      return
+    }
     setBusy(true)
     const r = await lookupBarcode(clean)
     setBusy(false)
+    openNew(r)
+  }
+
+  function openNew(r: LookupResult) {
     if (r.draft) {
       setCode('')
       setOpen({ initial: r.draft, note: r.error })
@@ -118,6 +132,22 @@ export default function Products() {
           onDetect={(c) => {
             setScanning(false)
             void add(c)
+          }}
+        />
+      )}
+      {pick && (
+        <ProductPicker
+          code={pick.code}
+          lookup={pick.lookup}
+          onClose={() => setPick(null)}
+          onLearned={(p) => {
+            setPick(null)
+            setMsg(`Saved. "${p.name}" now has barcode ${pick.code}. Scanning it finds it straight away.`)
+          }}
+          onNew={() => {
+            const r = pick.lookup
+            setPick(null)
+            if (r) openNew(r)
           }}
         />
       )}

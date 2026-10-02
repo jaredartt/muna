@@ -112,8 +112,54 @@ export function startProductSync(householdId: string): () => void {
   }
 }
 
+/** Finds a product by barcode, whichever way the barcode is written (UPC-A with 12 digits, EAN-13 with 13). */
 export function findByBarcode(code: string): Product | undefined {
-  return items.find((i) => i.barcode === code)
+  const v = barcodeVariants(code.replace(/\D/g, ''))
+  return items.find((i) => i.barcode != null && v.includes(i.barcode))
+}
+
+/**
+ * Teaches Muna a barcode: saves it on a product you already have, for good. It is shared with everyone in the home,
+ * so the next scan (yours or Lidia's) finds the product straight away.
+ */
+export async function learnBarcode(productId: string, code: string): Promise<string | null> {
+  const clean = code.replace(/\D/g, '')
+  if (clean.length < 6 || clean.length > 20) return 'A barcode has 6 to 20 digits.'
+  const other = findByBarcode(clean)
+  if (other && other.id !== productId) return `This barcode already belongs to "${other.name}".`
+  const { data, error } = await supabase.from('products').update({ barcode: clean, updated_at: new Date().toISOString() }).eq('id', productId).select(COLS).single()
+  if (error || !data) {
+    if (error?.code === '23505') return 'This barcode is already in your list.'
+    return 'Could not save the barcode. Check your internet and try again.'
+  }
+  upsertLocal(data as Product)
+  return null
+}
+
+// Words that say nothing about which product it is (shop brand, pack sizes, "bio"), left out when comparing names.
+const NAME_NOISE = new Set(['rewe', 'bio', 'beste', 'wahl', 'the', 'and', 'und', 'mit', 'ohne', 'von', 'der', 'die', 'das', 'stück', 'stueck', 'piece', 'pack', 'class', 'klasse', 'natur', 'frisch', 'fresh'])
+const nameWords = (s: string): string[] =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9äöüß\s]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !/^\d/.test(w) && !NAME_NOISE.has(w))
+
+/**
+ * Your products that have no barcode yet, the most likely match first (by name and brand). Used when a scan finds nothing,
+ * so you can say "this is my X" instead of typing a new product. `hint` is what the online databases called it, if they knew.
+ */
+export function unbarcoded(hint = ''): { product: Product; likely: boolean }[] {
+  const want = nameWords(hint)
+  return items
+    .filter((p) => !p.barcode)
+    .map((p) => {
+      const words = nameWords(`${p.name} ${p.brand ?? ''}`)
+      const hits = want.length ? words.filter((w) => want.some((x) => x === w || (x.length > 3 && w.length > 3 && (x.startsWith(w) || w.startsWith(x))))).length : 0
+      return { product: p, hits }
+    })
+    .sort((a, b) => b.hits - a.hits || a.product.name.localeCompare(b.product.name))
+    .map(({ product, hits }) => ({ product, likely: hits > 0 }))
 }
 
 export async function saveProduct(householdId: string, draft: ProductDraft, id?: string): Promise<string | null> {
@@ -233,7 +279,7 @@ function barcodeVariants(clean: string): string[] {
 
 async function offFetch(host: string, code: string): Promise<OffProduct | null> {
   try {
-    const r = await fetch(`https://${host}/api/v2/product/${code}.json?fields=${OFF_FIELDS}`)
+    const r = await fetch(`https://${host}/api/v2/product/${code}.json?fields=${OFF_FIELDS}`, { signal: AbortSignal.timeout(8000) })
     if (!r.ok) return null
     const j = (await r.json()) as { status?: number; product?: OffProduct }
     return j.status === 1 && j.product ? j.product : null
@@ -245,7 +291,7 @@ async function offFetch(host: string, code: string): Promise<OffProduct | null> 
 /** Name, brand and size only (no nutrition): UPCitemdb, a free general product database. Limited to about 100 lookups a day. */
 async function upcItemDb(code: string): Promise<{ title: string; brand: string; size: string; image: string } | null> {
   try {
-    const r = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`)
+    const r = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`, { signal: AbortSignal.timeout(8000) })
     if (!r.ok) return null
     const j = (await r.json()) as { items?: { title?: string; brand?: string; size?: string; images?: string[] }[] }
     const it = j.items?.[0]
@@ -261,7 +307,8 @@ async function upcItemDb(code: string): Promise<{ title: string; brand: string; 
  * Open Pet Food Facts) under each way of writing the barcode, and uses the first one that knows a name. If none does, UPCitemdb
  * can still give the name and brand. Nothing is saved: the person checks the numbers first.
  */
-export async function lookupBarcode(code: string): Promise<{ draft?: ProductDraft; error?: string }> {
+export type LookupResult = { draft?: ProductDraft; error?: string }
+export async function lookupBarcode(code: string): Promise<LookupResult> {
   const clean = code.replace(/\D/g, '')
   if (clean.length < 6) return { error: 'A barcode has at least 6 digits.' }
   try {

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
-import { IconTrashFilled, IconX } from '@tabler/icons-react'
+import { IconBarcode, IconTrashFilled, IconX } from '@tabler/icons-react'
+import BarcodeScanner from './BarcodeScanner'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
 import { deleteProduct, saveProduct, type Edc, type ProductDraft, type Tri } from '../lib/products'
 
@@ -57,6 +58,7 @@ export default function ProductSheet({ householdId, initial, id, note, onClose }
   const [notes, setNotes] = useState(initial.notes ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [scanning, setScanning] = useState(false)
 
   async function save() {
     setError('')
@@ -136,7 +138,12 @@ export default function ProductSheet({ householdId, initial, id, note, onClose }
           </label>
           <label className="field">
             <span>Barcode</span>
-            <input inputMode="numeric" value={barcode} onChange={(e) => setBarcode(e.target.value)} maxLength={20} />
+            <div className="prod-type">
+              <input inputMode="numeric" value={barcode} onChange={(e) => setBarcode(e.target.value)} maxLength={20} />
+              <button type="button" className="btn soft" onClick={() => setScanning(true)} aria-label="Scan the barcode with the camera">
+                <IconBarcode size={20} />
+              </button>
+            </div>
           </label>
           <label className="field">
             <span>Numbers are per 100</span>
@@ -201,6 +208,17 @@ export default function ProductSheet({ householdId, initial, id, note, onClose }
           </button>
         </div>
       </div>
+      {scanning && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <BarcodeScanner
+            onClose={() => setScanning(false)}
+            onDetect={(c) => {
+              setScanning(false)
+              setBarcode(c)
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }

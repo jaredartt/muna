@@ -9,9 +9,9 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/lib/types.ts`: used by 14 files
 - `src/lib/icons.tsx`: used by 11 files
 - `src/lib/supabase.ts`: used by 11 files
+- `src/lib/products.ts`: used by 10 files
 - `src/lib/router.ts`: used by 9 files
 - `src/lib/google.ts`: used by 9 files
-- `src/lib/meals.ts`: used by 9 files
 
 ## Source files (src/)
 
@@ -25,7 +25,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - used by: pages/Profile.tsx
 - `src/components/BarcodeScanner.tsx` (113 lines) - Browsers with a built-in barcode reader (Chrome, Edge, Android) use it. iPhone Safari has none, so we load a small open-source reader (ZXing
   - exports: BarcodeScanner
-  - used by: pages/Products.tsx
+  - used by: components/ProductSheet.tsx, pages/Products.tsx
 - `src/components/BottomNav.tsx` (33 lines)
   - exports: BottomNav
   - imports: lib/router.ts
@@ -60,9 +60,13 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: MyIcons
   - imports: context/AuthContext.tsx, lib/customIcons.ts, lib/icons.tsx, lib/svgIcons.tsx
   - used by: pages/Profile.tsx
-- `src/components/ProductSheet.tsx` (206 lines)
-  - exports: ProductSheet
+- `src/components/ProductPicker.tsx` (100 lines)
+  - exports: ProductPicker
   - imports: hooks/useSheetScrollGuard.ts, lib/products.ts
+  - used by: pages/Products.tsx
+- `src/components/ProductSheet.tsx` (224 lines)
+  - exports: ProductSheet
+  - imports: components/BarcodeScanner.tsx, hooks/useSheetScrollGuard.ts, lib/products.ts
   - used by: pages/Products.tsx
 - `src/components/RecipePicker.tsx` (72 lines)
   - exports: RecipePicker
@@ -124,7 +128,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - used by: hooks/useShopping.ts, pages/CalendarPage.tsx, pages/Home.tsx
 - `src/hooks/useSheetScrollGuard.ts` (37 lines)
   - exports: useSheetScrollGuard
-  - used by: components/EventSheet.tsx, components/HomeRings.tsx, components/ProductSheet.tsx, components/RecipePicker.tsx, components/RecipeSheet.tsx, components/TaskSheet.tsx
+  - used by: components/EventSheet.tsx, components/HomeRings.tsx, components/ProductPicker.tsx, components/ProductSheet.tsx, components/RecipePicker.tsx, components/RecipeSheet.tsx, components/TaskSheet.tsx
 - `src/hooks/useShopping.ts` (30 lines)
   - exports: useShopping
   - imports: context/AuthContext.tsx, context/TasksContext.tsx, hooks/useGoogleEvents.ts, lib/dates.ts, lib/meals.ts
@@ -173,10 +177,10 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: PhosphorData, loadPhosphor, phosphorAvailable, usePhosphor
   - imports: lib/svgIcons.tsx
   - used by: components/IconPicker.tsx, lib/icons.tsx
-- `src/lib/products.ts` (338 lines) - The home's product list (table "products"). Kept in memory, cached on the phone, live through realtime.
+- `src/lib/products.ts` (385 lines) - The home's product list (table "products"). Kept in memory, cached on the phone, live through realtime.
   - exports: Tri, Edc, Product, ProductDraft, useProducts, productsReady, allProducts, startProductSync…
   - imports: lib/supabase.ts
-  - used by: components/HomeRings.tsx, components/IconSync.tsx, components/ProductSheet.tsx, components/RecipePicker.tsx, components/RecipeSheet.tsx, lib/meals.ts, pages/Meals.tsx, pages/Pantry.tsx, pages/Products.tsx
+  - used by: components/HomeRings.tsx, components/IconSync.tsx, components/ProductPicker.tsx, components/ProductSheet.tsx, components/RecipePicker.tsx, components/RecipeSheet.tsx, lib/meals.ts, pages/Meals.tsx, pages/Pantry.tsx, pages/Products.tsx
 - `src/lib/recorder.ts` (120 lines) - Records the microphone and returns a small 16 kHz mono WAV (what Muna's Gemini brain can listen to).
   - exports: WavRecorder
   - used by: pages/Chat.tsx
@@ -237,9 +241,9 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: Pantry
   - imports: context/AuthContext.tsx, lib/dates.ts, lib/meals.ts, lib/products.ts, lib/router.ts
   - used by: App.tsx
-- `src/pages/Products.tsx` (127 lines)
+- `src/pages/Products.tsx` (157 lines)
   - exports: Products
-  - imports: components/BarcodeScanner.tsx, components/ProductSheet.tsx, context/AuthContext.tsx, lib/products.ts, lib/router.ts
+  - imports: components/BarcodeScanner.tsx, components/ProductPicker.tsx, components/ProductSheet.tsx, context/AuthContext.tsx, lib/products.ts, lib/router.ts
   - used by: App.tsx
 - `src/pages/Profile.tsx` (247 lines)
   - exports: Profile

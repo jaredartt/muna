@@ -224,3 +224,9 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 - `lookupBarcode` in `src/lib/products.ts` now reads the ingredient list too: cereal words -> gluten contains, milk words -> lactose contains, no hit with a list present -> free (the person still checks the pack). Traces tags -> 'traces'. Falls back to Open Beauty Facts when Open Food Facts does not know the barcode.
 - `edcCheck(text, additives)` compares ingredients with a short suspect list (parabens, triclosan, oxybenzone, octinoxate, homosalate, 4-MBC, BHA E320, BHT E321, siloxane D4, phthalates, bisphenols, PFAS, resorcinol, lilial) and treats "parfum" as possible (secret mix). It cannot see packaging (BPA/phthalates) or pesticide residues. Never claim "safe", only "no known suspects".
 - The product list always shows the three tags; grey means not checked.
+
+## Barcode learning (Oct 2)
+- A scan that is not in the list now opens `ProductPicker` ("Is this one of your products?"): searchable list of the home's products WITHOUT a barcode, likely matches first (name compared with what the online databases call it). Picking one runs `learnBarcode(id, code)` in `src/lib/products.ts`, which saves the barcode on that product (shared live with Lidia). "No, it is a new product" goes on to the form, which keeps the scanned barcode, so every new product also learns its barcode on save. If every product already has a barcode the picker is skipped.
+- `findByBarcode` matches UPC-A (12 digits) and EAN-13 (13) as the same code. Online lookups now time out after 8 s.
+- `ProductSheet` has a camera button next to the Barcode field, to teach a barcode to an existing product by scanning it there.
+- No database change (no migration). Products that already have a barcode are not offered in the picker (one barcode per product).
