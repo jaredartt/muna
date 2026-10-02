@@ -14,6 +14,45 @@ const MAX_RECORD_SECONDS = 60
 // A silent half-moment of sound: playing it during a tap "unlocks" the audio player, so Muna may speak later without a tap (iPhone rule).
 const SILENT_WAV = 'data:audio/wav;base64,UklGRkwAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YSgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
 
+const VOICE_KEY = 'muna.voiceReplies.v1'
+// Spoken replies are ON unless you turned them off once (that choice is remembered on this phone).
+function loadVoicePref(): boolean {
+  try {
+    return localStorage.getItem(VOICE_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
+
+/** Plain speech text cut into pieces: a short first one (starts fast) and then bigger ones, about 650 characters in all. */
+function voiceChunks(reply: string): string[] {
+  const plain = reply
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/[*_`#>~]/g, '')
+    .replace(/\p{Extended_Pictographic}/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const sentences = plain.match(/[^.!?…]+[.!?…]*\s*/g)?.map((x) => x.trim()).filter(Boolean) ?? []
+  const out: string[] = []
+  let cur = ''
+  let total = 0
+  for (const sentence of sentences) {
+    if (total + sentence.length > 650) break
+    const limit = out.length === 0 ? 110 : 260
+    if (cur && cur.length + 1 + sentence.length > limit) {
+      out.push(cur)
+      cur = sentence
+    } else cur = cur ? cur + ' ' + sentence : sentence
+    total += sentence.length
+    if (out.length === 0 && cur.length >= 60) {
+      out.push(cur)
+      cur = ''
+    }
+  }
+  if (cur) out.push(cur)
+  return out.slice(0, 5)
+}
+
 async function readFunctionError(err: unknown): Promise<string> {
   const ctx = (err as { context?: Response }).context
   if (ctx && typeof ctx.json === 'function') {
@@ -45,17 +84,22 @@ export default function Chat() {
   const [error, setError] = useState('')
   const [recording, setRecording] = useState(false)
   const [seconds, setSeconds] = useState(0)
-  const [voiceReplies, setVoiceReplies] = useState(false)
+  const [voiceReplies, setVoiceReplies] = useState(loadVoicePref)
   const justLoaded = useRef(Boolean(cached)) // true right after the history is fetched: jump to the end instantly, like WhatsApp
   const recRef = useRef<WavRecorder | null>(null)
   const timerRef = useRef<number | null>(null)
   const busyRef = useRef(false)
-  const voiceRepliesRef = useRef(false)
+  const voiceRepliesRef = useRef(voiceReplies)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const speakId = useRef(0) // a newer reply cancels a slower older one
 
   useEffect(() => {
     voiceRepliesRef.current = voiceReplies
+    try {
+      localStorage.setItem(VOICE_KEY, voiceReplies ? '1' : '0')
+    } catch {
+      /* private mode: fine, it just will not be remembered */
+    }
   }, [voiceReplies])
 
   // Keep the unsent message when you switch tabs or close the app (stored on this phone only).
@@ -117,28 +161,48 @@ export default function Chat() {
     window.speechSynthesis?.cancel()
   }, [])
 
-  // Muna's voice comes from Google's Gemini text-to-speech (edge function muna-voice). If that fails, use the phone's own voice.
+  // Muna's voice comes from Google's Gemini text-to-speech (edge function muna-voice). To start fast, the reply is cut into
+  // short pieces that are all requested at the same time; the first (short) one is ready after a moment and starts playing
+  // while the others are still being made. If that fails, use the phone's own voice.
   const speak = useCallback(async (reply: string) => {
     const my = ++speakId.current
     audioRef.current?.pause()
     window.speechSynthesis?.cancel()
-    const plain = reply.replace(/[*_`#]/g, '')
-    try {
-      const { data, error: err } = await supabase.functions.invoke('muna-voice', { body: { text: plain } })
-      if (my !== speakId.current || !voiceRepliesRef.current) return
-      if (!err && data?.audio) {
-        const a = audioRef.current ?? (audioRef.current = new Audio())
-        a.src = `data:${data.mime || 'audio/wav'};base64,${data.audio}`
-        await a.play()
+    const pieces = voiceChunks(reply)
+    if (!pieces.length) return
+    const jobs = pieces.map((t) =>
+      supabase.functions
+        .invoke('muna-voice', { body: { text: t } })
+        .then(({ data, error: err }) => (!err && data?.audio ? `data:${data.mime || 'audio/wav'};base64,${data.audio}` : null))
+        .catch(() => null),
+    )
+    const alive = () => my === speakId.current && voiceRepliesRef.current
+    for (let i = 0; i < jobs.length; i++) {
+      const src = await jobs[i]
+      if (!alive()) return
+      if (!src) {
+        // this piece (and the rest) with the phone's voice
+        if (!('speechSynthesis' in window)) return
+        const u = new SpeechSynthesisUtterance(pieces.slice(i).join(' '))
+        u.lang = navigator.language
+        window.speechSynthesis.speak(u)
         return
       }
-    } catch {
-      /* fall back to the phone's voice below */
+      const a = audioRef.current ?? (audioRef.current = new Audio())
+      try {
+        await new Promise<void>((resolve, reject) => {
+          a.onended = () => resolve()
+          a.onerror = () => reject(new Error('audio'))
+          a.src = src
+          a.play().catch(reject)
+        })
+      } catch {
+        return
+      } finally {
+        a.onended = null
+        a.onerror = null
+      }
     }
-    if (my !== speakId.current || !voiceRepliesRef.current || !('speechSynthesis' in window)) return
-    const u = new SpeechSynthesisUtterance(plain)
-    u.lang = navigator.language
-    window.speechSynthesis.speak(u)
   }, [])
 
   // iPhone only lets a page play sound after a tap, so "wake up" the audio player and the phone voice during the tap that starts the exchange.

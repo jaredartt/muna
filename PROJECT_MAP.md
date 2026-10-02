@@ -185,7 +185,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: ThemePref, Targets, Profile, Member, ChecklistItem, Task, Occurrence, TaskDraft…
   - imports: lib/recurrence.ts
   - used by: components/RecipePicker.tsx, components/RecipeSheet.tsx, components/TaskRow.tsx, components/TaskSheet.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useTasks.ts, lib/meals.ts, lib/theme.ts, pages/CalendarPage.tsx, pages/Chat.tsx, pages/Profile.tsx
-- `src/lib/updates.tsx` (77 lines)
+- `src/lib/updates.tsx` (78 lines)
   - exports: UpdateEntry, UPDATES
   - used by: pages/Updates.tsx
 - `src/main.tsx` (13 lines)
@@ -194,7 +194,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: CalendarPage
   - imports: components/DayView.tsx, components/WeekView.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useGoogleEvents.ts, lib/dates.ts, lib/dayItems.ts, lib/eventStyles.ts, lib/events.ts, lib/google.ts, lib/router.ts, lib/types.ts
   - used by: App.tsx
-- `src/pages/Chat.tsx` (325 lines)
+- `src/pages/Chat.tsx` (389 lines)
   - exports: Chat
   - imports: components/Muna.tsx, context/AuthContext.tsx, lib/draft.ts, lib/events.ts, lib/recorder.ts, lib/supabase.ts, lib/types.ts
   - used by: App.tsx
