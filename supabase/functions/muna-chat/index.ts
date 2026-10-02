@@ -460,8 +460,20 @@ const isDailyQuota = (status: number, body: string) => status === 429 && /PerDay
 type Part = Record<string, unknown>
 type Content = { role: 'user' | 'model'; parts: Part[] }
 
+// Google's free model sometimes answers 503 "high demand" for a moment. Try again a couple of times before giving up.
+async function geminiFetch(init: RequestInit): Promise<Response> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
+  let res = await fetch(url, init)
+  for (let attempt = 1; attempt < 3 && [500, 502, 503, 504].includes(res.status); attempt++) {
+    await res.text().catch(() => '')
+    await new Promise((r) => setTimeout(r, 900 * attempt))
+    res = await fetch(url, init)
+  }
+  return res
+}
+
 async function callGemini(system: string, contents: Content[]) {
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
+  const res = await geminiFetch({
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY },
     body: JSON.stringify({
@@ -475,14 +487,14 @@ async function callGemini(system: string, contents: Content[]) {
     const body = await res.text()
     console.error('Gemini error', res.status, body.slice(0, 500))
     if (isDailyQuota(res.status, body)) throw new TiredError(TIRED_REPLY)
-    throw new Error(res.status === 429 ? 'Muna is a bit overwhelmed right now. Try again in a minute.' : 'Muna could not reach her brain right now.')
+    throw new Error(res.status === 429 ? 'Muna is a bit overwhelmed right now. Try again in a minute.' : res.status >= 500 ? 'Muna\'s brain is very busy right now (Google is overloaded). Please send it again in a moment.' : 'Muna could not reach her brain right now.')
   }
   return await res.json()
 }
 
 // Turns a short voice recording (WAV, sent by the app) into text. The audio is NOT stored anywhere.
 async function transcribe(base64: string, mime: string) {
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
+  const res = await geminiFetch({
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY },
     body: JSON.stringify({

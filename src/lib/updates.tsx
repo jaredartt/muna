@@ -27,6 +27,7 @@ export type UpdateEntry = {
 
 // Newest first. Add one entry here for every change we make (see "Working agreements" in project_status.md).
 export const UPDATES: UpdateEntry[] = [
+  { date: '2026-10-02', time: '11:10', title: 'Personality fixed for good', text: 'Found the real mistake: the personality box could stay empty when you opened Profile. It now always shows the saved text. Muna also retries when Google is busy.', Icon: IconShieldFilled, color: 'rose' },
   { date: '2026-10-02', time: '10:54', title: 'More icons, one search', text: '1,512 Phosphor filled icons (food, drinks and lots more) joined the icon search. One search box now looks through your uploads, Phosphor and Tabler together.', Icon: IconPizzaFilled, color: 'peach' },
   { date: '2026-10-02', time: '10:39', title: 'Edit Google events', text: 'Tap any Google Calendar event, yours or your partner\'s, to change its title, day or time, or delete it. Repeating events change on every repeat (or only one day if you choose). Muna can do it too.', Icon: IconCalendarFilled, color: 'sky' },
   { date: '2026-10-02', time: '10:39', title: 'My icons', text: 'Upload your own SVG icons in Profile. You both see them straight away and can use them for tasks and profiles.', Icon: IconPaletteFilled, color: 'lilac' },

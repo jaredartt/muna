@@ -40,8 +40,11 @@ export default function Profile() {
   // something this person is in the middle of typing.
   const lastSaved = useRef('')
   useEffect(() => {
-    setPersonality((draft) => (draft === lastSaved.current ? munaPersonality : draft))
+    // Remember the OLD saved text first. React runs the function below later, so reading lastSaved.current inside it
+    // would already see the NEW text and the box would stay empty (this was the "personality disappeared" bug).
+    const before = lastSaved.current
     lastSaved.current = munaPersonality
+    setPersonality((draft) => (draft === before ? munaPersonality : draft))
   }, [munaPersonality])
 
   if (!profile) return null
