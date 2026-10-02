@@ -1,3 +1,4 @@
+import { useLayoutEffect } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { TasksProvider } from './context/TasksContext'
 import BottomNav from './components/BottomNav'
@@ -12,6 +13,10 @@ import { useRoute } from './lib/router'
 
 function Screens() {
   const route = useRoute()
+  // Every screen opens at the top (the chat is the exception: it scrolls itself to the newest message).
+  useLayoutEffect(() => {
+    if (route !== '/chat') window.scrollTo(0, 0)
+  }, [route])
   switch (route) {
     case '/calendar':
       return <CalendarPage />

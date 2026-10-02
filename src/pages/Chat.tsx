@@ -39,7 +39,6 @@ export default function Chat() {
   const [recording, setRecording] = useState(false)
   const [seconds, setSeconds] = useState(0)
   const [voiceReplies, setVoiceReplies] = useState(false)
-  const endRef = useRef<HTMLDivElement>(null)
   const justLoaded = useRef(false) // true right after the history is fetched: jump to the end instantly, like WhatsApp
   const recRef = useRef<WavRecorder | null>(null)
   const timerRef = useRef<number | null>(null)
@@ -71,9 +70,19 @@ export default function Chat() {
   useEffect(() => {
     const instant = justLoaded.current
     justLoaded.current = false
-    // wait one frame so the messages are laid out, then show the newest one (instantly when the screen opens, smoothly afterwards)
-    const id = requestAnimationFrame(() => endRef.current?.scrollIntoView({ behavior: instant ? 'auto' : 'smooth', block: 'end' }))
-    return () => cancelAnimationFrame(id)
+    const toBottom = (smooth: boolean) => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: smooth ? 'smooth' : 'auto' })
+    if (!instant) {
+      const id = requestAnimationFrame(() => toBottom(true))
+      return () => cancelAnimationFrame(id)
+    }
+    // Screen just opened: jump to the newest message at once. iPhones finish laying the page out a moment later, so repeat a few times.
+    toBottom(false)
+    const ids = [60, 200, 500].map((ms) => window.setTimeout(() => toBottom(false), ms))
+    const raf = requestAnimationFrame(() => toBottom(false))
+    return () => {
+      cancelAnimationFrame(raf)
+      ids.forEach((t) => window.clearTimeout(t))
+    }
   }, [messages, busy, recording])
 
   // leaving the screen while recording: drop the recording and release the microphone
@@ -234,7 +243,6 @@ export default function Chat() {
           </div>
         )}
         {error && <p className="error">{error}</p>}
-        <div ref={endRef} />
       </div>
 
       {recording ? (
