@@ -58,9 +58,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             supabase.from('profiles').select('id, display_name, avatar, avatar_color').eq('household_id', p.household_id),
             supabase.from('households').select('invite_code, muna_personality').eq('id', p.household_id).maybeSingle(),
           ])
-          setMembers((ms ?? []) as Member[])
-          setInviteCode(hh?.invite_code ?? '')
-          setMunaPersonality(hh?.muna_personality ?? '')
+          // Only replace what we show when the answer really arrived. On iPhones the network is often not ready
+          // for a moment after the app wakes up; an empty answer must never wipe the text on screen.
+          if (ms) setMembers(ms as Member[])
+          if (hh) {
+            setInviteCode(hh.invite_code ?? '')
+            if (typeof hh.muna_personality === 'string') setMunaPersonality(hh.muna_personality)
+          }
           void loadGoogleStatus()
           return
         }

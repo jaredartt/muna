@@ -1,3 +1,5 @@
+import type { Repeat } from './recurrence'
+
 export type ThemePref = 'light' | 'dark' | 'system'
 
 export type Profile = {
@@ -29,7 +31,11 @@ export type Task = {
   sync_google: boolean
   google_event_id: string | null
   google_owner: string | null
+  repeat: Repeat | null // null = happens once
 }
+
+/** One day of a repeating task (looks like a Task, with that day's date and tick). `series` is the real task. */
+export type Occurrence = Task & { series?: Task }
 
 export type TaskDraft = Partial<Omit<Task, 'id' | 'household_id' | 'created_at' | 'google_event_id' | 'google_owner'>> & { title: string }
 

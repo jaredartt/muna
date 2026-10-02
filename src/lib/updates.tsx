@@ -10,12 +10,14 @@ import {
   IconMoonFilled,
   IconPaletteFilled,
   IconPawFilled,
+  IconRepeat,
   IconShieldFilled,
   IconTimelineEventFilled,
 } from '@tabler/icons-react'
 
 export type UpdateEntry = {
   date: string // YYYY-MM-DD
+  time?: string // HH:MM (Berlin time); older entries from before we tracked it have none
   title: string
   text: string // one or two short sentences, simple words
   Icon: ComponentType<{ size?: number }>
@@ -24,13 +26,18 @@ export type UpdateEntry = {
 
 // Newest first. Add one entry here for every change we make (see "Working agreements" in project_status.md).
 export const UPDATES: UpdateEntry[] = [
-  { date: '2026-10-02', title: 'Scroll fix', text: 'The chat now really opens on the latest message, and every other page (like this log) opens at the top.', Icon: IconBoltFilled, color: 'sky' },
+  { date: '2026-10-02', time: '09:38', title: 'Repeating tasks', text: 'Tasks can now repeat: every X days, weeks, months or years, on chosen weekdays or dates, with days skipped and an end. Each day has its own tick, and Google Calendar repeats too.', Icon: IconRepeat, color: 'lilac' },
+  { date: '2026-10-02', time: '09:38', title: 'New logo', text: 'Muna has a new app icon: the smiling face.', Icon: IconHeartFilled, color: 'peach' },
+  { date: '2026-10-02', time: '09:38', title: 'Chat header stays', text: 'Muna and her speaker button now stay at the top while you scroll the chat.', Icon: IconMessageCircleFilled, color: 'mint' },
+  { date: '2026-10-02', time: '09:38', title: 'Personality never blank', text: 'The personality text no longer shows empty after the phone wakes up. It was always safe in the database.', Icon: IconShieldFilled, color: 'rose' },
+  { date: '2026-10-02', time: '09:38', title: 'Times in the log', text: 'Each update now shows the time next to the date (older ones from before this have none).', Icon: IconTimelineEventFilled, color: 'sky' },
+  { date: '2026-10-02', time: '09:18', title: 'Scroll fix', text: 'The chat opens on the latest message without a flash, and every other page (like this log) opens at the top.', Icon: IconBoltFilled, color: 'sky' },
   { date: '2026-10-02', title: 'Chat opens at the end', text: 'When you open the chat, you land on the latest message, like WhatsApp.', Icon: IconMessageCircleFilled, color: 'sky' },
-  { date: '2026-10-02', title: 'Update log', text: 'This list! Every change we make to Muna will show up here.', Icon: IconTimelineEventFilled, color: 'sky' },
-  { date: '2026-10-02', title: 'Cat and dog icons', text: 'The icon search now finds every Tabler icon, filled and outline mixed, so cat, dog and many more are there.', Icon: IconPawFilled, color: 'peach' },
-  { date: '2026-10-02', title: 'Menu animation', text: 'The icon now glides up when its dot appears, and back down when it leaves.', Icon: IconHomeFilled, color: 'lilac' },
-  { date: '2026-10-02', title: 'Message kept', text: 'What you are typing to Muna stays when you switch tabs or close the app.', Icon: IconMessageCircleFilled, color: 'mint' },
-  { date: '2026-10-02', title: 'Shared personality', text: 'You both see and edit the same personality text for Muna.', Icon: IconHeartFilled, color: 'rose' },
+  { date: '2026-10-02', time: '09:00', title: 'Update log', text: 'This list! Every change we make to Muna will show up here.', Icon: IconTimelineEventFilled, color: 'sky' },
+  { date: '2026-10-02', time: '09:15', title: 'Cat and dog icons', text: 'The icon search now finds every Tabler icon, filled and outline mixed, so cat, dog and many more are there.', Icon: IconPawFilled, color: 'peach' },
+  { date: '2026-10-02', time: '09:00', title: 'Menu animation', text: 'The icon now glides up when its dot appears, and back down when it leaves.', Icon: IconHomeFilled, color: 'lilac' },
+  { date: '2026-10-02', time: '08:55', title: 'Message kept', text: 'What you are typing to Muna stays when you switch tabs or close the app.', Icon: IconMessageCircleFilled, color: 'mint' },
+  { date: '2026-10-02', time: '08:54', title: 'Shared personality', text: 'You both see and edit the same personality text for Muna.', Icon: IconHeartFilled, color: 'rose' },
   { date: '2026-10-02', title: 'Muna gets tired', text: 'When the daily limit is used up she says she is tired and asks to continue tomorrow.', Icon: IconMoonFilled, color: 'butter' },
   { date: '2026-10-02', title: 'No token limit', text: 'Removed the 1,000,000 limit. Profile just counts how many tokens were used.', Icon: IconBoltFilled, color: 'butter' },
   { date: '2026-10-01', title: 'Colors and icons', text: 'Everything uses filled icons. Pick your own color and icon, with a search bar.', Icon: IconPaletteFilled, color: 'peach' },

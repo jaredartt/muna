@@ -221,9 +221,17 @@ textarea { resize: vertical; line-height: 1.45; }
 
 /* ---------- Chat ---------- */
 .chat { gap: 12px; }
-.chat-head { display: flex; align-items: center; gap: 14px; }
+.chat-head {
+  display: flex; align-items: center; gap: 14px;
+  position: sticky; top: 0; z-index: 20;
+  background: var(--bg);
+  /* stretch over the page's top padding so nothing shows above the header while scrolling */
+  margin: calc(-1 * (env(safe-area-inset-top) + 28px)) -20px 0;
+  padding: calc(env(safe-area-inset-top) + 36px) 20px 12px;
+}
 .chat-head > div { flex: 1; min-width: 0; }
 .messages { display: flex; flex-direction: column; gap: 10px; padding-bottom: 70px; }
+.messages.hidden { visibility: hidden; }
 .bubble { max-width: 85%; padding: 12px 16px; border-radius: 20px; white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: var(--shadow); }
 .bubble.user { align-self: flex-end; background: var(--coral); color: #fff; border-bottom-right-radius: 6px; }
 .bubble.assistant { align-self: flex-start; background: var(--card); border-bottom-left-radius: 6px; }
@@ -285,3 +293,18 @@ textarea { resize: vertical; line-height: 1.45; }
 .update-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .update-body strong { font-weight: 700; }
 .update-date { font-size: 12px; color: var(--muted); }
+
+/* ---------- Repeating tasks ---------- */
+.repeat-ic { vertical-align: -2px; margin-right: 4px; }
+.repeat-box { gap: 10px; }
+.repeat-box .sub { font-size: 14px; color: var(--muted); }
+.repeat-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.repeat-line input[type='number'] { width: 72px; flex: none; }
+.repeat-line select, .repeat-line input[type='date'] { flex: 1; min-width: 0; }
+.day-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.day-chip { min-width: 44px; min-height: 40px; padding: 0 10px; border-radius: 12px; background: var(--track); color: var(--ink); text-align: center; transition: background 0.15s, color 0.15s; }
+.day-chip.on { background: var(--coral); color: #fff; }
+.day-chips.wide .day-chip { min-width: 40px; padding: 0 6px; }
+.small-seg button { min-height: 40px; }
+.repeat-summary { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--track); font-size: 14px; }
+.small-seg { grid-template-columns: repeat(2, 1fr); }

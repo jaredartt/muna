@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { IconMicrophoneFilled } from '@tabler/icons-react'
 import { IconSend, IconVolume, IconVolumeOff, IconX } from '@tabler/icons-react'
 import Muna, { type MunaMood } from '../components/Muna'
@@ -25,6 +25,9 @@ async function readFunctionError(err: unknown): Promise<string> {
   return 'Muna could not answer right now. Please try again in a moment.'
 }
 
+// Remember the conversation while the app is open, so coming back to this tab shows it instantly (no empty flash).
+let historyCache: { uid: string; messages: ChatMessage[] } | null = null
+
 function mmss(s: number) {
   const m = Math.floor(s / 60)
   return `${m}:${String(Math.floor(s % 60)).padStart(2, '0')}`
@@ -32,14 +35,16 @@ function mmss(s: number) {
 
 export default function Chat() {
   const { session } = useAuth()
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const cached = historyCache && historyCache.uid === session?.user.id ? historyCache.messages : null
+  const [messages, setMessages] = useState<ChatMessage[]>(cached ?? [])
+  const [loaded, setLoaded] = useState(Boolean(cached))
   const [text, setText] = useState(() => loadDraft(session?.user.id))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [recording, setRecording] = useState(false)
   const [seconds, setSeconds] = useState(0)
   const [voiceReplies, setVoiceReplies] = useState(false)
-  const justLoaded = useRef(false) // true right after the history is fetched: jump to the end instantly, like WhatsApp
+  const justLoaded = useRef(Boolean(cached)) // true right after the history is fetched: jump to the end instantly, like WhatsApp
   const recRef = useRef<WavRecorder | null>(null)
   const timerRef = useRef<number | null>(null)
   const busyRef = useRef(false)
@@ -64,10 +69,16 @@ export default function Chat() {
       .then(({ data }) => {
         justLoaded.current = true
         setMessages(((data ?? []) as ChatMessage[]).reverse())
+        setLoaded(true)
       })
   }, [session])
 
   useEffect(() => {
+    if (loaded && session) historyCache = { uid: session.user.id, messages }
+  }, [loaded, messages, session])
+
+  // useLayoutEffect = runs before the screen is painted, so you never see the chat at the top first
+  useLayoutEffect(() => {
     const instant = justLoaded.current
     justLoaded.current = false
     const toBottom = (smooth: boolean) => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: smooth ? 'smooth' : 'auto' })
@@ -83,7 +94,7 @@ export default function Chat() {
       cancelAnimationFrame(raf)
       ids.forEach((t) => window.clearTimeout(t))
     }
-  }, [messages, busy, recording])
+  }, [messages, busy, recording, loaded])
 
   // leaving the screen while recording: drop the recording and release the microphone
   useEffect(
@@ -217,7 +228,7 @@ export default function Chat() {
         </button>
       </header>
 
-      <div className="messages">
+      <div className={'messages' + (loaded ? '' : ' hidden')}>
         {messages.length === 0 && !busy && (
           <div className="chat-empty">
             <p className="muted">Hi! I can add, change and complete tasks for you, and plan your days. Type, or tap the microphone to send me a voice note. Try:</p>

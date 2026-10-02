@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { IconTrashFilled } from '@tabler/icons-react'
 import { IconX } from '@tabler/icons-react'
 import IconPicker from './IconPicker'
+import RepeatEditor from './RepeatEditor'
+import { cleanRepeat, firstOccurrence, type Repeat } from '../lib/recurrence'
 import { TASK_COLORS, TASK_ICONS } from '../lib/icons'
 import { useAuth } from '../context/AuthContext'
 import type { Task, TaskDraft } from '../lib/types'
@@ -25,16 +27,20 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onClose
   const [color, setColor] = useState(task?.color ?? 'mint')
   const [assignee, setAssignee] = useState(task?.assigned_to ?? '')
   const [syncGoogle, setSyncGoogle] = useState(task?.sync_google ?? true)
+  const [repeat, setRepeat] = useState<Repeat | null>(task?.repeat ?? null)
   const [saving, setSaving] = useState(false)
 
   async function save() {
     if (!title.trim() || saving) return
     setSaving(true)
+    // A repeating task starts on the first day it really happens (e.g. the first Tuesday if you picked Tuesdays).
+    const rule = repeat && date ? cleanRepeat(repeat) : null
     await onSave(
       {
         title: title.trim(),
         notes: notes.trim(),
-        due_date: date || null,
+        due_date: rule && date ? firstOccurrence(date, rule) : date || null,
+        repeat: rule,
         start_time: start || null,
         end_time: start && end ? end : null,
         icon,
@@ -98,6 +104,8 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onClose
           </label>
         )}
 
+        <RepeatEditor value={repeat} onChange={setRepeat} date={date} />
+
         <label className="field">
           <span>Notes</span>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Anything to remember…" />
@@ -120,7 +128,7 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onClose
         <div className="sheet-actions">
           {task && onDelete && (
             <button className="btn danger" onClick={() => onDelete(task.id)}>
-              <IconTrashFilled size={18} /> Delete
+              <IconTrashFilled size={18} /> {task.repeat ? 'Delete all' : 'Delete'}
             </button>
           )}
           <button className="btn primary grow" onClick={save} disabled={!title.trim() || saving}>

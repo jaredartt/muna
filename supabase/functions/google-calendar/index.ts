@@ -5,6 +5,7 @@
 // Secrets needed: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET (same OAuth client you created for Google login).
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
+import { addDaysStr, isExcluded, lastOccurrence, matchesPattern, type Repeat } from './recurrence.ts'
 
 const CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID') ?? ''
 const CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET') ?? ''
@@ -32,6 +33,7 @@ type Task = {
   sync_google: boolean
   google_event_id: string | null
   google_owner: string | null
+  repeat: Repeat | null
 }
 
 class GoogleError extends Error {
@@ -114,12 +116,60 @@ function endTimeFor(start: string, end: string | null): { date?: string; time: s
   return { time: `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}` }
 }
 
+const BYDAY = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']
+const compact = (d: string) => d.replaceAll('-', '')
+
+// local date+time in a time zone -> UTC stamp like 20261231T213000Z
+function utcStamp(date: string, time: string, tz: string): string {
+  const [y, m, d] = date.split('-').map(Number)
+  const [hh, mm] = time.split(':').map(Number)
+  const guess = Date.UTC(y, m - 1, d, hh, mm)
+  const f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' })
+  const p = Object.fromEntries(f.formatToParts(new Date(guess)).map((x) => [x.type, Number(x.value)]))
+  const asLocal = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute)
+  return new Date(guess - (asLocal - guess)).toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z'
+}
+
+// Muna repeat rule -> Google "RRULE" (+ EXDATE lines for the days it skips)
+function recurrenceLines(t: Task, tz: string): string[] {
+  const r = t.repeat!
+  const start = t.due_date!
+  const every = Math.max(1, r.every || 1)
+  const timed = Boolean(t.start_time)
+  const wd = (new Date(Date.parse(start + 'T00:00:00Z')).getUTCDay() + 6) % 7
+  const parts: string[] = []
+  if (r.freq === 'day') parts.push('FREQ=DAILY')
+  if (r.freq === 'week') parts.push('FREQ=WEEKLY', 'BYDAY=' + (r.weekdays?.length ? r.weekdays : [wd]).map((d) => BYDAY[d]).join(','))
+  if (r.freq === 'month') {
+    parts.push('FREQ=MONTHLY')
+    if (r.nth) parts.push(`BYDAY=${r.nth.n}${BYDAY[r.nth.weekday]}`)
+    else parts.push('BYMONTHDAY=' + (r.monthDays?.length ? r.monthDays : [Number(start.slice(8, 10))]).join(','))
+  }
+  if (r.freq === 'year') parts.push('FREQ=YEARLY')
+  parts.push(`INTERVAL=${every}`)
+  const last = lastOccurrence(start, r) // a "stop after N times" rule is turned into its last day, so skipped days do not count
+  if (last) parts.push('UNTIL=' + (timed ? utcStamp(last, hhmm(t.start_time!), tz) : compact(last)))
+  const lines = ['RRULE:' + parts.join(';')]
+  if (r.exceptWeekdays?.length || r.exceptWeeks?.length) {
+    const stop = last && last < addDaysStr(start, 730) ? last : addDaysStr(start, 730)
+    let n = 0
+    for (let d = start; d <= stop && n < 150; d = addDaysStr(d, 1)) {
+      if (matchesPattern(r, start, d) && isExcluded(r, d)) {
+        lines.push(timed ? `EXDATE;TZID=${tz}:${compact(d)}T${hhmm(t.start_time!).replace(':', '')}00` : `EXDATE;VALUE=DATE:${compact(d)}`)
+        n++
+      }
+    }
+  }
+  return lines
+}
+
 function eventBody(t: Task, tz: string, patch = false) {
-  const summary = (t.completed ? '✓ ' : '') + t.title
+  const summary = (t.completed && !t.repeat ? '✓ ' : '') + t.title
   const base = {
     summary,
     description: t.notes ? t.notes + '\n\n(Added from Muna)' : '(Added from Muna)',
     extendedProperties: { private: { muna_task_id: t.id } },
+    ...(t.repeat ? { recurrence: recurrenceLines(t, tz) } : patch ? { recurrence: null } : {}),
   }
   if (t.start_time) {
     const end = endTimeFor(t.start_time, t.end_time)
@@ -260,7 +310,7 @@ Deno.serve(async (req) => {
       if (ids.length) {
         const { data: tasks } = await admin
           .from('tasks')
-          .select('id, household_id, created_by, assigned_to, title, notes, due_date, start_time, end_time, completed, sync_google, google_event_id, google_owner')
+          .select('id, household_id, created_by, assigned_to, title, notes, due_date, start_time, end_time, completed, sync_google, google_event_id, google_owner, repeat')
           .in('id', ids)
           .eq('household_id', householdId)
         for (const t of (tasks ?? []) as Task[]) {

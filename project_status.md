@@ -34,12 +34,13 @@ Migrations are in `supabase/migrations/` (already applied; keep new ones there t
 - `households` – a shared "home" (name, `invite_code`, `muna_personality` = the shared personality text).
 - `profiles` – one per user (`id` = auth user id): `household_id`, `display_name`, `avatar` (a Tabler filled icon name, e.g. `IconPawFilled`), `avatar_color` (mint/peach/lilac/sky/butter/rose), `theme_pref`, `monthly_token_budget`, and the legacy unused `muna_personality`. The app may only edit `display_name, avatar, avatar_color, theme_pref`.
 - `tasks` – `household_id, created_by, assigned_to, title, notes, due_date, start_time, end_time, icon, color, completed, completed_at, sync_google` plus server-only `google_event_id, google_owner` (the app cannot write those; column-level grants).
+- `tasks.repeat` (jsonb, null = once) holds the repeat rule; `task_completions(task_id, occ_date, household_id, completed_by, completed_at)` = one row per ticked day of a repeating task (RLS by household, realtime on). Migration 6.
 - `google_connections` – `user_id, refresh_token`. RLS on, NO policies: only the edge functions (service role) can read it. RPCs: `save_google_connection(token)`, `disconnect_google()`, `get_google_status()` (who in the home is connected; never exposes tokens). Realtime is on for `tasks`.
 - `chat_messages` – per-user chat history with Muna.
 - `ai_usage` – tokens used per user per month. RPCs: `get_ai_usage()`, `add_ai_usage()`.
 - `private.allowed_emails` – **guest list**. Only `jaredartt@gmail.com` and `limisan98@gmail.com` can sign up (trigger `handle_new_user` rejects everyone else) and both automatically share one household. To add/change someone, edit this table with SQL.
 - RPC `join_household(code)` is a fallback to join a partner's home by invite code.
-- Security advisor note: `join_household`, `add_ai_usage`, `get_ai_usage`, `get_google_status`, `save_google_connection`, `disconnect_google` are SECURITY DEFINER functions callable by signed-in users on purpose; `google_connections` showing "RLS enabled, no policy" is also on purpose. Migrations 1-5 are in `supabase/migrations/` (3 = Google Calendar, 4 = profile colour + filled avatar icons, 5 = shared personality).
+- Security advisor note: `join_household`, `add_ai_usage`, `get_ai_usage`, `get_google_status`, `save_google_connection`, `disconnect_google` are SECURITY DEFINER functions callable by signed-in users on purpose; `google_connections` showing "RLS enabled, no policy" is also on purpose. Migrations 1-6 are in `supabase/migrations/` (3 = Google Calendar, 4 = profile colour + filled avatar icons, 5 = shared personality, 6 = repeating tasks).
 
 ## Muna (Gemini) – how it works
 1. Chat page calls `supabase.functions.invoke('muna-chat', { message, timezone })` (JWT required).
@@ -59,7 +60,15 @@ Migrations are in `supabase/migrations/` (already applied; keep new ones there t
 - Frontend: `src/lib/google.ts`, `src/hooks/useGoogleEvents.ts` (60 s cache, refetch on `TASKS_CHANGED`), `EventRow`, events shown in Calendar (blue ring dots) and Home's Today card. The task sheet has an "Add to Google Calendar" checkbox (`sync_google`).
 - Limits: only the primary calendar; edits made inside Google to Muna-created events are **not** read back (Google → Muna is only the read-only list); refresh token is stored as plain text in a locked table; while the Google Cloud app is in "Testing" refresh tokens expire after 7 days, so the app must be **published to production** (unverified-app warning is normal: Advanced → Go to Muna).
 
+## Repeating tasks
+- ONE task row = the whole series. Rule shape (`Repeat` in `src/lib/recurrence.ts`): `freq` day/week/month/year, `every`, `weekdays` (0=Mon..6=Sun), `monthDays` (1..31, -1=last), `nth` ({n:1-4|-1, weekday}), `exceptWeekdays`, `exceptWeeks` (week of month 1-4, -1=last), `until` or `count`. "Twice a week" = two weekdays, "twice a month" = two dates. Times per DAY ("twice a day") is NOT supported.
+- `due_date` of a repeating task = its first real occurrence (normalised on save, also by Muna). `useTasks` exposes `occurrencesOn(date)` / `occurrenceMap(from,to)` which expand repeats into `Occurrence` objects (`series` = the real task, `completed` = ticked that day). `toggleTask` on an occurrence writes `task_completions`; `openEditor(occurrence)` opens the whole series; Delete = "Delete all". Home's "All tasks" ring counts one-time tasks only.
+- `recurrence.ts` exists in THREE identical copies: `src/lib/` and `supabase/functions/{google-calendar,muna-chat}/` (edge functions can't import from src). Change all three together; the server copies have trimmed comments.
+- Google: `google-calendar` turns the rule into RRULE (+ EXDATE for skipped days, up to 2 years ahead, max 150) and converts "after N times" into an UNTIL date. Muna (`muna-chat`) has a `repeat` object in create_tasks/update_task and `set_tasks_completed(date)` for one day.
+
 ## Small UX details
+- Chat opens at the newest message: history is cached in memory (`historyCache` in `Chat.tsx`) and scrolled with `useLayoutEffect` before paint; the message list is `visibility:hidden` until loaded. The chat header is `position: sticky`. Every other route scrolls to top (`App.tsx`).
+- Update-log entries have an optional `time` (Berlin, HH:MM); entries from before Oct 2 09:00 have none because it was not recorded.
 - Chat draft: the unsent message is kept in the browser's `localStorage` (`muna-chat-draft:<user id>`, `src/lib/draft.ts`) so it survives tab switches AND closing the app. It is per phone, not synced, and uses no Supabase storage. If sending fails, the text is put back in the box.
 - Bottom nav: the active tab shows a white dot and its icon glides up 5px (and back down when you leave), animated in CSS in `src/styles.css` (`.nav-btn svg`, `.nav-dot`).
 
@@ -67,7 +76,7 @@ Migrations are in `supabase/migrations/` (already applied; keep new ones there t
 Each person picks a colour (`avatar_color`) and any Tabler **filled** icon (`avatar`) with a search bar (`src/components/IconPicker.tsx`; the full icon library is loaded lazily with `import('@tabler/icons-react')`). The same picker is used for task icons (Muna's own `icon` enum stays the 32 curated keys in `TASK_ICONS`). The partner's events in the calendar are tinted with their colour.
 
 ## Screens (done)
-Login (Google) · Home (dashboard like Figma) · Calendar (month grid, dots per day, Google events, day list, add task) · Chat with Muna (text + voice notes) · Profile (name, colour, filled icon with search, light/dark/system, Muna personality, tokens used, Google Calendar connect, invite code, sign out). Task editor sheet (title, date, time, who, notes, colour, icon).
+Login (Google) · Home (dashboard like Figma) · Calendar (month grid, dots per day, Google events, day list, add task) · Chat with Muna (text + voice notes) · Profile (name, colour, filled icon with search, light/dark/system, Muna personality, tokens used, Google Calendar connect, invite code, sign out). Task editor sheet (title, date, time, who, repeat, notes, colour, icon).
 
 ## Known limits / not done yet
 - Google Calendar: see limits above. Sleep / Calories / Uni dashboard cards are still not built.

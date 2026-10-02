@@ -31,7 +31,7 @@ export default function Updates() {
                 <div className="update-body">
                   <strong>{u.title}</strong>
                   <span>{u.text}</span>
-                  <span className="update-date">{niceDate(u.date)}</span>
+                  <span className="update-date">{niceDate(u.date)}{u.time ? ` · ${u.time}` : ''}</span>
                 </div>
               </div>
             ))}

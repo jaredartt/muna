@@ -8,10 +8,10 @@ import { eventDays, eventSortKey, type GoogleEvent } from '../lib/google'
 import { WEEKDAYS_MON_FIRST, formatDateNice, monthGrid, parseDateStr, todayStr } from '../lib/dates'
 import { useAuth } from '../context/AuthContext'
 import { navigate } from '../lib/router'
-import type { Task } from '../lib/types'
+import { toDateStr } from '../lib/dates'
 
 export default function CalendarPage() {
-  const { tasks, toggleTask, openEditor } = useTasksCtx()
+  const { toggleTask, openEditor, occurrencesOn, occurrenceMap } = useTasksCtx()
   const { googleConnected } = useAuth()
   const today = todayStr()
   const [cursor, setCursor] = useState(() => {
@@ -28,16 +28,10 @@ export default function CalendarPage() {
   const rangeTo = useMemo(() => new Date(cursor.y, cursor.m + 1, 1), [cursor.y, cursor.m])
   const google = useGoogleEvents(rangeFrom, rangeTo)
 
-  const byDate = useMemo(() => {
-    const map = new Map<string, Task[]>()
-    for (const t of tasks) {
-      if (!t.due_date) continue
-      const arr = map.get(t.due_date) ?? []
-      arr.push(t)
-      map.set(t.due_date, arr)
-    }
-    return map
-  }, [tasks])
+  const byDate = useMemo(
+    () => occurrenceMap(toDateStr(new Date(cursor.y, cursor.m, 1)), toDateStr(new Date(cursor.y, cursor.m + 1, 0))),
+    [occurrenceMap, cursor.y, cursor.m],
+  )
 
   const eventsByDate = useMemo(() => {
     const map = new Map<string, GoogleEvent[]>()
@@ -51,7 +45,7 @@ export default function CalendarPage() {
     return map
   }, [google.events])
 
-  const dayTasks = (byDate.get(selected) ?? []).slice().sort((a, b) => (a.start_time ?? '99').localeCompare(b.start_time ?? '99'))
+  const dayTasks = occurrencesOn(selected).slice().sort((a, b) => (a.start_time ?? '99').localeCompare(b.start_time ?? '99'))
   const dayEvents = (eventsByDate.get(selected) ?? []).slice().sort((a, b) => eventSortKey(a).localeCompare(eventSortKey(b)))
 
   function shift(delta: number) {

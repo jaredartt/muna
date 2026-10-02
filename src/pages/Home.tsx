@@ -28,7 +28,7 @@ function currentWeek(): string[] {
 
 export default function Home() {
   const { profile } = useAuth()
-  const { tasks, loading, toggleTask, openEditor } = useTasksCtx()
+  const { tasks, loading, toggleTask, openEditor, occurrencesOn } = useTasksCtx()
   const today = todayStr()
 
   // Today's Google Calendar events (read-only) sit next to the tasks
@@ -39,17 +39,18 @@ export default function Home() {
     .filter((e) => eventDays(e).includes(today))
     .sort((a, b) => eventSortKey(a).localeCompare(eventSortKey(b)))
 
-  const todays = tasks.filter((t) => t.due_date === today).sort((a, b) => Number(a.completed) - Number(b.completed) || (a.start_time ?? '99').localeCompare(b.start_time ?? '99'))
+  const todays = occurrencesOn(today).sort((a, b) => Number(a.completed) - Number(b.completed) || (a.start_time ?? '99').localeCompare(b.start_time ?? '99'))
   const doneToday = todays.filter((t) => t.completed).length
   const todayPct = todays.length ? Math.round((doneToday / todays.length) * 100) : 0
 
   const week = currentWeek()
-  const weekCounts = week.map((d) => tasks.filter((t) => t.due_date === d).length)
+  const weekCounts = week.map((d) => occurrencesOn(d).length)
   const weekTotal = weekCounts.reduce((a, b) => a + b, 0)
 
-  const open = tasks.filter((t) => !t.completed)
+  const once = tasks.filter((t) => !t.repeat) // the 'All tasks' ring counts one-time tasks only
+  const open = once.filter((t) => !t.completed)
   const overdue = open.filter((t) => t.due_date && t.due_date < today).length
-  const allPct = tasks.length ? Math.round(((tasks.length - open.length) / tasks.length) * 100) : 0
+  const allPct = once.length ? Math.round(((once.length - open.length) / once.length) * 100) : 0
 
   const name = profile?.display_name?.split(' ')[0] || 'friend'
   const remaining = todays.length - doneToday
