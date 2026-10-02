@@ -5,6 +5,7 @@ import { IconTimelineEventFilled } from '@tabler/icons-react'
 import { navigate } from '../lib/router'
 import Avatar from '../components/Avatar'
 import IconPicker from '../components/IconPicker'
+import MyIcons from '../components/MyIcons'
 import { AVATAR_SUGGESTIONS, TASK_COLORS } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -109,6 +110,8 @@ export default function Profile() {
           <IconPicker value={profile.avatar} onChange={(a) => save({ avatar: a }, 'Icon saved')} suggestions={AVATAR_SUGGESTIONS} colorClass={`c-${profile.avatar_color}`} />
         </div>
       </section>
+
+      <MyIcons colorClass={`c-${profile.avatar_color}`} />
 
       <section className="card">
         <h3>Appearance</h3>

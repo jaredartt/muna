@@ -1,6 +1,9 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 import { useTasks } from '../hooks/useTasks'
 import TaskSheet from '../components/TaskSheet'
+import EventSheet from '../components/EventSheet'
+import { notifyTasksChanged } from '../lib/events'
+import type { GoogleEvent } from '../lib/google'
 import type { Occurrence, Task, TaskDraft } from '../lib/types'
 
 type Editor = { task: Task | null; defaultDate: string | null } | null
@@ -8,6 +11,8 @@ type Editor = { task: Task | null; defaultDate: string | null } | null
 type TasksState = ReturnType<typeof useTasks> & {
   /** Open the task sheet. Pass a task to edit, or { date } to create one on a given day. */
   openEditor: (arg?: Task | Occurrence | { date?: string | null }) => void
+  /** Open the editor for a Google Calendar event (either person's). */
+  openEvent: (ev: GoogleEvent) => void
 }
 
 const Ctx = createContext<TasksState | null>(null)
@@ -15,6 +20,8 @@ const Ctx = createContext<TasksState | null>(null)
 export function TasksProvider({ children }: { children: ReactNode }) {
   const t = useTasks()
   const [editor, setEditor] = useState<Editor>(null)
+  const [eventEditor, setEventEditor] = useState<GoogleEvent | null>(null)
+  const openEvent = useCallback((ev: GoogleEvent) => setEventEditor(ev), [])
 
   const openEditor = useCallback((arg?: Task | Occurrence | { date?: string | null }) => {
     // a repeating day opens the real task (the whole series), not just that one day
@@ -40,7 +47,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     [deleteTask],
   )
 
-  const value = useMemo(() => ({ ...t, openEditor }), [t, openEditor])
+  const value = useMemo(() => ({ ...t, openEditor, openEvent }), [t, openEditor, openEvent])
 
   return (
     <Ctx.Provider value={value}>
@@ -52,6 +59,16 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           onSave={handleSave}
           onDelete={handleDelete}
           onClose={() => setEditor(null)}
+        />
+      )}
+      {eventEditor && (
+        <EventSheet
+          event={eventEditor}
+          onClose={() => setEventEditor(null)}
+          onDone={() => {
+            setEventEditor(null)
+            notifyTasksChanged()
+          }}
         />
       )}
     </Ctx.Provider>

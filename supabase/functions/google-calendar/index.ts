@@ -1,6 +1,7 @@
 // Google Calendar bridge for Muna.
 //   action "list": events from every connected person in the home (primary calendars), for a date range.
 //   action "sync": mirror Muna tasks into the right person's Google Calendar (create / update / delete).
+//   action "update_event" / "delete_event": edit or remove any event on either person's calendar (both can edit each other's).
 // Google refresh tokens live in table google_connections, which only this server code (service role) can read.
 // Secrets needed: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET (same OAuth client you created for Google login).
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
@@ -260,6 +261,8 @@ Deno.serve(async (req) => {
             if (ev.extendedProperties?.private?.muna_task_id) continue // already shown as a Muna task
             events.push({
               id: `${uid}:${ev.id}`,
+              event_id: ev.id,
+              recurring: Boolean(ev.recurringEventId),
               owner_id: uid,
               owner_name: m.display_name,
               title: ev.summary ?? '(no title)',
@@ -361,6 +364,63 @@ Deno.serve(async (req) => {
         }
       }
       return json(result)
+    }
+
+    // ---------------- UPDATE / DELETE ONE EVENT ----------------
+    if (body.action === 'update_event' || body.action === 'delete_event') {
+      const owner = typeof body.owner_id === 'string' ? body.owner_id : ''
+      const eventId = typeof body.event_id === 'string' ? body.event_id : ''
+      if (!eventId || !memberIds.has(owner) || !connected.has(owner)) return json({ ok: false, error: 'not_found', message: 'That event could not be found.' })
+      const at = await accessTokenFor(admin, owner)
+      if (!at) return json({ ok: false, reconnect: true, message: 'Google access expired. Please reconnect.' })
+      const path = `/${encodeURIComponent(eventId)}`
+      try {
+        if (body.action === 'delete_event') {
+          await gcal(at, 'DELETE', path)
+          return json({ ok: true })
+        }
+        const tz = validTz(body.tz)
+        const cur = await gcal(at, 'GET', `${path}?timeZone=${encodeURIComponent(tz)}`)
+        const ex = cur.data
+        if (!ex || cur.status === 404 || cur.status === 410 || ex.status === 'cancelled') return json({ ok: false, error: 'not_found', message: 'That event no longer exists.' })
+        if (ex.extendedProperties?.private?.muna_task_id) return json({ ok: false, error: 'muna_task', message: 'That is a Muna task. Edit it as a task.' })
+
+        const wasAllDay = Boolean(ex.start?.date)
+        const allDay = typeof body.all_day === 'boolean' ? body.all_day : wasAllDay
+        const exStartDate: string = wasAllDay ? ex.start.date : String(ex.start.dateTime).slice(0, 10)
+        const exEndDate: string = wasAllDay ? addDaysStr(ex.end.date, -1) : String(ex.end.dateTime).slice(0, 10)
+        const exStartTime: string | null = wasAllDay ? null : String(ex.start.dateTime).slice(11, 16)
+        const exEndTime: string | null = wasAllDay ? null : String(ex.end.dateTime).slice(11, 16)
+        const span = Math.max(0, Math.round((Date.parse(exEndDate + 'T00:00:00Z') - Date.parse(exStartDate + 'T00:00:00Z')) / 86400000))
+
+        const date = typeof body.date === 'string' ? body.date : exStartDate
+        if (!DATE_RE.test(date)) return json({ ok: false, error: 'bad_date', message: 'The date looks wrong.' })
+        let endDate = typeof body.end_date === 'string' ? body.end_date : body.date ? addDaysStr(date, span) : exEndDate
+        if (!DATE_RE.test(endDate) || endDate < date) endDate = date
+
+        const patch: Record<string, unknown> = {}
+        if (typeof body.title === 'string') {
+          const t = body.title.trim().slice(0, 300)
+          if (!t) return json({ ok: false, error: 'bad_title', message: 'The title cannot be empty.' })
+          patch.summary = t
+        }
+        if (allDay) {
+          patch.start = { date, dateTime: null, timeZone: null }
+          patch.end = { date: addDaysStr(endDate, 1), dateTime: null, timeZone: null }
+        } else {
+          const st = typeof body.start_time === 'string' && /^\d{2}:\d{2}/.test(body.start_time) ? hhmm(body.start_time) : (exStartTime ?? '09:00')
+          let et = typeof body.end_time === 'string' && /^\d{2}:\d{2}/.test(body.end_time) ? hhmm(body.end_time) : (typeof body.start_time === 'string' || !exEndTime ? endTimeFor(st, null).time : exEndTime)
+          if (endDate === date && et <= st) et = endTimeFor(st, null).time
+          patch.start = { dateTime: `${date}T${st}:00`, timeZone: tz, date: null }
+          patch.end = { dateTime: `${endDate}T${et}:00`, timeZone: tz, date: null }
+        }
+        const r = await gcal(at, 'PATCH', path, patch)
+        if (r.status === 404 || r.status === 410) return json({ ok: false, error: 'not_found', message: 'That event no longer exists.' })
+        return json({ ok: true })
+      } catch (e) {
+        if (e instanceof GoogleError) return json({ ok: false, reconnect: e.code === 'reconnect', api_disabled: e.code === 'api_disabled', message: e.message })
+        throw e
+      }
     }
 
     return json({ error: 'Unknown action' }, 400)

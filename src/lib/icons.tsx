@@ -1,4 +1,7 @@
 import { useEffect, useState, type ComponentType } from 'react'
+import { SvgGlyph } from './svgIcons'
+import { customIconById, customIconsReady, useCustomIcons } from './customIcons'
+import { usePhosphor } from './phosphor'
 import {
   IconCircleCheckFilled, IconShoppingCartFilled, IconChefHatFilled, IconPizzaFilled, IconCoffee, IconCake,
   IconHomeFilled, IconBedFilled, IconHeartFilled, IconGiftFilled, IconBriefcaseFilled, IconDeviceLaptop,
@@ -102,8 +105,10 @@ export function allIconNames(lib: Lib): string[] {
   return allNames
 }
 
-/** IconToolsKitchenFilled -> tools-kitchen (what people search for). */
+/** IconToolsKitchenFilled -> tools-kitchen; ph:pizza -> pizza; custom:<id> -> the name it was uploaded with. */
 export function iconSearchName(name: string): string {
+  if (name.startsWith('ph:')) return name.slice(3)
+  if (name.startsWith('custom:')) return customIconById(name.slice(7))?.name ?? 'my icon'
   return name
     .replace(/^Icon/, '')
     .replace(/Filled$/, '')
@@ -118,13 +123,31 @@ function DynamicIcon({ name, size }: { name: string; size: number }) {
   return <Cmp size={size} stroke={1.8} />
 }
 
-/** Renders a stored icon: a Muna icon key (e.g. "pizza") or a Tabler component name (e.g. "IconBeerFilled"). */
+function PhosphorIcon({ name, size }: { name: string; size: number }) {
+  const data = usePhosphor(true)
+  const hit = data?.icons[name]
+  if (!data || !hit) return <span style={{ display: 'inline-block', width: size, height: size }} />
+  return <SvgGlyph data={{ nodes: hit[1], root: { fill: 'currentColor' } }} viewBox={data.viewBox} size={size} />
+}
+
+function CustomIconView({ id, size }: { id: string; size: number }) {
+  const all = useCustomIcons()
+  const hit = all.find((i) => i.id === id)
+  if (hit) return <SvgGlyph data={hit.data} size={size} />
+  // not loaded yet: keep the space empty; deleted icon: show the default one
+  if (!customIconsReady()) return <span style={{ display: 'inline-block', width: size, height: size }} />
+  return <IconCircleCheckFilled size={size} />
+}
+
+/** Renders a stored icon: a Muna icon key ("pizza"), a Phosphor icon ("ph:pizza"), an uploaded icon ("custom:<id>") or a Tabler component name ("IconBeerFilled"). */
 export function AppIcon({ name, size = 20 }: { name: string; size?: number }) {
   const curated = TASK_ICONS[name]
   if (curated) {
     const Cmp = curated
     return <Cmp size={size} stroke={1.8} />
   }
+  if (name.startsWith('ph:')) return <PhosphorIcon name={name.slice(3)} size={size} />
+  if (name.startsWith('custom:')) return <CustomIconView id={name.slice(7)} size={size} />
   if (/^Icon[A-Za-z0-9]+$/.test(name)) return <DynamicIcon name={name} size={size} />
   const Fallback = IconCircleCheckFilled
   return <Fallback size={size} />

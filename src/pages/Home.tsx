@@ -28,10 +28,10 @@ function currentWeek(): string[] {
 
 export default function Home() {
   const { profile } = useAuth()
-  const { tasks, loading, toggleTask, openEditor, occurrencesOn } = useTasksCtx()
+  const { tasks, loading, toggleTask, openEditor, openEvent, occurrencesOn } = useTasksCtx()
   const today = todayStr()
 
-  // Today's Google Calendar events (read-only) sit next to the tasks
+  // Today's Google Calendar events sit next to the tasks
   const dayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())
   const dayEnd = new Date(dayStart.getTime() + 86400000)
   const google = useGoogleEvents(dayStart, dayEnd)
@@ -101,10 +101,10 @@ export default function Home() {
                   <span className="tile c-sky" aria-hidden="true">
                     <IconCalendarEventFilled size={18} />
                   </span>
-                  <span className="mini-title">
+                  <button className="mini-title" onClick={() => openEvent(e)}>
                     {e.title}
                     <small className="muted"> {eventTimeLabel(e)}</small>
-                  </span>
+                  </button>
                 </div>
               ))}
               {hiddenCount > 0 && (

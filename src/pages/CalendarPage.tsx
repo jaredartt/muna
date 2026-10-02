@@ -11,7 +11,7 @@ import { navigate } from '../lib/router'
 import { toDateStr } from '../lib/dates'
 
 export default function CalendarPage() {
-  const { toggleTask, openEditor, occurrencesOn, occurrenceMap } = useTasksCtx()
+  const { toggleTask, openEditor, openEvent, occurrencesOn, occurrenceMap } = useTasksCtx()
   const { googleConnected } = useAuth()
   const today = todayStr()
   const [cursor, setCursor] = useState(() => {
@@ -117,13 +117,13 @@ export default function CalendarPage() {
         <div className="stack">
           {dayTasks.length === 0 && dayEvents.length === 0 && <p className="empty">Nothing planned. A free day!</p>}
           {dayEvents.filter((e) => e.all_day).map((e) => (
-            <EventRow key={e.id + selected} event={e} />
+            <EventRow key={e.id + selected} event={e} onOpen={openEvent} />
           ))}
           {dayTasks.map((t) => (
             <TaskRow key={t.id} task={t} onToggle={toggleTask} onOpen={openEditor} />
           ))}
           {dayEvents.filter((e) => !e.all_day).map((e) => (
-            <EventRow key={e.id + selected} event={e} />
+            <EventRow key={e.id + selected} event={e} onOpen={openEvent} />
           ))}
           {!googleConnected && dayTasks.length === 0 && (
             <button className="soft-link" onClick={() => navigate('/profile')}>

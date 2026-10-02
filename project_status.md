@@ -40,7 +40,7 @@ Migrations are in `supabase/migrations/` (already applied; keep new ones there t
 - `ai_usage` – tokens used per user per month. RPCs: `get_ai_usage()`, `add_ai_usage()`.
 - `private.allowed_emails` – **guest list**. Only `jaredartt@gmail.com` and `limisan98@gmail.com` can sign up (trigger `handle_new_user` rejects everyone else) and both automatically share one household. To add/change someone, edit this table with SQL.
 - RPC `join_household(code)` is a fallback to join a partner's home by invite code.
-- Security advisor note: `join_household`, `add_ai_usage`, `get_ai_usage`, `get_google_status`, `save_google_connection`, `disconnect_google` are SECURITY DEFINER functions callable by signed-in users on purpose; `google_connections` showing "RLS enabled, no policy" is also on purpose. Migrations 1-6 are in `supabase/migrations/` (3 = Google Calendar, 4 = profile colour + filled avatar icons, 5 = shared personality, 6 = repeating tasks).
+- Security advisor note: `join_household`, `add_ai_usage`, `get_ai_usage`, `get_google_status`, `save_google_connection`, `disconnect_google` are SECURITY DEFINER functions callable by signed-in users on purpose; `google_connections` showing "RLS enabled, no policy" is also on purpose. Migrations 1-7 are in `supabase/migrations/` (3 = Google Calendar, 4 = profile colour + filled avatar icons, 5 = shared personality, 6 = repeating tasks, 7 = custom_icons).
 
 ## Muna (Gemini) – how it works
 1. Chat page calls `supabase.functions.invoke('muna-chat', { message, timezone })` (JWT required).
@@ -75,6 +75,13 @@ Migrations are in `supabase/migrations/` (already applied; keep new ones there t
 ## Profile colour + icon
 Each person picks a colour (`avatar_color`) and any Tabler **filled** icon (`avatar`) with a search bar (`src/components/IconPicker.tsx`; the full icon library is loaded lazily with `import('@tabler/icons-react')`). The same picker is used for task icons (Muna's own `icon` enum stays the 32 curated keys in `TASK_ICONS`). The partner's events in the calendar are tinted with their colour.
 
+## Editing Google events + custom icons (Oct 2)
+- **Google events are editable** (both people can edit each other's): `google-calendar` actions `update_event` / `delete_event` (merge with the existing event, so Muna can send only what changed). `EventSheet.tsx` is opened with `openEvent(ev)` from `TasksContext` (tap an event in Calendar or Home). A repeating event changes only that one day. Muna tools: `update_calendar_event`, `delete_calendar_event` (use the `ref` from `list_calendar_events`). Muna's own task events stay edited as tasks.
+- **Icon keys:** curated (`pizza`), Tabler (`IconBeerFilled`), Phosphor Fill (`ph:pizza`, from `src/data/phosphor-fill.json`) and uploaded (`custom:<uuid>`). `AppIcon` renders all four; `IconPicker` searches custom + Phosphor + Tabler together.
+- **Uploaded icons:** table `custom_icons` (migration 7, per household, RLS, realtime). `src/lib/svgIcons.tsx` cleans an SVG into a list of whitelisted shapes (no scripts, every colour becomes currentColor, max 30 KB); `src/lib/customIcons.ts` is the live store (cached in localStorage); `MyIcons.tsx` is the Profile card; `IconSync.tsx` starts the sync. Storage is Supabase (a few KB per icon).
+- **Phosphor Fill:** MIT, github.com/phosphor-icons/core. This workspace and the Mac shell cannot reach npm, so the file is made once from the GitHub ZIP: download "Code > Download ZIP", put it in the Muna folder, run `python3 tools/import_phosphor.py core-main.zip` (writes `src/data/phosphor-fill.json`, ~1500 icons incl. food, searchable by tags). Until that file exists the app just works without Phosphor. `*.zip` is git-ignored.
+- **Project map:** `PROJECT_MAP.md` (made by `python3 tools/make_map.py`) lists every file, exports, imports, tables and server functions. Read it first instead of opening many files; regenerate after structural changes. (This replaces trying Graphify, which Claude cannot install here.)
+
 ## Task sheet notes
 Google sync is always on for dated tasks (`sync_google` forced true; no checkbox). Date/Who and Starts/Ends use `minmax(0,1fr)` grid columns so iOS date inputs can't overflow; the sheet and page block sideways scrolling (`overflow-x: hidden`, `touch-action: pan-y`). Checkboxes are custom (rounded coral box, animated tick) in `styles.css`.
 
@@ -102,7 +109,7 @@ Login (Google) · Home (dashboard like Figma) · Calendar (month grid, dots per 
 ## Working agreements
 - Keep answers simple and step-by-step for Jared; he does not code.
 - Don't ask him for secrets in chat (no API keys, no tokens). Gemini key → Supabase secrets dashboard only.
-- Update this file after every change.
+- Update this file after every change. Read `PROJECT_MAP.md` first and rerun `python3 tools/make_map.py` after adding/removing files.
 - Delivering files to the Mac folder: after copying files into the staging folder, wait a few seconds before `device_commit_files`, then verify with `md5sum` on the Mac (`device_bash`) that they match. Twice a commit reported "written" but the Mac kept the OLD file, which broke the GitHub build (run #4/#5: missing export). Always run a build-style check (all local imports resolve) before telling Jared to push.
 - **Update log:** for EVERY change we make, add one entry at the top of `src/lib/updates.tsx` (date, short title, one or two simple sentences, a Tabler filled icon, a pastel colour). Jared reads it in Profile → Update log (`src/pages/Updates.tsx`, route `/updates`). Keep it very short and in simple words.
-- Icon picker: the search covers ALL Tabler icons, filled and outline mixed together (Tabler has no filled cat/dog; Lidia asked for a cat). The suggestion grid before searching is filled-only. Uploading own SVG icons was discussed but NOT built (needs sanitising the SVG for safety and sharing it between phones).
+- Icon picker: the search covers ALL Tabler icons, filled and outline mixed together (Tabler has no filled cat/dog; Lidia asked for a cat). The suggestion grid before searching is filled-only. Own SVG icons are built (Profile > My icons, Supabase).

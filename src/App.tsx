@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { TasksProvider } from './context/TasksContext'
 import BottomNav from './components/BottomNav'
 import Muna from './components/Muna'
+import IconSync from './components/IconSync'
 import Login from './pages/Login'
 import Home from './pages/Home'
 import CalendarPage from './pages/CalendarPage'
@@ -50,6 +51,7 @@ function Shell() {
   }
   return (
     <TasksProvider>
+      <IconSync />
       <Screens />
       <BottomNav />
     </TasksProvider>

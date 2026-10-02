@@ -6,6 +6,8 @@ export const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.e
 
 export type GoogleEvent = {
   id: string
+  event_id: string // Google's own id
+  recurring?: boolean
   owner_id: string
   owner_name: string
   title: string
@@ -28,6 +30,27 @@ export async function fetchGoogleEvents(from: Date, to: Date): Promise<ListResul
     apiDisabled: Boolean(data.api_disabled),
     failed: false,
   }
+}
+
+export type EventEdit = { title: string; all_day: boolean; date: string; end_date: string; start_time: string; end_time: string }
+export type EventResult = { ok: boolean; message?: string; reconnect?: boolean }
+
+/** Change a Google event on either person's calendar (the server checks both are in the same home). */
+export async function updateGoogleEvent(ev: GoogleEvent, edit: EventEdit): Promise<EventResult> {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const { data, error } = await supabase.functions.invoke('google-calendar', {
+    body: { action: 'update_event', owner_id: ev.owner_id, event_id: ev.event_id, tz, ...edit },
+  })
+  if (error || !data) return { ok: false, message: 'Could not reach Google right now. Try again.' }
+  return data as EventResult
+}
+
+export async function deleteGoogleEvent(ev: GoogleEvent): Promise<EventResult> {
+  const { data, error } = await supabase.functions.invoke('google-calendar', {
+    body: { action: 'delete_event', owner_id: ev.owner_id, event_id: ev.event_id },
+  })
+  if (error || !data) return { ok: false, message: 'Could not reach Google right now. Try again.' }
+  return data as EventResult
 }
 
 // Tasks are mirrored one after another so quick edits never create duplicate events.
