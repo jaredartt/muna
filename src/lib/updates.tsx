@@ -15,7 +15,7 @@ import {
   IconRepeat,
   IconShieldFilled,
   IconTimelineEventFilled,
-  IconToolsKitchenFilled,
+  IconShoppingCartFilled,
 } from '@tabler/icons-react'
 
 export type UpdateEntry = {
@@ -29,7 +29,9 @@ export type UpdateEntry = {
 
 // Newest first. Add one entry here for every change we make (see "Working agreements" in project_status.md).
 export const UPDATES: UpdateEntry[] = [
-  { date: '2026-10-02', time: '15:10', title: 'Pantry', text: 'New Pantry tab for everything at home: food, hygiene, cleaning. Add a product, then move the slider when you use some. Under half a pack Muna adds it to your Grocery shopping list, and after a few uses she tells you roughly when it runs out. Recipes now check what is really left, not just if you have it.', Icon: IconToolsKitchenFilled, color: 'mint' },
+  { date: '2026-10-02', time: '15:27', title: 'Fixes: build, recipes, chat header', text: 'The last build failed because of one icon (fixed). Load the plan now works (a database index was the cause). The chat header stays at the top again. Muna\'s energy counts today only and starts at 0 every day.', Icon: IconShieldFilled, color: 'rose' },
+  { date: '2026-10-02', time: '15:27', title: 'A better voice for Muna', text: 'When spoken replies are on, Muna now talks with Google\'s Gemini voice (soft and friendly, English and Spanish) instead of the robotic phone voice. If it cannot load, she falls back to the old one.', Icon: IconMicrophoneFilled, color: 'lilac' },
+  { date: '2026-10-02', time: '15:10', title: 'Pantry', text: 'New Pantry tab for everything at home: food, hygiene, cleaning. Add a product, then move the slider when you use some. Under half a pack Muna adds it to your Grocery shopping list, and after a few uses she tells you roughly when it runs out. Recipes now check what is really left, not just if you have it.', Icon: IconShoppingCartFilled, color: 'mint' },
   { date: '2026-10-02', time: '15:05', title: 'Muna no longer loses her words', text: 'Sometimes her brain (Gemini) answered with nothing on a long request, like your gym schedule, and she said she lost her words. She now asks again by herself, has more room to answer, and can chat to-do lists into tasks.', Icon: IconMessageCircleFilled, color: 'rose' },
   { date: '2026-10-02', time: '15:05', title: 'Meals and to-do lists', text: 'New Meals tab with your 20 recipes, a plan for breakfast, lunch, merienda and dinner on each day, and calories and macros against your targets. Muna makes one Grocery shopping task with a to-do list of what is missing. Tasks can now hold to-do lists, and ticking a shopping line makes the recipe cookable.', Icon: IconChefHatFilled, color: 'peach' },
   { date: '2026-10-02', time: '14:40', title: 'Gluten, lactose and hormone tags', text: 'Every product now shows three tags: gluten, lactose and hormone disruptors (for your thyroid). Fixed: a lactose-free product was tagged Contains lactose. Muna now also reads the ingredient list, and finds perfume, soap and deodorant on Open Beauty Facts.', Icon: IconShieldFilled, color: 'lilac' },

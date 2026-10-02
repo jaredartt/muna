@@ -149,9 +149,9 @@ export default function Profile() {
         {usage ? (
           <>
             <p>
-              <strong>{usage.used.toLocaleString()}</strong> <span className="muted">tokens used this month</span>
+              <strong>{usage.used.toLocaleString()}</strong> <span className="muted">tokens used today</span>
             </p>
-            <p className="muted small">Counted exactly from what Gemini reports. There is no limit in the app: on the free plan Google only applies its own speed limits.</p>
+            <p className="muted small">Counted exactly from what Gemini reports, and it starts again at 0 every day (Berlin time). There is no limit in the app: on the free plan Google only applies its own speed limits.</p>
           </>
         ) : (
           <p className="muted small">Loading…</p>

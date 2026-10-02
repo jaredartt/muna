@@ -11,6 +11,8 @@ import type { ChatMessage } from '../lib/types'
 
 const SUGGESTIONS = ['What do we have planned this week?', 'Add "buy groceries" for tomorrow', 'Plan a cozy Sunday for us']
 const MAX_RECORD_SECONDS = 60
+// A silent half-moment of sound: playing it during a tap "unlocks" the audio player, so Muna may speak later without a tap (iPhone rule).
+const SILENT_WAV = 'data:audio/wav;base64,UklGRkwAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YSgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
 
 async function readFunctionError(err: unknown): Promise<string> {
   const ctx = (err as { context?: Response }).context
@@ -49,6 +51,8 @@ export default function Chat() {
   const timerRef = useRef<number | null>(null)
   const busyRef = useRef(false)
   const voiceRepliesRef = useRef(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const speakId = useRef(0) // a newer reply cancels a slower older one
 
   useEffect(() => {
     voiceRepliesRef.current = voiceReplies
@@ -102,23 +106,48 @@ export default function Chat() {
       if (timerRef.current) window.clearInterval(timerRef.current)
       recRef.current?.cancel()
       window.speechSynthesis?.cancel()
+      audioRef.current?.pause()
     },
     [],
   )
 
-  const speak = useCallback((reply: string) => {
-    if (!('speechSynthesis' in window)) return
-    window.speechSynthesis.cancel()
-    const u = new SpeechSynthesisUtterance(reply.replace(/[*_`#]/g, ''))
+  const stopVoice = useCallback(() => {
+    speakId.current++
+    audioRef.current?.pause()
+    window.speechSynthesis?.cancel()
+  }, [])
+
+  // Muna's voice comes from Google's Gemini text-to-speech (edge function muna-voice). If that fails, use the phone's own voice.
+  const speak = useCallback(async (reply: string) => {
+    const my = ++speakId.current
+    audioRef.current?.pause()
+    window.speechSynthesis?.cancel()
+    const plain = reply.replace(/[*_`#]/g, '')
+    try {
+      const { data, error: err } = await supabase.functions.invoke('muna-voice', { body: { text: plain } })
+      if (my !== speakId.current || !voiceRepliesRef.current) return
+      if (!err && data?.audio) {
+        const a = audioRef.current ?? (audioRef.current = new Audio())
+        a.src = `data:${data.mime || 'audio/wav'};base64,${data.audio}`
+        await a.play()
+        return
+      }
+    } catch {
+      /* fall back to the phone's voice below */
+    }
+    if (my !== speakId.current || !voiceRepliesRef.current || !('speechSynthesis' in window)) return
+    const u = new SpeechSynthesisUtterance(plain)
     u.lang = navigator.language
     window.speechSynthesis.speak(u)
   }, [])
 
-  // iPhone only lets a page speak after a tap, so "wake up" the voice during the tap that starts the exchange.
+  // iPhone only lets a page play sound after a tap, so "wake up" the audio player and the phone voice during the tap that starts the exchange.
   const unlockSpeech = useCallback(() => {
-    if (voiceRepliesRef.current && 'speechSynthesis' in window) {
-      window.speechSynthesis.speak(new SpeechSynthesisUtterance(''))
-    }
+    if (!voiceRepliesRef.current) return
+    const a = audioRef.current ?? (audioRef.current = new Audio())
+    a.src = SILENT_WAV
+    void a.play().catch(() => {})
+    if ('speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(''))
   }, [])
 
   const finish = useCallback(
@@ -128,7 +157,7 @@ export default function Chat() {
         return [...next, { id: 'a-' + Date.now(), role: 'assistant', content: data.reply, created_at: new Date().toISOString() }]
       })
       if (data.changed) notifyTasksChanged()
-      if (voiceRepliesRef.current) speak(data.reply)
+      if (voiceRepliesRef.current) void speak(data.reply)
     },
     [speak],
   )
@@ -218,7 +247,11 @@ export default function Chat() {
         <button
           className={'icon-btn' + (voiceReplies ? ' on' : '')}
           onClick={() => {
-            if (voiceReplies) window.speechSynthesis?.cancel()
+            if (voiceReplies) stopVoice()
+            else {
+              voiceRepliesRef.current = true // this tap also wakes up the audio player (iPhone)
+              unlockSpeech()
+            }
             setVoiceReplies(!voiceReplies)
           }}
           aria-label={voiceReplies ? 'Turn off spoken replies' : 'Turn on spoken replies'}

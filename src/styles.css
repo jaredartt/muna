@@ -49,7 +49,9 @@
 /* ---------- Base ---------- */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body, #root { min-height: 100%; }
-html, body { overflow-x: hidden; max-width: 100%; }
+/* html clips sideways overflow for the whole page. body uses `clip` (not `hidden`): `hidden` would make body a scroll container and break every position: sticky header (the chat header scrolled away). */
+html { overflow-x: hidden; max-width: 100%; }
+body { overflow-x: clip; max-width: 100%; }
 body {
   margin: 0;
   background: var(--bg);
@@ -60,7 +62,7 @@ body {
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
 }
-/* NOTE: do not put overscroll-behavior on body. body is a scroll container (because of overflow-x: hidden), so it would stop wheel and touch scrolling from reaching the page. Put it on html only. */
+/* NOTE: keep overscroll-behavior on html only, and never give html or body overflow: hidden/auto on both (that makes body a scroll container: stuck scrolling and a sticky header that scrolls away). */
 html { overscroll-behavior-y: none; }
 h1, h2, h3, h4 { font-family: var(--font); font-weight: 700; margin: 0; line-height: 1.2; } /* thickest Quicksand for titles */
 h1 { font-size: 28px; }

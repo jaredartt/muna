@@ -150,7 +150,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: liveTable
   - imports: lib/supabase.ts
   - used by: lib/meals.ts
-- `src/lib/meals.ts` (397 lines) - ---------- Types ----------
+- `src/lib/meals.ts` (404 lines) - ---------- Types ----------
   - exports: Slot, SLOTS, Ingredient, Recipe, RecipeDraft, PlanRow, PantryRow, PantryLog…
   - imports: lib/dates.ts, lib/liveTable.ts, lib/products.ts, lib/supabase.ts, lib/types.ts
   - used by: components/IconSync.tsx, components/RecipePicker.tsx, components/RecipeSheet.tsx, components/ShoppingSync.tsx, components/TaskSheet.tsx, hooks/useShopping.ts, pages/Meals.tsx, pages/Pantry.tsx
@@ -185,7 +185,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: ThemePref, Targets, Profile, Member, ChecklistItem, Task, Occurrence, TaskDraft…
   - imports: lib/recurrence.ts
   - used by: components/RecipePicker.tsx, components/RecipeSheet.tsx, components/TaskRow.tsx, components/TaskSheet.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useTasks.ts, lib/meals.ts, lib/theme.ts, pages/CalendarPage.tsx, pages/Chat.tsx, pages/Profile.tsx
-- `src/lib/updates.tsx` (75 lines)
+- `src/lib/updates.tsx` (77 lines)
   - exports: UpdateEntry, UPDATES
   - used by: pages/Updates.tsx
 - `src/main.tsx` (13 lines)
@@ -194,7 +194,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: CalendarPage
   - imports: components/DayView.tsx, components/WeekView.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useGoogleEvents.ts, lib/dates.ts, lib/dayItems.ts, lib/eventStyles.ts, lib/events.ts, lib/google.ts, lib/router.ts, lib/types.ts
   - used by: App.tsx
-- `src/pages/Chat.tsx` (292 lines)
+- `src/pages/Chat.tsx` (325 lines)
   - exports: Chat
   - imports: components/Muna.tsx, context/AuthContext.tsx, lib/draft.ts, lib/events.ts, lib/recorder.ts, lib/supabase.ts, lib/types.ts
   - used by: App.tsx
@@ -251,4 +251,5 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 
 - `google-calendar` (451 lines) - actions: delete_event, list, sync, update_event
 - `muna-chat` (712 lines) - Muna tools: create_tasks, update_task, set_tasks_completed, delete_tasks, list_tasks, list_calendar_events, update_calendar_event, delete_calendar_event
+- `muna-voice` (134 lines)
 - `recurrence.ts` exists in THREE places (src/lib, google-calendar, muna-chat): keep the copies in sync.

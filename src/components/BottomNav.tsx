@@ -1,11 +1,11 @@
-import { IconCalendarFilled, IconChefHatFilled, IconToolsKitchenFilled, IconHomeFilled, IconMessageCircleFilled, IconUserFilled } from '@tabler/icons-react'
+import { IconCalendarFilled, IconChefHatFilled, IconShoppingCartFilled, IconHomeFilled, IconMessageCircleFilled, IconUserFilled } from '@tabler/icons-react'
 import { navigate, useRoute, type Route } from '../lib/router'
 
 const ITEMS: { route: Route; label: string; Icon: typeof IconHomeFilled }[] = [
   { route: '/', label: 'Home', Icon: IconHomeFilled },
   { route: '/calendar', label: 'Calendar', Icon: IconCalendarFilled },
   { route: '/meals', label: 'Meals', Icon: IconChefHatFilled },
-  { route: '/pantry', label: 'Pantry', Icon: IconToolsKitchenFilled },
+  { route: '/pantry', label: 'Pantry', Icon: IconShoppingCartFilled },
   { route: '/chat', label: 'Chat with Muna', Icon: IconMessageCircleFilled },
   { route: '/profile', label: 'Profile', Icon: IconUserFilled },
 ]

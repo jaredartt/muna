@@ -276,8 +276,15 @@ export async function loadStarter(householdId: string, members: Member[], existi
       amounts: { ...(jared ? { [jared.id]: i.j } : {}), ...(other ? { [other.id]: i.l } : {}) },
     })),
   }))
-  const { error } = await supabase.from('recipes').upsert(recRows, { onConflict: 'household_id,code', ignoreDuplicates: true })
-  return error ? 'Could not load the recipes. Check your internet and try again.' : null
+  // only add the recipes that are not there yet (the unique index on the code is partial, so "upsert" cannot be used)
+  const { data: haveCodes } = await supabase.from('recipes').select('code').eq('household_id', householdId).not('code', 'is', null)
+  const got = new Set(((haveCodes ?? []) as { code: string }[]).map((r) => r.code))
+  const newRecipes = recRows.filter((r) => !got.has(r.code))
+  if (newRecipes.length === 0) return null
+  const { data: saved, error } = await supabase.from('recipes').insert(newRecipes).select('*')
+  if (error) return 'Could not load the recipes: ' + error.message.slice(0, 120)
+  for (const r of (saved ?? []) as Recipe[]) recipeStore.upsert(r)
+  return null
 }
 
 // ---------- One shopping trip for everything the plan needs ----------
