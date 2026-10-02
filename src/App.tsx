@@ -11,6 +11,7 @@ import Chat from './pages/Chat'
 import Profile from './pages/Profile'
 import Updates from './pages/Updates'
 import Products from './pages/Products'
+import Meals from './pages/Meals'
 import { useRoute } from './lib/router'
 
 function Screens() {
@@ -30,6 +31,8 @@ function Screens() {
       return <Updates />
     case '/products':
       return <Products />
+    case '/meals':
+      return <Meals />
     default:
       return <Home />
   }

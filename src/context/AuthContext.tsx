@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(p)
           applyTheme(p.theme_pref)
           void Promise.all([
-            supabase.from('profiles').select('id, display_name, avatar, avatar_color').eq('household_id', p.household_id),
+            supabase.from('profiles').select('id, display_name, avatar, avatar_color, targets').eq('household_id', p.household_id),
             supabase.from('households').select('invite_code, muna_personality').eq('id', p.household_id).maybeSingle(),
           ]).then(([{ data: ms }, { data: hh }]) => {
           // Only replace what we show when the answer really arrived. On iPhones the network is often not ready

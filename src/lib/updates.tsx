@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 import {
   IconBoltFilled,
   IconCalendarFilled,
+  IconChefHatFilled,
   IconHeartFilled,
   IconHomeFilled,
   IconLockFilled,
@@ -27,6 +28,8 @@ export type UpdateEntry = {
 
 // Newest first. Add one entry here for every change we make (see "Working agreements" in project_status.md).
 export const UPDATES: UpdateEntry[] = [
+  { date: '2026-10-02', time: '15:05', title: 'Muna no longer loses her words', text: 'Sometimes her brain (Gemini) answered with nothing on a long request, like your gym schedule, and she said she lost her words. She now asks again by herself, has more room to answer, and can chat to-do lists into tasks.', Icon: IconMessageCircleFilled, color: 'rose' },
+  { date: '2026-10-02', time: '15:05', title: 'Meals and to-do lists', text: 'New Meals tab with your 20 recipes, a plan for breakfast, lunch, merienda and dinner on each day, and calories and macros against your targets. Muna makes one Grocery shopping task with a to-do list of what is missing. Tasks can now hold to-do lists, and ticking a shopping line makes the recipe cookable.', Icon: IconChefHatFilled, color: 'peach' },
   { date: '2026-10-02', time: '14:40', title: 'Gluten, lactose and hormone tags', text: 'Every product now shows three tags: gluten, lactose and hormone disruptors (for your thyroid). Fixed: a lactose-free product was tagged Contains lactose. Muna now also reads the ingredient list, and finds perfume, soap and deodorant on Open Beauty Facts.', Icon: IconShieldFilled, color: 'lilac' },
   { date: '2026-10-02', time: '14:07', title: 'Products and barcode scanner', text: 'New Products list (Profile > Products). Scan a barcode and Muna fetches calories, protein, carbs and fat from Open Food Facts. You check the numbers and save. This is the base for recipes and the pantry.', Icon: IconPizzaFilled, color: 'mint' },
   { date: '2026-10-02', time: '14:04', title: 'Scrolling really fixed', text: 'The real cause of the stuck scrolling on trackpad and iPhone was one line of page styling. It is fixed now.', Icon: IconShieldFilled, color: 'mint' },

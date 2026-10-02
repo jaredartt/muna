@@ -13,7 +13,9 @@ type Props = {
 export default function TaskRow({ task, onToggle, onOpen, showDate }: Props) {
   const time = task.start_time ? formatTime(task.start_time) + (task.end_time ? '–' + formatTime(task.end_time) : '') : ''
   const repeating = Boolean((task as Occurrence).series)
-  const meta = [showDate && task.due_date ? formatDateNice(task.due_date) : '', time].filter(Boolean).join(' · ')
+  const list = task.checklist ?? []
+  const progress = list.length ? `${list.filter((i) => i.done).length}/${list.length} done` : ''
+  const meta = [showDate && task.due_date ? formatDateNice(task.due_date) : '', time, progress].filter(Boolean).join(' · ')
   return (
     <div className={'task-row' + (task.completed ? ' done' : '')}>
       <button className={`task-icon c-${task.color}`} onClick={() => onOpen(task)} aria-label={`Edit ${task.title}`}>

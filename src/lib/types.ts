@@ -2,6 +2,8 @@ import type { Repeat } from './recurrence'
 
 export type ThemePref = 'light' | 'dark' | 'system'
 
+export type Targets = { kcal: number; protein: number; carbs: number; fat: number }
+
 export type Profile = {
   id: string
   household_id: string
@@ -9,9 +11,13 @@ export type Profile = {
   avatar: string // a Tabler icon component name, e.g. "IconPawFilled"
   avatar_color: string // mint | peach | lilac | sky | butter | rose
   theme_pref: ThemePref
+  targets?: Targets | null // daily food targets of this person
 }
 
-export type Member = Pick<Profile, 'id' | 'display_name' | 'avatar' | 'avatar_color'>
+export type Member = Pick<Profile, 'id' | 'display_name' | 'avatar' | 'avatar_color' | 'targets'>
+
+/** One line of a to-do list inside a task. A line with a product_id is something to buy: ticking it puts the product in the pantry. */
+export type ChecklistItem = { id: string; text: string; done: boolean; product_id?: string }
 
 export type Task = {
   id: string
@@ -32,6 +38,7 @@ export type Task = {
   google_event_id: string | null
   google_owner: string | null
   repeat: Repeat | null // null = happens once
+  checklist?: ChecklistItem[] // the to-do list inside the task
 }
 
 /** One day of a repeating task (looks like a Task, with that day's date and tick). `series` is the real task. */

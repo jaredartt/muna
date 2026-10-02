@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { startCustomIconSync } from '../lib/customIcons'
 import { startEventStyleSync } from '../lib/eventStyles'
 import { startProductSync } from '../lib/products'
+import { startMealSync } from '../lib/meals'
 
 // Keeps the home's uploaded icons and the look of Google events loaded and live (renders nothing).
 export default function IconSync() {
@@ -13,10 +14,12 @@ export default function IconSync() {
     const stopIcons = startCustomIconSync(householdId)
     const stopStyles = startEventStyleSync(householdId)
     const stopProducts = startProductSync(householdId)
+    const stopMeals = startMealSync(householdId)
     return () => {
       stopIcons()
       stopStyles()
       stopProducts()
+      stopMeals()
     }
   }, [householdId])
   return null

@@ -1,26 +1,27 @@
 import { useRef, useState } from 'react'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
-import { IconTrashFilled } from '@tabler/icons-react'
-import { IconX } from '@tabler/icons-react'
+import { IconCheck, IconPlus, IconTrashFilled, IconX } from '@tabler/icons-react'
 import IconPicker from './IconPicker'
 import RepeatEditor from './RepeatEditor'
 import { cleanRepeat, firstOccurrence, type Repeat } from '../lib/recurrence'
 import { TASK_COLORS, TASK_ICONS } from '../lib/icons'
 import { useAuth } from '../context/AuthContext'
-import type { Task, TaskDraft } from '../lib/types'
+import { buyProduct } from '../lib/meals'
+import type { ChecklistItem, Task, TaskDraft } from '../lib/types'
 
 type Props = {
   task?: Task | null
   defaultDate?: string | null
   onSave: (draft: TaskDraft, id?: string) => Promise<void>
   onDelete?: (id: string) => Promise<void>
+  onChecklist?: (id: string, items: ChecklistItem[]) => void // saves the to-do list at once (ticks should not wait for Save)
   onClose: () => void
 }
 
-export default function TaskSheet({ task, defaultDate, onSave, onDelete, onClose }: Props) {
+export default function TaskSheet({ task, defaultDate, onSave, onDelete, onChecklist, onClose }: Props) {
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
-  const { members, session } = useAuth()
+  const { members, session, profile } = useAuth()
   const [title, setTitle] = useState(task?.title ?? '')
   const [notes, setNotes] = useState(task?.notes ?? '')
   const [date, setDate] = useState(task ? task.due_date ?? '' : defaultDate ?? '')
@@ -30,7 +31,27 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onClose
   const [color, setColor] = useState(task?.color ?? 'mint')
   const [assignee, setAssignee] = useState(task?.assigned_to ?? '')
   const [repeat, setRepeat] = useState<Repeat | null>(task?.repeat ?? null)
+  const [items, setItems] = useState<ChecklistItem[]>(task?.checklist ?? [])
+  const [newItem, setNewItem] = useState('')
   const [saving, setSaving] = useState(false)
+
+  // Every change to the to-do list is saved straight away for an existing task. Ticking something to buy puts it in the pantry.
+  function changeItems(next: ChecklistItem[]) {
+    setItems(next)
+    if (task) onChecklist?.(task.id, next)
+  }
+  function tick(i: number) {
+    const it = items[i]
+    const done = !it.done
+    changeItems(items.map((x, j) => (j === i ? { ...x, done } : x)))
+    if (task && it.product_id && profile) void buyProduct(profile.household_id, it.product_id, done ? 1 : -1)
+  }
+  function addItem() {
+    const text = newItem.trim()
+    if (!text) return
+    changeItems([...items, { id: crypto.randomUUID(), text: text.slice(0, 200), done: false }])
+    setNewItem('')
+  }
 
   async function save() {
     if (!title.trim() || saving) return
@@ -48,6 +69,7 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onClose
         icon,
         color,
         assigned_to: assignee || null,
+        checklist: newItem.trim() ? [...items, { id: crypto.randomUUID(), text: newItem.trim().slice(0, 200), done: false }] : items,
         sync_google: true,
       },
       task?.id,
@@ -100,6 +122,40 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onClose
         </div>
 
         <RepeatEditor value={repeat} onChange={setRepeat} date={date} />
+
+        <div className="field">
+          <span>To-do list{items.length ? ` (${items.filter((i) => i.done).length}/${items.length})` : ''}</span>
+          <div className="cl">
+            {items.map((it, i) => (
+              <div key={it.id} className={'cl-row' + (it.done ? ' done' : '')}>
+                <button type="button" className={'check' + (it.done ? ' checked' : '')} onClick={() => tick(i)} aria-label={it.done ? 'Mark as not done' : 'Mark as done'} aria-pressed={it.done}>
+                  {it.done && <IconCheck size={16} stroke={3} />}
+                </button>
+                <span className="cl-text">{it.text}</span>
+                <button type="button" className="icon-btn" onClick={() => changeItems(items.filter((_, j) => j !== i))} aria-label={`Remove ${it.text}`}>
+                  <IconX size={16} />
+                </button>
+              </div>
+            ))}
+            <div className="cl-add">
+              <input
+                value={newItem}
+                onChange={(e) => setNewItem(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addItem()
+                  }
+                }}
+                placeholder="Add a line…"
+                maxLength={200}
+              />
+              <button type="button" className="btn soft" onClick={addItem} disabled={!newItem.trim()} aria-label="Add line">
+                <IconPlus size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
 
         <label className="field">
           <span>Notes</span>

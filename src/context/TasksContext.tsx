@@ -4,7 +4,7 @@ import TaskSheet from '../components/TaskSheet'
 import EventSheet from '../components/EventSheet'
 import { notifyTasksChanged } from '../lib/events'
 import type { GoogleEvent } from '../lib/google'
-import type { Occurrence, Task, TaskDraft } from '../lib/types'
+import type { ChecklistItem, Occurrence, Task, TaskDraft } from '../lib/types'
 
 type Editor = { task: Task | null; defaultDate: string | null } | null
 
@@ -30,6 +30,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const { addTask, updateTask, deleteTask } = t
+  const handleChecklist = useCallback((id: string, items: ChecklistItem[]) => void updateTask(id, { checklist: items }), [updateTask])
 
   const handleSave = useCallback(
     async (draft: TaskDraft, id?: string) => {
@@ -58,6 +59,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           defaultDate={editor.defaultDate}
           onSave={handleSave}
           onDelete={handleDelete}
+          onChecklist={handleChecklist}
           onClose={() => setEditor(null)}
         />
       )}
