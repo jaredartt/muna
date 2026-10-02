@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { IconExternalLink, IconTrashFilled, IconX } from '@tabler/icons-react'
 import { useAuth } from '../context/AuthContext'
 import { addDays, pad, toDateStr } from '../lib/dates'
-import { deleteGoogleEvent, updateGoogleEvent, type GoogleEvent } from '../lib/google'
+import { deleteGoogleEvent, updateGoogleEvent, type EventScope, type GoogleEvent } from '../lib/google'
 
 const hm = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`
 
@@ -23,6 +23,8 @@ export default function EventSheet({ event, onDone, onClose }: Props) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [scope, setScope] = useState<EventScope>('all')
+  const series = Boolean(event.recurring) && scope === 'all' // changing every repeat: the days stay as they are
 
   function changeDate(v: string) {
     // keep the length of the event when the day moves
@@ -38,6 +40,7 @@ export default function EventSheet({ event, onDone, onClose }: Props) {
     setBusy(true)
     setError('')
     const r = await updateGoogleEvent(event, {
+      scope: event.recurring ? scope : 'one',
       title: title.trim(),
       all_day: allDay,
       date,
@@ -50,11 +53,11 @@ export default function EventSheet({ event, onDone, onClose }: Props) {
     onDone()
   }
 
-  async function remove() {
+  async function remove(delScope: EventScope) {
     if (busy) return
     setBusy(true)
     setError('')
-    const r = await deleteGoogleEvent(event)
+    const r = await deleteGoogleEvent(event, delScope)
     setBusy(false)
     if (!r.ok) return setError(r.message ?? 'Could not delete.')
     onDone()
@@ -69,7 +72,20 @@ export default function EventSheet({ event, onDone, onClose }: Props) {
             <IconX size={22} />
           </button>
         </div>
-        <p className="muted small">This event is in {who} Google Calendar.{event.recurring ? ' It repeats, so changes here only affect this one day.' : ''}</p>
+        <p className="muted small">This event is in {who} Google Calendar.</p>
+        {event.recurring && (
+          <div className="field">
+            <span>This event repeats. Change…</span>
+            <div className="segmented small-seg" role="radiogroup" aria-label="Which repeats">
+              <button type="button" role="radio" aria-checked={scope === 'all'} className={scope === 'all' ? 'active' : ''} onClick={() => setScope('all')}>
+                All repeats
+              </button>
+              <button type="button" role="radio" aria-checked={scope === 'one'} className={scope === 'one' ? 'active' : ''} onClick={() => setScope('one')}>
+                Only this day
+              </button>
+            </div>
+          </div>
+        )}
 
         <label className="field">
           <span>Title</span>
@@ -84,12 +100,12 @@ export default function EventSheet({ event, onDone, onClose }: Props) {
         <div className="row-2">
           <label className="field">
             <span>{allDay ? 'First day' : 'Date'}</span>
-            <input type="date" value={date} onChange={(e) => changeDate(e.target.value)} />
+            <input type="date" value={date} onChange={(e) => changeDate(e.target.value)} disabled={series} />
           </label>
           {allDay ? (
             <label className="field">
               <span>Last day</span>
-              <input type="date" value={endDate} min={date} onChange={(e) => setEndDate(e.target.value)} />
+              <input type="date" value={endDate} min={date} onChange={(e) => setEndDate(e.target.value)} disabled={series} />
             </label>
           ) : (
             <span />
@@ -114,13 +130,25 @@ export default function EventSheet({ event, onDone, onClose }: Props) {
             <IconExternalLink size={16} /> Open in Google Calendar
           </a>
         )}
+        {series && <p className="muted small">The days follow the repeat, so only the title and time change. Pick “Only this day” to move a single day.</p>}
         {error && <p className="notice">{error}</p>}
 
         <div className="sheet-actions">
           {confirmDelete ? (
-            <button className="btn danger" onClick={remove} disabled={busy}>
-              <IconTrashFilled size={18} /> Really delete?
-            </button>
+            event.recurring ? (
+              <div className="delete-choice">
+                <button className="btn danger" onClick={() => remove('one')} disabled={busy}>
+                  <IconTrashFilled size={18} /> Only this day
+                </button>
+                <button className="btn danger" onClick={() => remove('all')} disabled={busy}>
+                  <IconTrashFilled size={18} /> All repeats
+                </button>
+              </div>
+            ) : (
+              <button className="btn danger" onClick={() => remove('one')} disabled={busy}>
+                <IconTrashFilled size={18} /> Really delete?
+              </button>
+            )
           ) : (
             <button className="btn danger" onClick={() => setConfirmDelete(true)} disabled={busy}>
               <IconTrashFilled size={18} /> Delete

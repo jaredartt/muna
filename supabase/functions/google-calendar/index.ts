@@ -376,13 +376,30 @@ Deno.serve(async (req) => {
       const path = `/${encodeURIComponent(eventId)}`
       try {
         if (body.action === 'delete_event') {
-          await gcal(at, 'DELETE', path)
+          // scope "all" on a repeating event removes the whole series; anything else removes just that one day
+          let delPath = path
+          if (body.scope === 'all') {
+            const one = await gcal(at, 'GET', path)
+            if (one.data?.recurringEventId) delPath = `/${encodeURIComponent(one.data.recurringEventId)}`
+          }
+          await gcal(at, 'DELETE', delPath)
           return json({ ok: true })
         }
         const tz = validTz(body.tz)
         const cur = await gcal(at, 'GET', `${path}?timeZone=${encodeURIComponent(tz)}`)
-        const ex = cur.data
+        let ex = cur.data
         if (!ex || cur.status === 404 || cur.status === 410 || ex.status === 'cancelled') return json({ ok: false, error: 'not_found', message: 'That event no longer exists.' })
+        // A repeating event is changed everywhere by default (scope "all"): edit the series itself, not just this one day.
+        let evPath = path
+        let series = false
+        if (ex.recurringEventId && body.scope !== 'one') {
+          const m = await gcal(at, 'GET', `/${encodeURIComponent(ex.recurringEventId)}?timeZone=${encodeURIComponent(tz)}`)
+          if (m.data && m.status < 400 && m.data.status !== 'cancelled' && m.data.start) {
+            ex = m.data
+            evPath = `/${encodeURIComponent(ex.id)}`
+            series = true
+          }
+        }
         if (ex.extendedProperties?.private?.muna_task_id) return json({ ok: false, error: 'muna_task', message: 'That is a Muna task. Edit it as a task.' })
 
         const wasAllDay = Boolean(ex.start?.date)
@@ -393,9 +410,10 @@ Deno.serve(async (req) => {
         const exEndTime: string | null = wasAllDay ? null : String(ex.end.dateTime).slice(11, 16)
         const span = Math.max(0, Math.round((Date.parse(exEndDate + 'T00:00:00Z') - Date.parse(exStartDate + 'T00:00:00Z')) / 86400000))
 
-        const date = typeof body.date === 'string' ? body.date : exStartDate
+        // for a whole series the days come from the series (the repeat rule decides them); only title and times change
+        const date = !series && typeof body.date === 'string' ? body.date : exStartDate
         if (!DATE_RE.test(date)) return json({ ok: false, error: 'bad_date', message: 'The date looks wrong.' })
-        let endDate = typeof body.end_date === 'string' ? body.end_date : body.date ? addDaysStr(date, span) : exEndDate
+        let endDate = series ? exEndDate : typeof body.end_date === 'string' ? body.end_date : body.date ? addDaysStr(date, span) : exEndDate
         if (!DATE_RE.test(endDate) || endDate < date) endDate = date
 
         const patch: Record<string, unknown> = {}
@@ -414,7 +432,7 @@ Deno.serve(async (req) => {
           patch.start = { dateTime: `${date}T${st}:00`, timeZone: tz, date: null }
           patch.end = { dateTime: `${endDate}T${et}:00`, timeZone: tz, date: null }
         }
-        const r = await gcal(at, 'PATCH', path, patch)
+        const r = await gcal(at, 'PATCH', evPath, patch)
         if (r.status === 404 || r.status === 410) return json({ ok: false, error: 'not_found', message: 'That event no longer exists.' })
         return json({ ok: true })
       } catch (e) {

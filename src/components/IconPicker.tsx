@@ -14,7 +14,7 @@ type Props = {
 
 const MAX_RESULTS = 120
 
-/** Icon grid with one search bar over: your own uploaded icons, Phosphor filled icons (food, etc.) and all of Tabler's icons, mixed together. */
+/** Icon grid with ONE search bar over everything: your own uploaded icons, Phosphor filled icons (incl. food) and all of Tabler's icons, ranked together. */
 export default function IconPicker({ value, onChange, suggestions, colorClass = '' }: Props) {
   const [q, setQ] = useState('')
   const raw = q.trim().toLowerCase()
@@ -24,43 +24,43 @@ export default function IconPicker({ value, onChange, suggestions, colorClass = 
   const mine = useCustomIcons()
   const all = useMemo(() => (lib ? allIconNames(lib) : []), [lib]) // filled and outline icons, mixed together
 
+  // ONE list for every source (my uploads, Phosphor Fill, Tabler), ranked together:
+  // exact name, then names that start with the word, then other name matches, then search words (tags).
   const results = useMemo(() => {
     if (!query) return []
-    // my own icons first (name or tags)
-    const own = mine.filter((i) => i.name.toLowerCase().includes(raw) || i.tags.toLowerCase().includes(raw)).map((i) => 'custom:' + i.id)
-
-    const rank = (names: string[]) => {
-      const starts: string[] = []
-      const contains: string[] = []
-      for (const n of names) {
-        const k = iconSearchName(n)
-        if (k.startsWith(query)) starts.push(n)
-        else if (k.includes(query)) contains.push(n)
-      }
-      return [...starts, ...contains]
+    const buckets: string[][][] = [[], [], [], [], []] // [score][source]
+    const add = (score: number, source: number, key: string) => {
+      ;(buckets[score][source] ??= []).push(key)
     }
-    const tabler = rank(all)
-
-    let phosphor: string[] = []
+    const score = (name: string, tags: string): number => {
+      if (name === query) return 0
+      if (name.startsWith(query)) return 1
+      if (name.includes('-' + query) || name.includes(query)) return 2
+      if (tags && tags.includes(raw)) return 3
+      return -1
+    }
+    for (const i of mine) {
+      const sc = score(i.name.toLowerCase().replace(/\s+/g, '-'), i.tags.toLowerCase())
+      if (sc >= 0) add(sc, 0, 'custom:' + i.id)
+    }
     if (ph) {
-      const starts: string[] = []
-      const contains: string[] = []
-      const byTag: string[] = []
       for (const [name, [tags]] of Object.entries(ph.icons)) {
-        if (name.startsWith(query)) starts.push('ph:' + name)
-        else if (name.includes(query)) contains.push('ph:' + name)
-        else if (tags.includes(raw)) byTag.push('ph:' + name)
+        const sc = score(name, tags)
+        if (sc >= 0) add(sc, 1, 'ph:' + name)
       }
-      phosphor = [...starts, ...contains, ...byTag]
     }
-
-    // mix the two libraries so both show up near the top
-    const mixed: string[] = []
-    for (let i = 0; i < Math.max(tabler.length, phosphor.length); i++) {
-      if (i < phosphor.length) mixed.push(phosphor[i])
-      if (i < tabler.length) mixed.push(tabler[i])
+    for (const n of all) {
+      const sc = score(iconSearchName(n), '')
+      if (sc >= 0) add(sc, 2, n)
     }
-    return [...own, ...mixed].slice(0, MAX_RESULTS)
+    // inside each rank, take turns between the sources so all of them show up near the top
+    const out: string[] = []
+    for (const group of buckets) {
+      const lists = group.filter(Boolean)
+      for (let k = 0; lists.some((l) => k < l.length); k++) for (const l of lists) if (k < l.length) out.push(l[k])
+      if (out.length >= MAX_RESULTS) break
+    }
+    return out.slice(0, MAX_RESULTS)
   }, [query, raw, all, ph, mine])
 
   const mineKeys = useMemo(() => mine.map((i) => 'custom:' + i.id), [mine])

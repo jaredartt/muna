@@ -32,7 +32,8 @@ export async function fetchGoogleEvents(from: Date, to: Date): Promise<ListResul
   }
 }
 
-export type EventEdit = { title: string; all_day: boolean; date: string; end_date: string; start_time: string; end_time: string }
+export type EventScope = 'all' | 'one' // repeating events: every repeat, or only this day
+export type EventEdit = { scope: EventScope; title: string; all_day: boolean; date: string; end_date: string; start_time: string; end_time: string }
 export type EventResult = { ok: boolean; message?: string; reconnect?: boolean }
 
 /** Change a Google event on either person's calendar (the server checks both are in the same home). */
@@ -45,9 +46,9 @@ export async function updateGoogleEvent(ev: GoogleEvent, edit: EventEdit): Promi
   return data as EventResult
 }
 
-export async function deleteGoogleEvent(ev: GoogleEvent): Promise<EventResult> {
+export async function deleteGoogleEvent(ev: GoogleEvent, scope: EventScope = 'one'): Promise<EventResult> {
   const { data, error } = await supabase.functions.invoke('google-calendar', {
-    body: { action: 'delete_event', owner_id: ev.owner_id, event_id: ev.event_id },
+    body: { action: 'delete_event', owner_id: ev.owner_id, event_id: ev.event_id, scope },
   })
   if (error || !data) return { ok: false, message: 'Could not reach Google right now. Try again.' }
   return data as EventResult

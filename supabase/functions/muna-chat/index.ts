@@ -334,7 +334,7 @@ const TOOLS: Tool[] = [
     declaration: {
       name: 'update_calendar_event',
       description:
-        'Change a Google Calendar event that is NOT a Muna task (either person\'s). Get its ref from list_calendar_events first. Only send the fields that change. For a repeating event this changes only that one day.',
+        'Change a Google Calendar event that is NOT a Muna task (either person\'s). Get its ref from list_calendar_events first. Only send the fields that change. For a repeating event this changes EVERY repeat (title and time) unless scope is "one" (only that day, and then the date can move).',
       parameters: {
         type: 'OBJECT',
         properties: {
@@ -344,6 +344,7 @@ const TOOLS: Tool[] = [
           start_time: { type: 'STRING', description: 'HH:MM 24h' },
           end_time: { type: 'STRING', description: 'HH:MM 24h' },
           all_day: { type: 'BOOLEAN', description: 'true = all-day event, false = timed event' },
+          scope: { type: 'STRING', enum: ['all', 'one'], description: 'Repeating events only: "all" (default) changes every repeat, "one" only that day' },
         },
         required: ['ref'],
       },
@@ -358,6 +359,7 @@ const TOOLS: Tool[] = [
       if (typeof args.start_time === 'string' && TIME_RE.test(args.start_time)) payload.start_time = args.start_time
       if (typeof args.end_time === 'string' && TIME_RE.test(args.end_time)) payload.end_time = args.end_time
       if (typeof args.all_day === 'boolean') payload.all_day = args.all_day
+      payload.scope = args.scope === 'one' ? 'one' : 'all'
       const res = await callGoogleFunction(ctx, payload)
       if (!res) return { error: 'Google Calendar is not available right now.' }
       if (!res.ok) return { error: res.message ?? 'Could not change that event.' }
@@ -368,14 +370,14 @@ const TOOLS: Tool[] = [
   {
     declaration: {
       name: 'delete_calendar_event',
-      description: 'Delete a Google Calendar event that is NOT a Muna task (either person\'s). Get its ref from list_calendar_events first. For a repeating event this removes only that one day.',
-      parameters: { type: 'OBJECT', properties: { ref: { type: 'STRING', description: 'The event ref from list_calendar_events' } }, required: ['ref'] },
+      description: 'Delete a Google Calendar event that is NOT a Muna task (either person\'s). Get its ref from list_calendar_events first. For a repeating event, scope "one" (default) removes only that day and "all" removes the whole series (use "all" only when asked to delete all the repeats).',
+      parameters: { type: 'OBJECT', properties: { ref: { type: 'STRING', description: 'The event ref from list_calendar_events' }, scope: { type: 'STRING', enum: ['all', 'one'] } }, required: ['ref'] },
     },
     async run(args, ctx) {
       const ref = typeof args.ref === 'string' ? args.ref : ''
       const i = ref.indexOf(':')
       if (i < 1) return { error: 'Unknown event ref. Call list_calendar_events first.' }
-      const res = await callGoogleFunction(ctx, { action: 'delete_event', owner_id: ref.slice(0, i), event_id: ref.slice(i + 1) })
+      const res = await callGoogleFunction(ctx, { action: 'delete_event', owner_id: ref.slice(0, i), event_id: ref.slice(i + 1), scope: args.scope === 'all' ? 'all' : 'one' })
       if (!res) return { error: 'Google Calendar is not available right now.' }
       if (!res.ok) return { error: res.message ?? 'Could not delete that event.' }
       ctx.changed = true

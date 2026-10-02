@@ -9,6 +9,7 @@ import {
   IconMicrophoneFilled,
   IconMoonFilled,
   IconPaletteFilled,
+  IconPizzaFilled,
   IconPawFilled,
   IconRepeat,
   IconShieldFilled,
@@ -26,7 +27,8 @@ export type UpdateEntry = {
 
 // Newest first. Add one entry here for every change we make (see "Working agreements" in project_status.md).
 export const UPDATES: UpdateEntry[] = [
-  { date: '2026-10-02', time: '10:39', title: 'Edit Google events', text: 'Tap any Google Calendar event, yours or your partner\'s, to change its title, day or time, or delete it. Muna can do it too.', Icon: IconCalendarFilled, color: 'sky' },
+  { date: '2026-10-02', time: '10:54', title: 'More icons, one search', text: '1,512 Phosphor filled icons (food, drinks and lots more) joined the icon search. One search box now looks through your uploads, Phosphor and Tabler together.', Icon: IconPizzaFilled, color: 'peach' },
+  { date: '2026-10-02', time: '10:39', title: 'Edit Google events', text: 'Tap any Google Calendar event, yours or your partner\'s, to change its title, day or time, or delete it. Repeating events change on every repeat (or only one day if you choose). Muna can do it too.', Icon: IconCalendarFilled, color: 'sky' },
   { date: '2026-10-02', time: '10:39', title: 'My icons', text: 'Upload your own SVG icons in Profile. You both see them straight away and can use them for tasks and profiles.', Icon: IconPaletteFilled, color: 'lilac' },
   { date: '2026-10-02', time: '10:28', title: 'Tidier task sheet', text: 'Google Calendar sync is now automatic, Date and Who no longer overlap, the times fit the screen, checkboxes are cuter, and the sheet only moves up and down.', Icon: IconPaletteFilled, color: 'sky' },
   { date: '2026-10-02', time: '09:38', title: 'Repeating tasks', text: 'Tasks can now repeat: every X days, weeks, months or years, on chosen weekdays or dates, with days skipped and an end. Each day has its own tick, and Google Calendar repeats too.', Icon: IconRepeat, color: 'lilac' },

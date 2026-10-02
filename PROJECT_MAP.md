@@ -31,7 +31,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: EventRow
   - imports: context/AuthContext.tsx, lib/google.ts
   - used by: pages/CalendarPage.tsx
-- `src/components/EventSheet.tsx` (136 lines) - Edit or delete a Google Calendar event (yours or your partner's) without leaving Muna.
+- `src/components/EventSheet.tsx` (164 lines) - Edit or delete a Google Calendar event (yours or your partner's) without leaving Muna.
   - exports: EventSheet
   - imports: context/AuthContext.tsx, lib/dates.ts, lib/google.ts
   - used by: context/TasksContext.tsx
@@ -97,8 +97,8 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/lib/events.ts` (5 lines) - Lets the chat tell the task list "something changed, please reload".
   - exports: TASKS_CHANGED, notifyTasksChanged
   - used by: context/TasksContext.tsx, hooks/useGoogleEvents.ts, hooks/useTasks.ts, pages/Chat.tsx
-- `src/lib/google.ts` (117 lines) - Only what Muna needs: read and write events on your own calendar.
-  - exports: GOOGLE_CALENDAR_SCOPE, GoogleEvent, ListResult, fetchGoogleEvents, EventEdit, EventResult, updateGoogleEvent, deleteGoogleEvent…
+- `src/lib/google.ts` (118 lines) - Only what Muna needs: read and write events on your own calendar.
+  - exports: GOOGLE_CALENDAR_SCOPE, GoogleEvent, ListResult, fetchGoogleEvents, EventScope, EventEdit, EventResult, updateGoogleEvent…
   - imports: lib/dates.ts, lib/supabase.ts
   - used by: components/EventRow.tsx, components/EventSheet.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useGoogleEvents.ts, hooks/useTasks.ts, pages/CalendarPage.tsx, pages/Home.tsx
 - `src/lib/icons.tsx` (157 lines)
@@ -132,7 +132,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: ThemePref, Profile, Member, Task, Occurrence, TaskDraft, ChatMessage
   - imports: lib/recurrence.ts
   - used by: components/TaskRow.tsx, components/TaskSheet.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useTasks.ts, lib/theme.ts, pages/Chat.tsx, pages/Profile.tsx
-- `src/lib/updates.tsx` (53 lines)
+- `src/lib/updates.tsx` (55 lines)
   - exports: UpdateEntry, UPDATES
   - used by: pages/Updates.tsx
 - `src/main.tsx` (13 lines)
@@ -177,6 +177,6 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 
 ## Server functions (supabase/functions)
 
-- `google-calendar` (431 lines) - actions: delete_event, list, sync, update_event
-- `muna-chat` (676 lines) - Muna tools: create_tasks, update_task, set_tasks_completed, delete_tasks, list_tasks, list_calendar_events, update_calendar_event, delete_calendar_event
+- `google-calendar` (449 lines) - actions: delete_event, list, sync, update_event
+- `muna-chat` (678 lines) - Muna tools: create_tasks, update_task, set_tasks_completed, delete_tasks, list_tasks, list_calendar_events, update_calendar_event, delete_calendar_event
 - `recurrence.ts` exists in THREE places (src/lib, google-calendar, muna-chat): keep the copies in sync.
