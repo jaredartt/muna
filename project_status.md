@@ -155,3 +155,5 @@ The first (06:00) and last (00:00) hour labels are hidden in day and week views 
 A small gap (`TOP_PAD` = 16 px in `src/lib/dayItems.ts`, `WPAD` = 12 px in WeekView) sits above the first hour line, mirroring the gap below the last one. In DayView it offsets the hour lines, the `.slots` layer, the now-line and the drag maths (`compute` subtracts it).
 
 Drag auto-scroll up: zone is the 130 px under the sticky all-day strip (was 50 px, too small to hit because the drag pill floats above the finger); speed grows nearer the strip. Down zone is the last 150 px of the screen.
+
+The 06:00 and 00:00 labels are visible again (now that TOP_PAD / WPAD keep them clear of the edges). This replaces the earlier 'hidden first/last labels' note.
