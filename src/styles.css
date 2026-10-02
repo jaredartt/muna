@@ -133,11 +133,11 @@ input[type='date']::-webkit-date-and-time-value, input[type='time']::-webkit-dat
 .bottom-nav {
   position: fixed; left: 50%; transform: translateX(-50%);
   bottom: calc(env(safe-area-inset-bottom) + 14px);
-  width: min(360px, calc(100% - 80px)); height: 80px; border-radius: 40px; background: var(--coral);
+  width: min(380px, calc(100% - 48px)); height: 80px; border-radius: 40px; background: var(--coral);
   display: flex; align-items: center; justify-content: space-around; padding: 0 12px;
   box-shadow: 0 10px 30px rgba(227, 123, 88, 0.35); z-index: 20;
 }
-.nav-btn { position: relative; width: 52px; height: 52px; display: grid; place-items: center; color: #fff; opacity: 0.78; transition: opacity 0.3s ease; }
+.nav-btn { position: relative; width: 46px; height: 52px; display: grid; place-items: center; color: #fff; opacity: 0.78; transition: opacity 0.3s ease; }
 .nav-btn.active { opacity: 1; }
 /* the icon glides up to make room for the dot, and back down when the dot goes away */
 .nav-btn svg { transition: transform 0.3s cubic-bezier(0.34, 1.4, 0.64, 1); }
@@ -505,3 +505,17 @@ input[type='checkbox']:focus-visible { outline: none; box-shadow: 0 0 0 4px colo
 .ml-edit-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .ml-amt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
 .ml-amt { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+
+/* ---------- Pantry ---------- */
+.pt-summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.pt-item { display: flex; flex-direction: column; gap: 10px; padding: 14px 0; border-top: 1px solid var(--line); }
+.pt-item.out .prod-thumb { opacity: 0.55; }
+.pt-top { display: flex; align-items: center; gap: 12px; }
+.pt-top .prod-body { flex: 1; min-width: 0; }
+.pt-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.pt-stepper { display: inline-flex; align-items: center; gap: 2px; background: var(--bg); border-radius: 14px; }
+.pt-packs { min-width: 70px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pt-slide { display: flex; flex-direction: column; gap: 6px; }
+.pt-slide input[type='range'] { width: 100%; accent-color: var(--coral); min-height: 32px; }
+.pt-quick { display: flex; gap: 6px; flex-wrap: wrap; }
+.pt-guess { margin: 0; }

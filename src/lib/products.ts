@@ -78,6 +78,8 @@ export function useProducts(): Product[] {
   return useSyncExternalStore(subscribe, () => items)
 }
 export const productsReady = () => ready
+/** The list right now, for code that is not a React component. */
+export const allProducts = () => items
 
 /** Starts loading + live updates for this home. Returns a stop function. */
 export function startProductSync(householdId: string): () => void {

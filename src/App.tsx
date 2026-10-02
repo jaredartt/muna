@@ -4,6 +4,7 @@ import { TasksProvider } from './context/TasksContext'
 import BottomNav from './components/BottomNav'
 import Muna from './components/Muna'
 import IconSync from './components/IconSync'
+import ShoppingSync from './components/ShoppingSync'
 import Login from './pages/Login'
 import Home from './pages/Home'
 import CalendarPage from './pages/CalendarPage'
@@ -12,6 +13,7 @@ import Profile from './pages/Profile'
 import Updates from './pages/Updates'
 import Products from './pages/Products'
 import Meals from './pages/Meals'
+import Pantry from './pages/Pantry'
 import { useRoute } from './lib/router'
 
 function Screens() {
@@ -33,6 +35,8 @@ function Screens() {
       return <Products />
     case '/meals':
       return <Meals />
+    case '/pantry':
+      return <Pantry />
     default:
       return <Home />
   }
@@ -58,6 +62,7 @@ function Shell() {
   return (
     <TasksProvider>
       <IconSync />
+      <ShoppingSync />
       <Screens />
       <BottomNav />
     </TasksProvider>

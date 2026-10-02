@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { IconChevronLeft, IconChevronRight, IconPlus, IconSearch } from '@tabler/icons-react'
 import { useAuth } from '../context/AuthContext'
-import { useTasksCtx } from '../context/TasksContext'
-import { useGoogleEvents } from '../hooks/useGoogleEvents'
+import { useShopping } from '../hooks/useShopping'
 import RecipePicker from '../components/RecipePicker'
 import RecipeSheet from '../components/RecipeSheet'
 import { addDays, formatDateNice, parseDateStr, todayStr } from '../lib/dates'
-import { fillWeek, first, loadStarter, missingIngredients, productMap, recipeMacros, round, setMeal, SLOTS, syncShopping, usePantry, usePlan, useRecipes, weekStart, type Recipe, type Slot } from '../lib/meals'
+import { fillWeek, first, loadStarter, missingIngredients, productMap, recipeMacros, round, setMeal, SLOTS, usePantry, usePlan, useRecipes, weekStart, type Recipe, type Slot } from '../lib/meals'
 import { useProducts } from '../lib/products'
 
 type Tab = 'plan' | 'recipes'
@@ -15,13 +14,13 @@ const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 /** Meals: choose what you eat each day, see calories and macros against your targets, and let Muna plan the shopping. */
 export default function Meals() {
   const { profile, members: allMembers, session } = useAuth()
-  const { tasks, addTask, updateTask, occurrenceMap } = useTasksCtx()
   const products = useProducts()
   const recipes = useRecipes()
   const plan = usePlan()
   const pantry = usePantry()
+  const today = todayStr()
   const [tab, setTab] = useState<Tab>('plan')
-  const [date, setDate] = useState(todayStr())
+  const [date, setDate] = useState(today)
   const [picking, setPicking] = useState<Slot | null>(null)
   const [openRecipe, setOpenRecipe] = useState<{ recipe: Recipe | null } | null>(null)
   const [msg, setMsg] = useState('')
@@ -36,37 +35,14 @@ export default function Meals() {
   }, [allMembers, session])
   const pmap = useMemo(() => productMap(products), [products])
 
-  // ----- the shopping task: runs by itself a moment after the plan or the pantry changes -----
-  const today = todayStr()
-  const from = useMemo(() => parseDateStr(today), [today])
-  const to = useMemo(() => parseDateStr(addDays(today, 9)), [today])
-  const google = useGoogleEvents(from, to)
-  const latest = useRef({ tasks, google: google.events, occurrenceMap })
-  latest.current = { tasks, google: google.events, occurrenceMap }
-
-  const runShopping = useCallback(
-    async (quiet: boolean) => {
-      if (!profile) return
-      const { tasks: ts, google: evs, occurrenceMap: occ } = latest.current
-      const days = occ(today, addDays(today, 9))
-      const load = (d: string) => (days.get(d)?.length ?? 0) + evs.filter((e) => e.start.slice(0, 10) === d).length
-      if (!quiet) setBusy(true)
-      const m = await syncShopping({ householdId: profile.household_id, tasks: ts, addTask, updateTask, load })
-      if (!quiet) setBusy(false)
-      if (m || !quiet) setMsg(m || 'Nothing planned for the next 7 days yet.')
-    },
-    [profile, today, addTask, updateTask],
-  )
-  const signature = useMemo(() => plan.map((p) => `${p.plan_date}${p.slot}${p.recipe_id}`).join('|') + '#' + pantry.map((p) => `${p.product_id}${p.packs > 0}`).join('|') + '#' + recipes.length, [plan, pantry, recipes.length])
-  const firstRun = useRef(true)
-  useEffect(() => {
-    if (firstRun.current) {
-      firstRun.current = false
-      return
-    }
-    const t = window.setTimeout(() => void runShopping(true), 2000)
-    return () => window.clearTimeout(t)
-  }, [signature, runShopping])
+  // the shopping task itself is kept up to date by <ShoppingSync/>; the button below runs the same check on demand
+  const shop = useShopping()
+  const runShopping = useCallback(async () => {
+    setBusy(true)
+    const m = await shop()
+    setBusy(false)
+    setMsg(m || 'Nothing to buy for the next 7 days.')
+  }, [shop])
 
   if (!profile) return null
   const hid = profile.household_id
@@ -230,7 +206,7 @@ export default function Meals() {
               <button className="btn soft" onClick={() => fill('B')} disabled={busy}>
                 Week B
               </button>
-              <button className="btn primary" onClick={() => runShopping(false)} disabled={busy}>
+              <button className="btn primary" onClick={runShopping} disabled={busy}>
                 {busy ? 'Checking…' : 'Check what is missing'}
               </button>
             </div>
