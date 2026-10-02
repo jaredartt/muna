@@ -17,7 +17,7 @@ type Props = {
 }
 
 export default function TaskSheet({ task, defaultDate, onSave, onDelete, onClose }: Props) {
-  const { members, session, googleConnected } = useAuth()
+  const { members, session } = useAuth()
   const [title, setTitle] = useState(task?.title ?? '')
   const [notes, setNotes] = useState(task?.notes ?? '')
   const [date, setDate] = useState(task ? task.due_date ?? '' : defaultDate ?? '')
@@ -26,7 +26,6 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onClose
   const [icon, setIcon] = useState(task?.icon ?? 'checklist')
   const [color, setColor] = useState(task?.color ?? 'mint')
   const [assignee, setAssignee] = useState(task?.assigned_to ?? '')
-  const [syncGoogle, setSyncGoogle] = useState(task?.sync_google ?? true)
   const [repeat, setRepeat] = useState<Repeat | null>(task?.repeat ?? null)
   const [saving, setSaving] = useState(false)
 
@@ -46,7 +45,7 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onClose
         icon,
         color,
         assigned_to: assignee || null,
-        sync_google: syncGoogle,
+        sync_google: true,
       },
       task?.id,
     )
@@ -96,13 +95,6 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onClose
             <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} disabled={!start} />
           </label>
         </div>
-
-        {googleConnected && (
-          <label className="check-row">
-            <input type="checkbox" checked={syncGoogle} onChange={(e) => setSyncGoogle(e.target.checked)} disabled={!date} />
-            <span>Add to Google Calendar{!date ? ' (pick a date first)' : ''}</span>
-          </label>
-        )}
 
         <RepeatEditor value={repeat} onChange={setRepeat} date={date} />
 

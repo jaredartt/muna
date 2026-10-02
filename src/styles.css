@@ -49,6 +49,7 @@
 /* ---------- Base ---------- */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body, #root { min-height: 100%; }
+html, body { overflow-x: hidden; max-width: 100%; }
 body {
   margin: 0;
   background: var(--bg);
@@ -118,11 +119,14 @@ button:disabled { cursor: default; opacity: 0.5; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field > span { font-size: 14px; color: var(--muted); }
 input, select, textarea {
-  width: 100%; background: var(--bg); border: 2px solid transparent; border-radius: 14px; padding: 12px 14px; min-height: 46px;
+  width: 100%; background: var(--bg); border: 2px solid transparent; border-radius: 14px; padding: 12px 14px; min-height: 46px; min-width: 0; max-width: 100%;
 }
 input:focus, select:focus, textarea:focus { outline: none; border-color: color-mix(in srgb, var(--coral) 60%, transparent); }
 textarea { resize: vertical; line-height: 1.45; }
-.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.row-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.row-2 > .field { min-width: 0; }
+input[type='date'], input[type='time'] { -webkit-appearance: none; appearance: none; display: block; text-align: left; }
+input[type='date']::-webkit-date-and-time-value, input[type='time']::-webkit-date-and-time-value { text-align: left; min-height: 1.4em; }
 
 /* ---------- Bottom navigation (coral pill) ---------- */
 .bottom-nav {
@@ -194,7 +198,7 @@ textarea { resize: vertical; line-height: 1.45; }
 
 /* ---------- Task sheet ---------- */
 .sheet-backdrop { position: fixed; inset: 0; background: rgba(40, 30, 20, 0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 50; }
-.sheet { background: var(--card); width: 100%; max-width: 480px; max-height: 92dvh; overflow-y: auto; border-radius: 28px 28px 0 0; padding: 20px 20px calc(env(safe-area-inset-bottom) + 20px); display: flex; flex-direction: column; gap: 14px; }
+.sheet { background: var(--card); width: 100%; max-width: 480px; max-height: 92dvh; overflow-y: auto; overflow-x: hidden; overscroll-behavior-x: none; touch-action: pan-y; box-sizing: border-box; border-radius: 28px 28px 0 0; padding: 20px 20px calc(env(safe-area-inset-bottom) + 20px); display: flex; flex-direction: column; gap: 14px; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; }
 .sheet-actions { display: flex; gap: 10px; margin-top: 4px; }
 .swatches { display: flex; gap: 10px; }
@@ -267,7 +271,19 @@ textarea { resize: vertical; line-height: 1.45; }
 
 /* ---------- Small helpers ---------- */
 .check-row { display: flex; align-items: center; gap: 10px; min-height: 44px; }
-.check-row input[type='checkbox'], input[type='checkbox'] { width: 22px; height: 22px; min-height: 0; padding: 0; flex: none; accent-color: var(--coral); }
+input[type='checkbox'] {
+  -webkit-appearance: none; appearance: none; width: 26px; height: 26px; min-height: 0; padding: 0; flex: none; margin: 0;
+  border-radius: 9px; border: 2px solid color-mix(in srgb, var(--coral) 45%, var(--track)); background: var(--bg);
+  display: inline-grid; place-items: center; cursor: pointer; transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+input[type='checkbox']::after {
+  content: ''; width: 6px; height: 12px; margin-top: -2px; border: solid #fff; border-width: 0 3px 3px 0; border-radius: 1px;
+  transform: rotate(45deg) scale(0); transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+input[type='checkbox']:checked { background: var(--coral); border-color: var(--coral); }
+input[type='checkbox']:checked::after { transform: rotate(45deg) scale(1); }
+input[type='checkbox']:active { transform: scale(0.9); }
+input[type='checkbox']:focus-visible { outline: none; box-shadow: 0 0 0 4px color-mix(in srgb, var(--coral) 25%, transparent); }
 .notice { display: block; width: 100%; text-align: left; background: var(--butter-bg); color: var(--butter-fg); border-radius: 14px; padding: 10px 14px; font-size: 14px; line-height: 1.4; }
 .soft-link { color: var(--coral); text-decoration: underline; text-underline-offset: 3px; padding: 8px 0; min-height: 44px; align-self: center; }
 .btn-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }

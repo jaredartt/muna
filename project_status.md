@@ -75,6 +75,9 @@ Migrations are in `supabase/migrations/` (already applied; keep new ones there t
 ## Profile colour + icon
 Each person picks a colour (`avatar_color`) and any Tabler **filled** icon (`avatar`) with a search bar (`src/components/IconPicker.tsx`; the full icon library is loaded lazily with `import('@tabler/icons-react')`). The same picker is used for task icons (Muna's own `icon` enum stays the 32 curated keys in `TASK_ICONS`). The partner's events in the calendar are tinted with their colour.
 
+## Task sheet notes
+Google sync is always on for dated tasks (`sync_google` forced true; no checkbox). Date/Who and Starts/Ends use `minmax(0,1fr)` grid columns so iOS date inputs can't overflow; the sheet and page block sideways scrolling (`overflow-x: hidden`, `touch-action: pan-y`). Checkboxes are custom (rounded coral box, animated tick) in `styles.css`.
+
 ## Screens (done)
 Login (Google) · Home (dashboard like Figma) · Calendar (month grid, dots per day, Google events, day list, add task) · Chat with Muna (text + voice notes) · Profile (name, colour, filled icon with search, light/dark/system, Muna personality, tokens used, Google Calendar connect, invite code, sign out). Task editor sheet (title, date, time, who, repeat, notes, colour, icon).
 
