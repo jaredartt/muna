@@ -41,7 +41,7 @@ export default function WeekView({ days, today, selected, itemsByDay, onPickDay 
       <div className="wk-body" style={{ height: HOURS_SHOWN * WH + 12 }}>
         {Array.from({ length: HOURS_SHOWN + 1 }, (_, i) => (
           <div key={i} className="wk-hour" style={{ top: i * WH }}>
-            <span>{String((DAY_START / 60 + i) % 24).padStart(2, '0')}</span>
+            <span>{i === 0 || i === HOURS_SHOWN ? '' : String((DAY_START / 60 + i) % 24).padStart(2, '0')}</span>
           </div>
         ))}
         <div className="wk-cols">

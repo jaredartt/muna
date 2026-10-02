@@ -203,7 +203,7 @@ export default function DayView({ label, isToday, items, onMove, onAdd }: Props)
       <div className="hours" ref={gridRef} style={{ height: HOURS_SHOWN * HOUR_H + 16 }}>
         {Array.from({ length: HOURS_SHOWN + 1 }, (_, i) => (
           <div key={i} className={'hour' + (i === HOURS_SHOWN ? ' last' : '')} style={{ top: i * HOUR_H }}>
-            <span className="hour-label">{`${String((DAY_START / 60 + i) % 24).padStart(2, '0')}:00`}</span>
+            <span className="hour-label">{i === 0 || i === HOURS_SHOWN ? '' : `${String((DAY_START / 60 + i) % 24).padStart(2, '0')}:00`}</span>
           </div>
         ))}
         <div className="slots">
