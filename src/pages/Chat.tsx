@@ -4,6 +4,7 @@ import { IconSend, IconVolume, IconVolumeOff, IconX } from '@tabler/icons-react'
 import Muna, { type MunaMood } from '../components/Muna'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { loadDraft, saveDraft } from '../lib/draft'
 import { notifyTasksChanged } from '../lib/events'
 import { WavRecorder } from '../lib/recorder'
 import type { ChatMessage } from '../lib/types'
@@ -32,7 +33,7 @@ function mmss(s: number) {
 export default function Chat() {
   const { session } = useAuth()
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [text, setText] = useState('')
+  const [text, setText] = useState(() => loadDraft(session?.user.id))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [recording, setRecording] = useState(false)
@@ -47,6 +48,11 @@ export default function Chat() {
   useEffect(() => {
     voiceRepliesRef.current = voiceReplies
   }, [voiceReplies])
+
+  // Keep the unsent message when you switch tabs or close the app (stored on this phone only).
+  useEffect(() => {
+    saveDraft(session?.user.id, text)
+  }, [text, session])
 
   useEffect(() => {
     if (!session) return
@@ -99,7 +105,7 @@ export default function Chat() {
     [speak],
   )
 
-  async function ask(body: Record<string, unknown>, bubbleText: string) {
+  async function ask(body: Record<string, unknown>, bubbleText: string, restoreText?: string) {
     if (busyRef.current) return
     busyRef.current = true
     setBusy(true)
@@ -113,6 +119,7 @@ export default function Chat() {
     setBusy(false)
     if (err || !data?.reply) {
       setMessages((m) => m.filter((x) => x.id !== tempId))
+      if (restoreText) setText((t) => t || restoreText) // do not lose what you typed if sending failed
       setError(await readFunctionError(err))
       return
     }
@@ -124,7 +131,7 @@ export default function Chat() {
     if (!content) return
     unlockSpeech()
     setText('')
-    void ask({ message: content }, content)
+    void ask({ message: content }, content, content)
   }
 
   async function startRecording() {
