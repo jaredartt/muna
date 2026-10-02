@@ -160,3 +160,6 @@ The 06:00 and 00:00 labels are visible again (now that TOP_PAD / WPAD keep them 
 
 ### Bug: app could not scroll on iPhone (Oct 2)
 Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), body:has(.sheet-backdrop) { overflow: hidden }` in styles.css. iOS Safari can stay stuck after overflow:hidden on html/body is toggled. Replaced by `src/hooks/useSheetScrollGuard.ts` (touchmove guard on the sheet backdrop, used by TaskSheet and EventSheet). RULE: never lock scrolling by setting overflow on html/body.
+
+### Bug: no wheel/trackpad scrolling (Oct 2) - REAL cause
+`body { overscroll-behavior-y: none }` combined with `html, body { overflow-x: hidden }`: body became a scroll container with overscroll-behavior none, so wheel/touch scrolling never chained up to the page (keyboard still worked). Found by testing in the in-app browser: injecting `body{overscroll-behavior-y:auto}` made wheel scrolling work. Fix: moved `overscroll-behavior-y: none` to `html`. RULE: never put overscroll-behavior on body.
