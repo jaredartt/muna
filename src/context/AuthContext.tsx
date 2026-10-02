@@ -29,6 +29,14 @@ type AuthState = {
 
 const Ctx = createContext<AuthState | null>(null)
 const CONNECTING_FLAG = 'muna-connecting-google'
+const GSTATUS_KEY = 'muna.googleStatus.v1'
+function readGoogleStatus(): Record<string, boolean> | null {
+  try {
+    return JSON.parse(localStorage.getItem(GSTATUS_KEY) ?? 'null') as Record<string, boolean> | null
+  } catch {
+    return null
+  }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
@@ -37,8 +45,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [members, setMembers] = useState<Member[]>([])
   const [inviteCode, setInviteCode] = useState('')
   const [munaPersonality, setMunaPersonality] = useState('')
-  const [googleStatus, setGoogleStatus] = useState<Record<string, boolean>>({})
-  const [googleReady, setGoogleReady] = useState(false)
+  const [savedStatus] = useState(readGoogleStatus)
+  const [googleStatus, setGoogleStatus] = useState<Record<string, boolean>>(savedStatus ?? {})
+  const [googleReady, setGoogleReady] = useState(Boolean(savedStatus))
 
   const loadGoogleStatus = useCallback(async () => {
     const { data } = await supabase.rpc('get_google_status')
@@ -46,6 +55,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     for (const row of (data ?? []) as { user_id: string; connected: boolean }[]) map[row.user_id] = row.connected
     setGoogleStatus(map)
     setGoogleReady(true)
+    try {
+      localStorage.setItem(GSTATUS_KEY, JSON.stringify(map))
+    } catch {
+      /* fine */
+    }
   }, [])
 
   const loadProfile = useCallback(
@@ -57,10 +71,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const p = data as Profile
           setProfile(p)
           applyTheme(p.theme_pref)
-          const [{ data: ms }, { data: hh }] = await Promise.all([
+          void Promise.all([
             supabase.from('profiles').select('id, display_name, avatar, avatar_color').eq('household_id', p.household_id),
             supabase.from('households').select('invite_code, muna_personality').eq('id', p.household_id).maybeSingle(),
-          ])
+          ]).then(([{ data: ms }, { data: hh }]) => {
           // Only replace what we show when the answer really arrived. On iPhones the network is often not ready
           // for a moment after the app wakes up; an empty answer must never wipe the text on screen.
           if (ms) setMembers(ms as Member[])
@@ -68,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setInviteCode(hh.invite_code ?? '')
             if (typeof hh.muna_personality === 'string') setMunaPersonality(hh.muna_personality)
           }
+          })
           void loadGoogleStatus()
           return
         }

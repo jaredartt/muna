@@ -5,6 +5,23 @@ import { fetchGoogleEvents, type GoogleEvent } from '../lib/google'
 
 const cache = new Map<string, { at: number; events: GoogleEvent[]; reconnect: string[]; apiDisabled: boolean }>()
 const TTL = 60_000
+const STORE = 'muna.googleEvents.v1'
+type Entry = { events: GoogleEvent[]; reconnect: string[]; apiDisabled: boolean }
+// What we saw last time is shown at once (as "old"), then refreshed from Google.
+try {
+  const saved = JSON.parse(localStorage.getItem(STORE) ?? '{}') as Record<string, Entry>
+  for (const [k, v] of Object.entries(saved)) cache.set(k, { at: 0, ...v })
+} catch {
+  /* nothing saved yet */
+}
+function persist() {
+  try {
+    const recent = [...cache.entries()].sort((a, b) => b[1].at - a[1].at).slice(0, 6)
+    localStorage.setItem(STORE, JSON.stringify(Object.fromEntries(recent.map(([k, v]) => [k, { events: v.events, reconnect: v.reconnect, apiDisabled: v.apiDisabled }]))))
+  } catch {
+    /* fine */
+  }
+}
 
 /** Google Calendar events (everyone in the home who connected Google) between two moments. */
 export function useGoogleEvents(from: Date, to: Date) {
@@ -28,7 +45,10 @@ export function useGoogleEvents(from: Date, to: Date) {
       }
       setState((s) => ({ ...s, loading: true }))
       const r = await fetchGoogleEvents(from, to)
-      if (!r.failed) cache.set(key, { at: Date.now(), events: r.events, reconnect: r.reconnect, apiDisabled: r.apiDisabled })
+      if (!r.failed) {
+        cache.set(key, { at: Date.now(), events: r.events, reconnect: r.reconnect, apiDisabled: r.apiDisabled })
+        persist()
+      }
       setState({ events: r.failed ? [] : r.events, reconnect: r.reconnect, apiDisabled: r.apiDisabled, loading: false, loaded: true })
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -136,3 +136,6 @@ Sheets (`.sheet`) and the icon grid had no `overscroll-behavior`, so at the end 
 - `WeekView.tsx`: 7 columns, tap a day or block (no dragging yet). Month: tap a day to open it in the Day view.
 - Look is a first cosy version; Jared will hand over the Figma design later and Claude must then replicate it exactly (keep logic and styling separate, styles are in the last section of styles.css).
 - Untested on a real iPhone: the long-press drag, auto-scroll and the sticky strip.
+
+### Faster start (Oct 2)
+Home intro started late because it waited for 3 network answers (tasks, who connected Google, today's Google events). Now each is remembered on the phone and shown at once, then refreshed: `useTasks` (localStorage `muna.tasksCache.v1`, keyed by household), `useGoogleEvents` (`muna.googleEvents.v1`, shown as stale, refetched when older than 60 s), AuthContext (`muna.googleStatus.v1`). `loadProfile` no longer waits for members/household before the app shows. Fallback timeout for the intro is 1.2 s, steps 110 ms. First-ever open (no cache) still waits for the network.

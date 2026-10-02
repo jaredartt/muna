@@ -7,12 +7,26 @@ import { occurrencesBetween, occursOn } from '../lib/recurrence'
 import { addDays } from '../lib/dates'
 import type { Occurrence, Task, TaskDraft } from '../lib/types'
 
+const CACHE = 'muna.tasksCache.v1'
+type TaskCache = { hid: string; tasks: Task[]; done: string[] }
+function readCache(hid: string | undefined): TaskCache | null {
+  if (!hid) return null
+  try {
+    const c = JSON.parse(localStorage.getItem(CACHE) ?? 'null') as TaskCache | null
+    return c && c.hid === hid && Array.isArray(c.tasks) ? c : null
+  } catch {
+    return null
+  }
+}
+
 export function useTasks() {
   const { profile, googleConnected } = useAuth()
   const householdId = profile?.household_id
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [loading, setLoading] = useState(true)
-  const [completions, setCompletions] = useState<Set<string>>(new Set()) // "taskId|YYYY-MM-DD": ticked days of repeating tasks
+  // The last list we saw is shown straight away (so the app opens instantly); the fresh list replaces it a moment later.
+  const [first] = useState(() => readCache(householdId))
+  const [tasks, setTasks] = useState<Task[]>(first?.tasks ?? [])
+  const [loading, setLoading] = useState(!first)
+  const [completions, setCompletions] = useState<Set<string>>(new Set(first?.done ?? [])) // "taskId|YYYY-MM-DD": ticked days of repeating tasks
   const tasksRef = useRef<Task[]>([])
   tasksRef.current = tasks
 
@@ -27,8 +41,14 @@ export function useTasks() {
       .order('created_at', { ascending: true })
     setTasks((data ?? []) as Task[])
     const { data: done } = await supabase.from('task_completions').select('task_id, occ_date').eq('household_id', householdId).gte('occ_date', addDays(new Date().toISOString().slice(0, 10), -800))
-    setCompletions(new Set((done ?? []).map((c) => `${c.task_id}|${c.occ_date}`)))
+    const doneKeys = (done ?? []).map((c) => `${c.task_id}|${c.occ_date}`)
+    setCompletions(new Set(doneKeys))
     setLoading(false)
+    try {
+      localStorage.setItem(CACHE, JSON.stringify({ hid: householdId, tasks: data ?? [], done: doneKeys }))
+    } catch {
+      /* storage full or blocked, fine */
+    }
   }, [householdId])
 
   useEffect(() => {

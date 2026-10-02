@@ -41,7 +41,7 @@ export default function Home() {
   const [playing] = useState(() => !introPlayed) // decided once when the page opens, so the animation is never cut short
   const [timedOut, setTimedOut] = useState(false)
   useEffect(() => {
-    const t = setTimeout(() => setTimedOut(true), 2500) // never wait forever on a slow network
+    const t = setTimeout(() => setTimedOut(true), 1200) // never wait forever on a slow network
     return () => clearTimeout(t)
   }, [])
 
@@ -59,7 +59,7 @@ export default function Home() {
   }, [ready])
   const reveal = (n: number) => ({
     className: !playing ? '' : ready ? ' reveal in' : ' reveal pre',
-    style: { '--d': `${n * 130}ms` } as CSSProperties,
+    style: { '--d': `${n * 110}ms` } as CSSProperties,
   })
   const r0 = reveal(0), r1 = reveal(1), r2 = reveal(2), r3 = reveal(3), r4 = reveal(4)
 
