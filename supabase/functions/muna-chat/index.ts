@@ -42,7 +42,22 @@ type Ctx = {
   touched: Set<string> // task ids created/changed (to mirror into Google Calendar)
   deletedEvents: { event_id: string; owner: string }[] // Google events of deleted tasks
   place: Place // the home's weather city
+  ops: UndoOp[] // the steps that put back what Muna changed in this request (saved as the one undo)
+  labels: string[] // the same changes in words, for the Undo button
 }
+// One step that undoes a change. They are saved in order and run backwards by the "undo" action.
+type UndoOp =
+  | { t: 'del'; id: string; title?: string } // a task Muna created: delete it again
+  | { t: 'patch'; id: string; fields: Record<string, unknown>; title?: string } // a task Muna changed: put the old values back
+  | { t: 'ins'; oldId: string; row: Record<string, unknown> } // a task Muna deleted: make it again (it gets a new id)
+  | { t: 'comp_ins'; oldTaskId: string; rows: Record<string, unknown>[] } // ticks of a repeating task that were removed
+  | { t: 'comp_del'; taskId: string; occDate: string } // a tick Muna added on a repeating task
+  | { t: 'gcal'; undo: Record<string, unknown> } // a Google Calendar event Muna changed or deleted (made by the google-calendar function)
+// Columns the app may write on tasks (migration 3 + 20). The Google link columns are never touched.
+const PATCH_COLS = ['assigned_to', 'title', 'notes', 'due_date', 'start_time', 'end_time', 'icon', 'color', 'completed', 'completed_at', 'sync_google', 'repeat', 'checklist', 'category']
+const INSERT_COLS = ['household_id', 'created_by', ...PATCH_COLS]
+const pick = (row: Record<string, unknown>, keys: string[]) => Object.fromEntries(keys.filter((k) => k in row).map((k) => [k, row[k]]))
+
 type Tool = {
   declaration: { name: string; description: string; parameters: Record<string, unknown> }
   run: (args: Record<string, unknown>, ctx: Ctx) => Promise<unknown>
@@ -175,7 +190,11 @@ const TOOLS: Tool[] = [
       const { data, error } = await ctx.db.from('tasks').insert(rows).select('id, title, due_date, start_time, repeat')
       if (error) return { error: error.message }
       ctx.changed = true
-      for (const d of data ?? []) ctx.touched.add(d.id as string)
+      for (const d of data ?? []) {
+        ctx.touched.add(d.id as string)
+        ctx.ops.push({ t: 'del', id: d.id as string, title: d.title as string })
+        ctx.labels.push(`Added "${d.title}"`)
+      }
       return { created: data }
     },
   },
@@ -200,11 +219,16 @@ const TOOLS: Tool[] = [
         const { data: cur } = await ctx.db.from('tasks').select('due_date').eq('id', id).eq('household_id', ctx.householdId).maybeSingle()
         normalizeRepeat(patch, (cur?.due_date as string | null) ?? null, ctx)
       }
+      const { data: before } = await ctx.db.from('tasks').select('*').eq('id', id).eq('household_id', ctx.householdId).maybeSingle()
       const { data, error } = await ctx.db.from('tasks').update(patch).eq('id', id).eq('household_id', ctx.householdId).select('id, title, due_date, start_time, repeat')
       if (error) return { error: error.message }
       if (!data?.length) return { error: 'task not found' }
       ctx.changed = true
       for (const d of data) ctx.touched.add(d.id as string)
+      if (before) {
+        ctx.ops.push({ t: 'patch', id, title: before.title as string, fields: pick(before as Record<string, unknown>, Object.keys(patch)) })
+        ctx.labels.push(`Changed "${before.title}"`)
+      }
       return { updated: data }
     },
   },
@@ -231,13 +255,18 @@ const TOOLS: Tool[] = [
       const repeating = (found ?? []).filter((t) => t.repeat)
       const plainIds = (found ?? []).filter((t) => !t.repeat).map((t) => t.id as string)
       const results: unknown[] = []
+      const { data: beforePlain } = plainIds.length ? await ctx.db.from('tasks').select('id, title, completed, completed_at').in('id', plainIds).eq('household_id', ctx.householdId) : { data: [] }
       for (const t of repeating) {
+        const { data: ex } = await ctx.db.from('task_completions').select('task_id, occ_date, completed_by').eq('task_id', t.id).eq('occ_date', day).maybeSingle()
         const q = completed
           ? ctx.db.from('task_completions').upsert({ task_id: t.id, occ_date: day, household_id: ctx.householdId, completed_by: ctx.userId })
           : ctx.db.from('task_completions').delete().eq('task_id', t.id).eq('occ_date', day)
         const { error } = await q
         if (error) return { error: error.message }
         results.push({ id: t.id, title: t.title, date: day, completed })
+        if (completed && !ex) ctx.ops.push({ t: 'comp_del', taskId: t.id as string, occDate: day })
+        if (!completed && ex) ctx.ops.push({ t: 'comp_ins', oldTaskId: t.id as string, rows: [ex as Record<string, unknown>] })
+        if (completed ? !ex : Boolean(ex)) ctx.labels.push(`${completed ? 'Ticked' : 'Unticked'} "${t.title}"`)
       }
       if (plainIds.length) {
         const { data, error } = await ctx.db
@@ -249,6 +278,11 @@ const TOOLS: Tool[] = [
         if (error) return { error: error.message }
         for (const d of data ?? []) ctx.touched.add(d.id as string)
         results.push(...(data ?? []))
+        for (const b of beforePlain ?? []) {
+          if (!(data ?? []).some((d) => d.id === b.id)) continue
+          ctx.ops.push({ t: 'patch', id: b.id as string, title: b.title as string, fields: { completed: b.completed, completed_at: b.completed_at } })
+          ctx.labels.push(`${completed ? 'Ticked' : 'Unticked'} "${b.title}"`)
+        }
       }
       ctx.changed = true
       return { updated: results }
@@ -263,12 +297,19 @@ const TOOLS: Tool[] = [
     async run(args, ctx) {
       const ids = (Array.isArray(args.ids) ? args.ids : []).filter((i): i is string => typeof i === 'string').slice(0, 50)
       if (!ids.length) return { error: 'ids required' }
-      const { data: before } = await ctx.db.from('tasks').select('id, google_event_id, google_owner').in('id', ids).eq('household_id', ctx.householdId)
+      const { data: before } = await ctx.db.from('tasks').select('*').in('id', ids).eq('household_id', ctx.householdId)
+      const { data: ticks } = await ctx.db.from('task_completions').select('task_id, occ_date, completed_by').in('task_id', ids)
       const { data, error } = await ctx.db.from('tasks').delete().in('id', ids).eq('household_id', ctx.householdId).select('id, title')
       if (error) return { error: error.message }
       ctx.changed = true
       const gone = new Set((data ?? []).map((d) => d.id as string))
       for (const b of before ?? []) {
+        if (!gone.has(b.id as string)) continue
+        const mine = (ticks ?? []).filter((c) => c.task_id === b.id)
+        // steps are run backwards: the ticks are listed first so the task is made again before its ticks
+        if (mine.length) ctx.ops.push({ t: 'comp_ins', oldTaskId: b.id as string, rows: mine as Record<string, unknown>[] })
+        ctx.ops.push({ t: 'ins', oldId: b.id as string, row: pick(b as Record<string, unknown>, INSERT_COLS) })
+        ctx.labels.push(`Deleted "${b.title}"`)
         if (gone.has(b.id as string) && b.google_event_id && b.google_owner) {
           ctx.deletedEvents.push({ event_id: b.google_event_id as string, owner: b.google_owner as string })
         }
@@ -413,6 +454,8 @@ const TOOLS: Tool[] = [
       if (!res) return { error: 'Google Calendar is not available right now.' }
       if (!res.ok) return { error: res.message ?? 'Could not change that event.' }
       ctx.changed = true
+      if (res.undo) ctx.ops.push({ t: 'gcal', undo: res.undo })
+      ctx.labels.push(`Changed calendar event${res.title ? ` "${res.title}"` : ''}`)
       return { ok: true }
     },
   },
@@ -430,13 +473,15 @@ const TOOLS: Tool[] = [
       if (!res) return { error: 'Google Calendar is not available right now.' }
       if (!res.ok) return { error: res.message ?? 'Could not delete that event.' }
       ctx.changed = true
+      if (res.undo) ctx.ops.push({ t: 'gcal', undo: res.undo })
+      ctx.labels.push(`Deleted calendar event${res.title ? ` "${res.title}"` : ''}`)
       return { ok: true }
     },
   },
 ]
 
 // Calls our other edge function (google-calendar) with the same signed-in user.
-async function callGoogleFunction(ctx: Ctx, payload: Record<string, unknown>) {
+async function callGoogleFunction(ctx: { authHeader: string }, payload: Record<string, unknown>) {
   try {
     const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/google-calendar`, {
       method: 'POST',
@@ -452,6 +497,94 @@ async function callGoogleFunction(ctx: Ctx, payload: Record<string, unknown>) {
     console.error('google-calendar call error', e)
     return null
   }
+}
+
+// ---------- Undo: the one last change ----------
+/** Keeps the steps that put back what Muna changed in this request. A newer change replaces the older one; a request that changed nothing keeps it. */
+async function saveUndo(ctx: Ctx, request: string) {
+  if (!ctx.ops.length) return
+  const shown = ctx.labels.slice(0, 4).join(' · ')
+  const summary = (shown + (ctx.labels.length > 4 ? ` · +${ctx.labels.length - 4} more` : '')).slice(0, 400) || 'Changed things'
+  const { error } = await ctx.db
+    .from('muna_undo')
+    .upsert({ user_id: ctx.userId, household_id: ctx.householdId, request: request.slice(0, 300), summary, ops: ctx.ops, created_at: new Date().toISOString() })
+  if (error) console.error('could not save the undo', error.message)
+}
+
+/** Runs the saved steps backwards, then forgets them. Things that were changed or removed since are skipped and counted. */
+async function runUndo(db: SupabaseClient, userId: string, householdId: string, tz: string, authHeader: string): Promise<{ reply?: string; error?: string; restored?: number; failed?: number }> {
+  const { data: rec } = await db.from('muna_undo').select('summary, ops').eq('user_id', userId).maybeSingle()
+  if (!rec) return { error: 'There is nothing to undo.' }
+  const ops = (Array.isArray(rec.ops) ? rec.ops : []) as UndoOp[]
+  const touched = new Set<string>()
+  const deletedEvents: { event_id: string; owner: string }[] = []
+  const idMap = new Map<string, string>() // a deleted task comes back with a new id; later steps that mention the old id follow it
+  const map = (id: string) => idMap.get(id) ?? id
+  let restored = 0
+  let failed = 0
+  for (const op of [...ops].reverse()) {
+    try {
+      if (op.t === 'del') {
+        const id = map(op.id)
+        const { data: cur } = await db.from('tasks').select('id, google_event_id, google_owner').eq('id', id).eq('household_id', householdId).maybeSingle()
+        if (!cur) {
+          restored++ // already gone: nothing to remove
+          continue
+        }
+        const { error } = await db.from('tasks').delete().eq('id', id).eq('household_id', householdId)
+        if (error) {
+          failed++
+          continue
+        }
+        if (cur.google_event_id && cur.google_owner) deletedEvents.push({ event_id: cur.google_event_id as string, owner: cur.google_owner as string })
+        restored++
+      } else if (op.t === 'patch') {
+        const id = map(op.id)
+        const fields = pick(op.fields ?? {}, PATCH_COLS)
+        if (!Object.keys(fields).length) continue
+        const { data, error } = await db.from('tasks').update(fields).eq('id', id).eq('household_id', householdId).select('id')
+        if (error || !data?.length) {
+          failed++
+          continue
+        }
+        touched.add(id)
+        restored++
+      } else if (op.t === 'ins') {
+        const row = { ...pick(op.row ?? {}, INSERT_COLS), household_id: householdId, created_by: userId }
+        const { data, error } = await db.from('tasks').insert(row).select('id').single()
+        if (error || !data) {
+          console.error('undo insert failed', error?.message)
+          failed++
+          continue
+        }
+        idMap.set(op.oldId, data.id as string)
+        touched.add(data.id as string)
+        restored++
+      } else if (op.t === 'comp_ins') {
+        const rows = (op.rows ?? []).map((r) => ({ task_id: map(op.oldTaskId), occ_date: r.occ_date, household_id: householdId, completed_by: r.completed_by ?? userId }))
+        if (!rows.length) continue
+        const { error } = await db.from('task_completions').upsert(rows)
+        if (error) failed++
+        else restored++
+      } else if (op.t === 'comp_del') {
+        const { error } = await db.from('task_completions').delete().eq('task_id', map(op.taskId)).eq('occ_date', op.occDate)
+        if (error) failed++
+        else restored++
+      } else if (op.t === 'gcal') {
+        const res = await callGoogleFunction({ authHeader }, { action: 'restore_event', undo: op.undo, tz })
+        if (res?.ok) restored++
+        else failed++
+      }
+    } catch (e) {
+      console.error('undo step failed', op.t, e)
+      failed++
+    }
+  }
+  if (touched.size || deletedEvents.length) await callGoogleFunction({ authHeader }, { action: 'sync', upsert_ids: [...touched], deletes: deletedEvents, tz })
+  await db.from('muna_undo').delete().eq('user_id', userId)
+  const reply = `Undone: ${rec.summary}.` + (failed ? ` ${failed === 1 ? 'One thing' : failed + ' things'} could not be put back, because ${failed === 1 ? 'it was' : 'they were'} changed or removed since.` : '')
+  await db.from('chat_messages').insert({ user_id: userId, role: 'assistant', content: reply })
+  return { reply, restored, failed }
 }
 
 // ---------- Prompt ----------
@@ -586,7 +719,6 @@ async function transcribe(base64: string, mime: string) {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors })
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
-  if (!GEMINI_KEY) return json({ error: 'Muna is not fully set up yet (missing Gemini key).' }, 500)
 
   const authHeader = req.headers.get('Authorization') ?? ''
   const token = authHeader.replace(/^Bearer\s+/i, '')
@@ -598,18 +730,27 @@ Deno.serve(async (req) => {
   if (userErr || !userData.user) return json({ error: 'Please sign in again.' }, 401)
   const userId = userData.user.id
 
-  let body: { message?: unknown; timezone?: unknown; audio?: { base64?: unknown; mime?: unknown } }
+  let body: { message?: unknown; timezone?: unknown; undo?: unknown; audio?: { base64?: unknown; mime?: unknown } }
   try {
     body = await req.json()
   } catch {
     return json({ error: 'Bad request' }, 400)
   }
+  const tz = typeof body.timezone === 'string' ? body.timezone : 'Europe/Berlin'
+  // "Undo Muna's last change": no Gemini involved, so it also works when Muna is tired.
+  if (body.undo === true) {
+    const { data: me } = await db.from('profiles').select('household_id').eq('id', userId).single()
+    if (!me) return json({ error: 'Profile not found' }, 404)
+    const r = await runUndo(db, userId, me.household_id as string, tz, authHeader)
+    return r.error ? json({ error: r.error }, 404) : json({ reply: r.reply, undone: true, changed: true, restored: r.restored, failed: r.failed })
+  }
+  if (!GEMINI_KEY) return json({ error: 'Muna is not fully set up yet (missing Gemini key).' }, 500)
   let message = typeof body.message === 'string' ? body.message.trim().slice(0, 2000) : ''
   const audioB64 = typeof body.audio?.base64 === 'string' ? body.audio.base64 : ''
   const audioMime = body.audio?.mime === 'audio/wav' ? 'audio/wav' : ''
   if (!message && !audioB64) return json({ error: 'Say something first :)' }, 400)
   if (audioB64 && (!audioMime || audioB64.length > MAX_AUDIO_BASE64)) return json({ error: 'That voice message is too long. Keep it under about a minute.' }, 413)
-  const tz = typeof body.timezone === 'string' ? body.timezone : 'Europe/Berlin'
+
 
   const { data: profile } = await db.from('profiles').select('display_name, household_id').eq('id', userId).single()
   if (!profile) return json({ error: 'Profile not found' }, 404)
@@ -680,6 +821,8 @@ Deno.serve(async (req) => {
     touched: new Set(),
     deletedEvents: [],
     place,
+    ops: [],
+    labels: [],
   }
   const system = buildSystemPrompt({
     name: profile.display_name,
@@ -736,6 +879,7 @@ Deno.serve(async (req) => {
     if (ctx.touched.size || ctx.deletedEvents.length) {
       await callGoogleFunction(ctx, { action: 'sync', upsert_ids: [...ctx.touched], deletes: ctx.deletedEvents, tz })
     }
+    await saveUndo(ctx, message)
     if (e instanceof TiredError) {
       // Show it as a normal Muna message instead of an error.
       await db.from('chat_messages').insert({ user_id: userId, role: 'assistant', content: TIRED_REPLY })
@@ -749,6 +893,7 @@ Deno.serve(async (req) => {
     await callGoogleFunction(ctx, { action: 'sync', upsert_ids: [...ctx.touched], deletes: ctx.deletedEvents, tz })
   }
 
+  await saveUndo(ctx, message)
   if (!reply) reply = ctx.changed ? 'Done!' : 'Hmm, that was a big one and I got lost. Could you split it into smaller steps, or say it again?'
   await db.from('chat_messages').insert({ user_id: userId, role: 'assistant', content: reply })
   await db.rpc('add_ai_usage', { p_prompt: promptTokens, p_output: outputTokens })

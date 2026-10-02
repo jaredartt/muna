@@ -7,8 +7,8 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/context/AuthContext.tsx`: used by 20 files
 - `src/lib/dates.ts`: used by 15 files
 - `src/lib/types.ts`: used by 14 files
+- `src/lib/supabase.ts`: used by 13 files
 - `src/lib/icons.tsx`: used by 11 files
-- `src/lib/supabase.ts`: used by 11 files
 - `src/lib/meals.ts`: used by 10 files
 - `src/lib/products.ts`: used by 10 files
 - `src/lib/router.ts`: used by 9 files
@@ -64,9 +64,9 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: ProductPicker
   - imports: hooks/useSheetScrollGuard.ts, lib/products.ts
   - used by: pages/Products.tsx
-- `src/components/ProductSheet.tsx` (245 lines)
+- `src/components/ProductSheet.tsx` (293 lines)
   - exports: ProductSheet
-  - imports: components/BarcodeScanner.tsx, hooks/useSheetScrollGuard.ts, lib/products.ts
+  - imports: components/BarcodeScanner.tsx, hooks/useSheetScrollGuard.ts, lib/productImage.ts, lib/products.ts
   - used by: pages/Products.tsx
 - `src/components/RecipePicker.tsx` (72 lines)
   - exports: RecipePicker
@@ -173,10 +173,18 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: Slot, SLOTS, Ingredient, Recipe, RecipeDraft, PlanRow, PantryRow, PantryLog…
   - imports: lib/dates.ts, lib/liveTable.ts, lib/products.ts, lib/supabase.ts, lib/types.ts
   - used by: components/HomeRings.tsx, components/IconSync.tsx, components/RecipePicker.tsx, components/RecipeSheet.tsx, components/ShoppingSync.tsx, components/TaskSheet.tsx, hooks/useShopping.ts, pages/Meals.tsx, pages/Pantry.tsx, pages/Products.tsx
+- `src/lib/munaUndo.ts` (38 lines) - The one last change Muna made for this person (table muna_undo, one row per person). It is kept in the database, not on the phone, so it is
+  - exports: LastChange, timeAgo, useLastChange
+  - imports: lib/supabase.ts
+  - used by: pages/Chat.tsx
 - `src/lib/phosphor.ts` (44 lines) - Phosphor "Fill" icons (MIT licence, https://phosphoricons.com). They live in the repo as one JSON file
   - exports: PhosphorData, loadPhosphor, phosphorAvailable, usePhosphor
   - imports: lib/svgIcons.tsx
   - used by: components/IconPicker.tsx, lib/icons.tsx
+- `src/lib/productImage.ts` (63 lines) - Photos for products that the barcode databases do not know. The phone shrinks the picture first (a camera photo is several MB),
+  - exports: isOurImage, uploadProductImage, removeProductImage
+  - imports: lib/supabase.ts
+  - used by: components/ProductSheet.tsx
 - `src/lib/products.ts` (389 lines) - The home's product list (table "products"). Kept in memory, cached on the phone, live through realtime.
   - exports: Tri, Edc, Product, ProductDraft, useProducts, productsReady, allProducts, startProductSync…
   - imports: lib/supabase.ts
@@ -196,7 +204,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - used by: components/HomeRings.tsx, components/IconSync.tsx
 - `src/lib/supabase.ts` (11 lines) - These two values are PUBLIC by design (they are safe to be in the browser).
   - exports: supabase
-  - used by: context/AuthContext.tsx, hooks/useTasks.ts, lib/customIcons.ts, lib/eventStyles.ts, lib/google.ts, lib/liveTable.ts, lib/meals.ts, lib/products.ts, lib/sleep.ts, pages/Chat.tsx, pages/Profile.tsx
+  - used by: context/AuthContext.tsx, hooks/useTasks.ts, lib/customIcons.ts, lib/eventStyles.ts, lib/google.ts, lib/liveTable.ts, lib/meals.ts, lib/munaUndo.ts, lib/productImage.ts, lib/products.ts, lib/sleep.ts, pages/Chat.tsx, pages/Profile.tsx
 - `src/lib/svgIcons.tsx` (130 lines) - A tiny, safe description of an SVG icon: a list of shapes. We never store or show raw SVG text,
   - exports: SvgNode, SvgIconData, MAX_ICON_BYTES, parseSvgIcon, SvgGlyph
   - used by: components/MyIcons.tsx, lib/customIcons.ts, lib/icons.tsx, lib/phosphor.ts
@@ -221,9 +229,9 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: CalendarPage
   - imports: components/DayView.tsx, components/WeekView.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useGoogleEvents.ts, lib/dates.ts, lib/dayItems.ts, lib/eventStyles.ts, lib/events.ts, lib/google.ts, lib/router.ts, lib/types.ts
   - used by: App.tsx
-- `src/pages/Chat.tsx` (435 lines)
+- `src/pages/Chat.tsx` (466 lines)
   - exports: Chat
-  - imports: components/Muna.tsx, context/AuthContext.tsx, lib/draft.ts, lib/events.ts, lib/recorder.ts, lib/supabase.ts, lib/types.ts
+  - imports: components/Muna.tsx, context/AuthContext.tsx, lib/draft.ts, lib/events.ts, lib/munaUndo.ts, lib/recorder.ts, lib/supabase.ts, lib/types.ts
   - used by: App.tsx
 - `src/pages/Home.tsx` (164 lines)
   - exports: Home
@@ -274,10 +282,11 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - table `pantry` (first in 20261002000012_meals_pantry.sql)
 - table `pantry_log` (first in 20261002000013_pantry_log.sql)
 - table `sleep_log` (first in 20261002000016_category_sleep.sql)
+- table `muna_undo` (first in 20261002000021_muna_undo.sql)
 
 ## Server functions (supabase/functions)
 
-- `google-calendar` (451 lines) - actions: delete_event, list, sync, update_event
-- `muna-chat` (758 lines) - Muna tools: create_tasks, update_task, set_tasks_completed, delete_tasks, get_weather, list_tasks, list_calendar_events, update_calendar_event, delete_calendar_event
-- `muna-voice` (134 lines)
+- `google-calendar` (494 lines) - actions: delete_event, list, restore_event, sync, update_event
+- `muna-chat` (903 lines) - Muna tools: create_tasks, update_task, set_tasks_completed, delete_tasks, get_weather, list_tasks, list_calendar_events, update_calendar_event, delete_calendar_event
+- `muna-voice` (148 lines)
 - `recurrence.ts` exists in THREE places (src/lib, google-calendar, muna-chat): keep the copies in sync.

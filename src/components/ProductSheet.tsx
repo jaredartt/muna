@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
-import { IconBarcode, IconRepeat, IconShoppingBag, IconTrashFilled, IconX } from '@tabler/icons-react'
+import { IconBarcode, IconCamera, IconRepeat, IconShoppingBag, IconTrashFilled, IconX } from '@tabler/icons-react'
 import BarcodeScanner from './BarcodeScanner'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
+import { removeProductImage, uploadProductImage } from '../lib/productImage'
 import { deleteProduct, saveProduct, type Edc, type Product, type ProductDraft, type Tri } from '../lib/products'
 
 type Props = {
@@ -62,6 +63,32 @@ export default function ProductSheet({ householdId, initial, id, note, onSaved, 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [scanning, setScanning] = useState(false)
+  const [imageUrl, setImageUrl] = useState<string | null>(initial.image_url)
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const uploaded = useRef<string[]>([]) // pictures added in this sheet, so the ones not kept can be deleted again
+
+  async function pickPhoto(file: File | undefined) {
+    if (!file) return
+    setError('')
+    setUploading(true)
+    const r = await uploadProductImage(householdId, file)
+    setUploading(false)
+    if (r.error || !r.url) return setError(r.error ?? 'Could not add the picture.')
+    uploaded.current.push(r.url)
+    setImageUrl(r.url)
+  }
+
+  /** Deletes the pictures this sheet uploaded that are not the one kept (and the old picture that was replaced, once it is saved). */
+  function tidyPhotos(keep: string | null, saved: boolean) {
+    for (const u of uploaded.current) if (u !== keep) void removeProductImage(u)
+    if (saved && initial.image_url && initial.image_url !== keep) void removeProductImage(initial.image_url)
+  }
+
+  function cancel() {
+    tidyPhotos(initial.image_url, false)
+    onClose()
+  }
 
   async function save() {
     setError('')
@@ -75,7 +102,7 @@ export default function ProductSheet({ householdId, initial, id, note, onSaved, 
     const code = barcode.replace(/\D/g, '')
     if (barcode.trim() && (code.length < 6 || code.length > 20)) return setError('A barcode has 6 to 20 digits.')
     const draft: ProductDraft = {
-      image_url: initial.image_url,
+      image_url: imageUrl,
       source: initial.source,
       barcode: code || null,
       name: name.trim(),
@@ -101,6 +128,7 @@ export default function ProductSheet({ householdId, initial, id, note, onSaved, 
     const res = await saveProduct(householdId, draft, id)
     setBusy(false)
     if (res.error || !res.product) return setError(res.error ?? 'Could not save the product.')
+    tidyPhotos(imageUrl, true)
     onSaved?.(res.product)
     onClose()
   }
@@ -111,15 +139,16 @@ export default function ProductSheet({ householdId, initial, id, note, onSaved, 
     const ok = await deleteProduct(id)
     setBusy(false)
     if (!ok) return setError('Could not delete it. Try again.')
+    tidyPhotos(null, true)
     onClose()
   }
 
   return (
-    <div className="sheet-backdrop" ref={backdropRef} onClick={onClose}>
+    <div className="sheet-backdrop" ref={backdropRef} onClick={cancel}>
       <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={id ? 'Edit product' : 'New product'}>
         <div className="sheet-head">
           <h2>{id ? 'Edit product' : 'New product'}</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
+          <button className="icon-btn" onClick={cancel} aria-label="Close">
             <IconX size={22} />
           </button>
         </div>
@@ -127,6 +156,25 @@ export default function ProductSheet({ householdId, initial, id, note, onSaved, 
         {initial.source !== 'manual' && !id && (
           <p className="muted small">Found on {({ openfoodfacts: 'Open Food Facts', openbeautyfacts: 'Open Beauty Facts', openproductsfacts: 'Open Products Facts', openpetfoodfacts: 'Open Pet Food Facts', upcitemdb: 'UPCitemdb' } as Record<string, string>)[initial.source] ?? 'a barcode database'}. Please check the numbers against the pack before you save.</p>
         )}
+
+        <div className="prod-photo">
+          <span className="prod-thumb big">{imageUrl ? <img src={imageUrl} alt="Photo of the product" /> : <IconCamera size={30} />}</span>
+          <div className="prod-photo-actions">
+            <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => {
+              void pickPhoto(e.target.files?.[0])
+              e.target.value = '' // so the same picture can be chosen again
+            }} />
+            <button type="button" className="btn soft" onClick={() => fileRef.current?.click()} disabled={uploading}>
+              <IconCamera size={18} /> {uploading ? 'Adding…' : imageUrl ? 'Change photo' : 'Add a photo'}
+            </button>
+            {imageUrl && !uploading && (
+              <button type="button" className="prod-manual" onClick={() => setImageUrl(null)}>
+                Remove photo
+              </button>
+            )}
+            {!imageUrl && !uploading && <span className="muted small">Take a picture of the pack, or choose one from your photos.</span>}
+          </div>
+        </div>
 
         <label className="field">
           <span>Name</span>

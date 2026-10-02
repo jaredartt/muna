@@ -573,3 +573,15 @@ input.sl-suggest { color: var(--muted); }
 .rebuy-opt strong { font-weight: 700; font-size: 15px; }
 .rebuy-opt small { font-size: 12px; line-height: 1.3; }
 .rebuy-opt.on { background: var(--peach-bg); color: var(--peach-fg); border-color: var(--coral); }
+
+/* Photo of a product (for ones the barcode databases do not know) */
+.prod-photo { display: flex; align-items: center; gap: 14px; }
+.prod-thumb.big { width: 88px; height: 88px; border-radius: 20px; }
+.prod-photo-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
+
+/* Undo Muna's last change: sits just above the message box */
+.undo-bar { position: fixed; left: 50%; transform: translateX(-50%); width: min(430px, calc(100% - 40px)); bottom: calc(env(safe-area-inset-bottom) + 176px); display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: 20px; padding: 8px 8px 8px 16px; box-shadow: 0 8px 28px rgba(120, 90, 40, 0.15); z-index: 15; }
+.undo-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.undo-text strong { font-weight: 700; font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.undo-bar .btn { align-self: center; flex: none; }
+.messages.with-undo { padding-bottom: 140px; }

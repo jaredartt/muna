@@ -2,6 +2,7 @@
 //   action "list": events from every connected person in the home (primary calendars), for a date range.
 //   action "sync": mirror Muna tasks into the right person's Google Calendar (create / update / delete).
 //   action "update_event" / "delete_event": edit or remove any event on either person's calendar (both can edit each other's).
+//     Both answer with `undo` (what is needed to put the event back) and `title`; action "restore_event" takes that `undo` and puts it back.
 // Google refresh tokens live in table google_connections, which only this server code (service role) can read.
 // Secrets needed: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET (same OAuth client you created for Google login).
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
@@ -379,12 +380,15 @@ Deno.serve(async (req) => {
         if (body.action === 'delete_event') {
           // scope "all" on a repeating event removes the whole series; anything else removes just that one day
           let delPath = path
-          if (body.scope === 'all') {
-            const one = await gcal(at, 'GET', path)
-            if (one.data?.recurringEventId) delPath = `/${encodeURIComponent(one.data.recurringEventId)}`
+          let delId = eventId
+          const one = await gcal(at, 'GET', path)
+          if (body.scope === 'all' && one.data?.recurringEventId) {
+            delPath = `/${encodeURIComponent(one.data.recurringEventId)}`
+            delId = String(one.data.recurringEventId)
           }
-          await gcal(at, 'DELETE', delPath)
-          return json({ ok: true })
+          const res = await gcal(at, 'DELETE', delPath)
+          // a deleted event stays in Google for a while as "cancelled", and can be switched back to "confirmed"
+          return json({ ok: true, title: typeof one.data?.summary === 'string' ? one.data.summary : undefined, undo: res.status < 300 ? { kind: 'restore', owner_id: owner, event_id: delId } : undefined })
         }
         const tz = validTz(body.tz)
         const cur = await gcal(at, 'GET', `${path}?timeZone=${encodeURIComponent(tz)}`)
@@ -434,7 +438,46 @@ Deno.serve(async (req) => {
           patch.start = { dateTime: `${date}T${st}:00`, timeZone: tz, date: null }
           patch.end = { dateTime: `${endDate}T${et}:00`, timeZone: tz, date: null }
         }
+        // how it looked before, so the change can be undone
+        const before = {
+          kind: 'patch',
+          owner_id: owner,
+          event_id: String(ex.id),
+          summary: typeof ex.summary === 'string' ? ex.summary : '',
+          description: typeof ex.description === 'string' ? ex.description : '',
+          start: ex.start?.date ? { date: ex.start.date, dateTime: null, timeZone: null } : { dateTime: ex.start?.dateTime, timeZone: ex.start?.timeZone ?? tz, date: null },
+          end: ex.end?.date ? { date: ex.end.date, dateTime: null, timeZone: null } : { dateTime: ex.end?.dateTime, timeZone: ex.end?.timeZone ?? tz, date: null },
+        }
         const r = await gcal(at, 'PATCH', evPath, patch)
+        if (r.status === 404 || r.status === 410) return json({ ok: false, error: 'not_found', message: 'That event no longer exists.' })
+        return json({ ok: true, title: before.summary || undefined, undo: before })
+      } catch (e) {
+        if (e instanceof GoogleError) return json({ ok: false, reconnect: e.code === 'reconnect', api_disabled: e.code === 'api_disabled', message: e.message })
+        throw e
+      }
+    }
+
+    // ---------------- RESTORE ONE EVENT (undo of update_event / delete_event) ----------------
+    if (body.action === 'restore_event') {
+      const u = (body.undo ?? {}) as Record<string, any>
+      const owner = typeof u.owner_id === 'string' ? u.owner_id : ''
+      const eventId = typeof u.event_id === 'string' ? u.event_id : ''
+      if (!eventId || !memberIds.has(owner) || !connected.has(owner)) return json({ ok: false, error: 'not_found', message: 'That event could not be found.' })
+      const at = await accessTokenFor(admin, owner)
+      if (!at) return json({ ok: false, reconnect: true, message: 'Google access expired. Please reconnect.' })
+      const path = `/${encodeURIComponent(eventId)}`
+      try {
+        let patch: Record<string, unknown>
+        if (u.kind === 'restore') patch = { status: 'confirmed' }
+        else if (u.kind === 'patch') {
+          patch = {
+            summary: String(u.summary ?? '').slice(0, 300),
+            description: String(u.description ?? '').slice(0, 8000),
+            start: u.start,
+            end: u.end,
+          }
+        } else return json({ ok: false, error: 'bad_undo', message: 'Nothing to restore.' })
+        const r = await gcal(at, 'PATCH', path, patch)
         if (r.status === 404 || r.status === 410) return json({ ok: false, error: 'not_found', message: 'That event no longer exists.' })
         return json({ ok: true })
       } catch (e) {

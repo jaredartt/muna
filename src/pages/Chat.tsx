@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { IconMicrophoneFilled } from '@tabler/icons-react'
-import { IconSend, IconVolume, IconVolumeOff, IconX } from '@tabler/icons-react'
+import { IconArrowBackUp, IconSend, IconVolume, IconVolumeOff, IconX } from '@tabler/icons-react'
 import Muna, { type MunaMood } from '../components/Muna'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { loadDraft, saveDraft } from '../lib/draft'
 import { notifyTasksChanged } from '../lib/events'
 import { WavRecorder } from '../lib/recorder'
+import { timeAgo, useLastChange } from '../lib/munaUndo'
 import type { ChatMessage } from '../lib/types'
 
 const SUGGESTIONS = ['What do we have planned this week?', 'Add "buy groceries" for tomorrow', 'Plan a cozy Sunday for us']
@@ -85,6 +86,8 @@ export default function Chat() {
   const [recording, setRecording] = useState(false)
   const [seconds, setSeconds] = useState(0)
   const [voiceReplies, setVoiceReplies] = useState(loadVoicePref)
+  const { change: lastChange, refresh: refreshLastChange } = useLastChange(session?.user.id)
+  const [undoing, setUndoing] = useState(false)
   const justLoaded = useRef(Boolean(cached)) // true right after the history is fetched: jump to the end instantly, like WhatsApp
   const recRef = useRef<WavRecorder | null>(null)
   const timerRef = useRef<number | null>(null)
@@ -254,10 +257,13 @@ export default function Chat() {
         const next = placeholderId ? m.map((x) => (x.id === placeholderId ? { ...x, content: data.transcript || x.content } : x)) : m
         return [...next, { id: 'a-' + stamp, role: 'assistant', content: data.reply, created_at: new Date().toISOString() }]
       })
-      if (data.changed) notifyTasksChanged()
+      if (data.changed) {
+        notifyTasksChanged()
+        void refreshLastChange() // Muna changed something: it is now the one change that can be undone
+      }
       if (voiceRepliesRef.current) void speak(data.reply, { id: 'a-' + stamp })
     },
-    [speak],
+    [speak, refreshLastChange],
   )
 
   async function ask(body: Record<string, unknown>, bubbleText: string, restoreText?: string) {
@@ -279,6 +285,19 @@ export default function Chat() {
       return
     }
     finish(data, tempId)
+  }
+
+  /** Puts back what Muna changed last (a new change replaces it, so only ever the last one). Does not use Gemini, and is not read aloud. */
+  async function undoLast() {
+    if (undoing || busyRef.current) return
+    setUndoing(true)
+    setError('')
+    const { data, error: err } = await supabase.functions.invoke('muna-chat', { body: { undo: true, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone } })
+    setUndoing(false)
+    void refreshLastChange()
+    if (err || !data?.reply) return setError(await readFunctionError(err))
+    setMessages((m) => [...m, { id: 'a-' + Date.now(), role: 'assistant', content: data.reply, created_at: new Date().toISOString() }])
+    notifyTasksChanged()
   }
 
   function sendText(raw: string) {
@@ -359,7 +378,7 @@ export default function Chat() {
         </button>
       </header>
 
-      <div className={'messages' + (loaded ? '' : ' hidden')}>
+      <div className={'messages' + (loaded ? '' : ' hidden') + (lastChange ? ' with-undo' : '')}>
         {messages.length === 0 && !busy && (
           <div className="chat-empty">
             <p className="muted">Hi! I can add, change and complete tasks for you, and plan your days. Type, or tap the microphone to send me a voice note. Try:</p>
@@ -398,6 +417,18 @@ export default function Chat() {
         )}
         {error && <p className="error">{error}</p>}
       </div>
+
+      {lastChange && !recording && (
+        <div className="undo-bar" role="status">
+          <span className="undo-text">
+            <span className="muted small">Muna&apos;s last change · {timeAgo(lastChange.created_at)}</span>
+            <strong>{lastChange.summary}</strong>
+          </span>
+          <button type="button" className="btn soft" onClick={() => void undoLast()} disabled={undoing || busy} aria-label="Undo Muna's last change">
+            <IconArrowBackUp size={18} /> {undoing ? 'Undoing…' : 'Undo'}
+          </button>
+        </div>
+      )}
 
       {recording ? (
         <div className="composer recording">

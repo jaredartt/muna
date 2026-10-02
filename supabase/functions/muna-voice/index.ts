@@ -9,6 +9,10 @@ const MODELS = [Deno.env.get('GEMINI_TTS_MODEL') ?? 'gemini-3.8-flash-tts', 'gem
 const VOICE = Deno.env.get('GEMINI_TTS_VOICE') ?? 'Leda'
 const STYLE = 'warm, gentle and cozy, like a kind little friend, natural pace'
 const MAX_CHARS = 700
+// Each model has its OWN free daily limit (about 10 requests a day). When one says "limit reached" (429) it is skipped for a while,
+// so the next model can keep Muna's real voice going instead of the phone's robotic one.
+const COOL_OFF_MS = 30 * 60 * 1000
+const coolOff = new Map<string, number>()
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -115,7 +119,12 @@ Deno.serve(async (req) => {
   if (!text) return json({ error: 'Nothing to say' }, 400)
 
   let last = ''
+  let limited = false
   for (const model of MODELS) {
+    if ((coolOff.get(model) ?? 0) > Date.now()) {
+      limited = true
+      continue
+    }
     for (const withMime of [true, false]) {
       const r = await tts(model, text, withMime)
       if (r.ok) {
@@ -126,9 +135,14 @@ Deno.serve(async (req) => {
       }
       last = `${model} ${r.status} ${r.body}`
       console.error('tts failed', last)
-      if (r.status === 429) return json({ error: 'Muna is resting her voice for a moment.' }, 429)
+      if (r.status === 429) {
+        limited = true
+        coolOff.set(model, Date.now() + COOL_OFF_MS)
+        break // this model is out for today: try the next one
+      }
       if (r.status !== 400) break // a 400 may just be the mime_type field: try once without it; anything else: next model
     }
   }
+  if (limited) return json({ error: 'Muna is resting her voice for a moment.' }, 429)
   return json({ error: 'Muna could not speak right now.' }, 502)
 })
