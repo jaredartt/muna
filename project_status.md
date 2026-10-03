@@ -317,3 +317,6 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 
 ## Overlapping items keep their colour's side (Oct 3)
 - `layoutLanes` (src/lib/dayItems.ts): in a group of overlapping items each colour gets its own column(s), always in the same order (orange, green, blue, yellow, coral, rose, purple), so e.g. orange tasks are always left and purple always right instead of swapping sides. Same-colour items that overlap each other still get separate columns. Items that overlap nothing stay full width. Used by day and week view. Tested on the layout function with the real example (blue left / purple right; Term project + Read assignments).
+
+## Drop-down arrows (Oct 3)
+- Every `<select>` in the app now has the same round chevron drawn by the app (CSS in styles.css: appearance none, SVG chevron 16 px at `right 16px`, `padding-right: 44px`, long text gets an ellipsis) instead of the phone's own arrow that touched the edge. Checked in a phone-size browser mock only.
