@@ -13,6 +13,7 @@ import {
   IconPaletteFilled,
   IconPizzaFilled,
   IconPawFilled,
+  IconSchool,
   IconRepeat,
   IconShieldFilled,
   IconTimelineEventFilled,
@@ -32,6 +33,7 @@ export type UpdateEntry = {
 
 // Newest first. Add one entry here for every change we make (see "Working agreements" in project_status.md).
 export const UPDATES: UpdateEntry[] = [
+  { date: '2026-10-03', time: '14:05', title: 'Uni follows your calendar ticks', text: 'When you tick the calendar block of a Uni assignment, the assignment is now done in Uni too. Before, it stayed open when the block was shorter than the time you had planned (for example a 30 minute block for a 1 hour assignment).', Icon: IconSchool, color: 'sky' },
   { date: '2026-10-03', time: '13:40', title: 'Resize tasks with the mouse (really)', text: 'On a computer you can now drag the top or bottom edge of a task in the Day calendar to change when it starts or ends. The grab spots were attached to the wrong thing before, so nothing happened. Fixed.', Icon: IconCalendarFilled, color: 'sky' },
   { date: '2026-10-03', time: '13:10', title: 'Weather is one column wide', text: 'The Weather block on Home is now the same width as the other white blocks and sits in one of the two columns. You can still press and hold it to move it.', Icon: IconSunFilled, color: 'butter' },
   { date: '2026-10-03', time: '12:30', title: 'Gym block shows your next session', text: 'Every training day (Push, Pull, Legs...) now has its own icon: Muna picks one from the name, and you can change it when you open the day. The Gym block on Home shows the next session with its icon and name, when it is, and the goal to beat for each exercise. Sessions Muna plans in your calendar use the same icon.', Icon: IconBarbell, color: 'mint' },

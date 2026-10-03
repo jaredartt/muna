@@ -394,3 +394,4 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 - Gym: gym_splits.icon (migration 30, applied live). Home Gym block = icon + name + when + 'Goal to beat'. Planned gym tasks use the split icon. Muna chat does not know the icon yet.
 - Home layout is now 2 columns only (the wide strip is gone). Weather is a normal 1-column block; old 3-zone saves fold into the shorter column (normalizeLayout).
 - Fixed: DayView resize handles (.blk-resize) were inside the all-day pill; now inside the timed .blk. Not tested with a real mouse.
+- Uni: item counts as done when every linked calendar block is ticked (uni.ts itemState), no longer requires doneMin >= planned minutes.
