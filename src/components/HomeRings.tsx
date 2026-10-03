@@ -163,7 +163,7 @@ export function CaloriesCard({ anim }: { anim: Anim }) {
             <IconChefHatFilled size={24} />
           </span>
         </div>
-        <Ring pct={(kcal / target) * 100} color="var(--green)" value={meals ? String(round(kcal)) : '–'} label={meals ? 'Kcal' : 'no meals planned'} />
+        <Ring pct={(kcal / target) * 100} color="var(--green)" value={meals ? String(round(kcal)) : '–'} label={meals ? 'Kcal' : 'no meals planned'} labelBelow />
       </button>
     </section>
   )
