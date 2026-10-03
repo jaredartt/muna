@@ -704,3 +704,5 @@ input.sl-suggest { color: var(--muted); }
 .confirm-btns .btn { flex: 1 1 120px; align-self: auto; }
 .btn.danger-solid { background: #c9503f; color: #fff; }
 @media (prefers-reduced-motion: reduce) { .confirm-backdrop, .confirm-box, .confirm-backdrop.leaving .confirm-box { animation: none; } }
+.tasks-card { cursor: pointer; }
+.tasks-card button { cursor: pointer; }

@@ -93,7 +93,14 @@ export default function Home() {
 
       <div className="masonry">
         <div className="col">
-          <section className={"card tasks-card" + r1.className} style={r1.style}>
+          <section
+            className={"card tasks-card" + r1.className}
+            style={r1.style}
+            onClick={(ev) => {
+              // the empty parts of the block open the calendar; a task, the add button etc. keep doing their own thing
+              if (!(ev.target as HTMLElement).closest('button')) navigate('/calendar')
+            }}
+          >
             <div className="card-head">
               <h3>Today&rsquo;s tasks</h3>
               <button className="plain-icon purple" onClick={() => navigate('/calendar')} aria-label="Open calendar">

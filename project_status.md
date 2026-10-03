@@ -327,3 +327,6 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 - Hobby sessions Muna plans are saved with category `hobby`; the "Grocery shopping" task is `pantry`.
 - Migration 20261003000027_task_categories.sql (applied live): constraint now allows null/uni/goal/hobby/pantry.
 - Not done: Muna chat edge function still only knows uni/goal/none (not redeployed).
+
+## Home: Today's tasks block opens the calendar (3 Oct 2026)
+- Tapping the empty parts of the "Today's tasks" block (title, spaces, "Nothing yet") opens the Calendar like the bottom menu; tapping a task, its tile, the add button or the "…" keeps its own action.
