@@ -201,6 +201,21 @@ type Ctx = {
   color: string // the colour of the person (Jared orange, Lidia purple)
 }
 
+/**
+ * You changed the time of a calendar block that belongs to a Uni assignment (dragged it, made it longer or shorter, edited it):
+ * the assignment's duration in Uni becomes the total of all its blocks, so the two always agree.
+ * `tasks` must already contain the new times.
+ */
+export async function syncUniMinutes(taskId: string, tasks: Task[]): Promise<void> {
+  const byId = new Map(tasks.map((t) => [t.id, t]))
+  for (const item of store.all().filter((i) => i.task_ids.includes(taskId))) {
+    const linked = item.task_ids.map((id) => byId.get(id)).filter((t): t is Task => Boolean(t))
+    if (!linked.length) continue
+    const total = Math.min(2400, Math.max(5, Math.round(linked.reduce((a, t) => a + taskMinutes(t), 0) / 5) * 5))
+    if (total !== item.minutes) await updateUniItem(item.id, { minutes: total })
+  }
+}
+
 /** Remove the blocks of an item that are still to do (ticked ones stay as a record). */
 export async function unplanItem(item: UniItem, ctx: Pick<Ctx, 'tasks' | 'deleteTask'>, today: string): Promise<void> {
   const st = itemState(item, ctx.tasks, today)

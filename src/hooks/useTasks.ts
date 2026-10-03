@@ -5,6 +5,7 @@ import { TASKS_CHANGED } from '../lib/events'
 import { syncTasksToGoogle } from '../lib/google'
 import { occurrencesBetween, occursOn } from '../lib/recurrence'
 import { addDays } from '../lib/dates'
+import { syncUniMinutes } from '../lib/uni'
 import type { Occurrence, Task, TaskDraft } from '../lib/types'
 
 const CACHE = 'muna.tasksCache.v1'
@@ -97,7 +98,11 @@ export function useTasks() {
       setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)))
       const { error } = await supabase.from('tasks').update(patch).eq('id', id)
       if (error) await reload()
-      else mirror([id])
+      else {
+        mirror([id])
+        // a Uni block got a new time: its assignment in Uni takes the new duration
+        if ('start_time' in patch || 'end_time' in patch) void syncUniMinutes(id, tasksRef.current.map((t) => (t.id === id ? { ...t, ...patch } : t)))
+      }
       return error?.message ?? null
     },
     [reload, mirror],
