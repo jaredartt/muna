@@ -6,6 +6,7 @@ import Muna from './components/Muna'
 import IconSync from './components/IconSync'
 import ShoppingSync from './components/ShoppingSync'
 import HolidaySync from './components/HolidaySync'
+import HobbySync from './components/HobbySync'
 import Login from './pages/Login'
 import Home from './pages/Home'
 import CalendarPage from './pages/CalendarPage'
@@ -16,6 +17,7 @@ import Products from './pages/Products'
 import Meals from './pages/Meals'
 import Pantry from './pages/Pantry'
 import Uni from './pages/Uni'
+import Hobbies from './pages/Hobbies'
 import { useRoute } from './lib/router'
 
 function Screens() {
@@ -41,6 +43,8 @@ function Screens() {
       return <Pantry />
     case '/uni':
       return <Uni />
+    case '/hobbies':
+      return <Hobbies />
     default:
       return <Home />
   }
@@ -68,6 +72,7 @@ function Shell() {
       <IconSync />
       <ShoppingSync />
       <HolidaySync />
+      <HobbySync />
       <Screens />
       <BottomNav />
     </TasksProvider>

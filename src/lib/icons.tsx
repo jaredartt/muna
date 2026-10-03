@@ -59,7 +59,7 @@ export const AVATAR_SUGGESTIONS = [
   'IconHeadphonesFilled', 'IconCameraFilled',
 ]
 
-export const TASK_COLORS = ['mint', 'peach', 'lilac', 'sky', 'butter', 'rose'] as const
+export const TASK_COLORS = ['mint', 'peach', 'lilac', 'sky', 'butter', 'rose', 'coral'] as const
 
 // ---- Any other Tabler icon is loaded on demand (the full library is big, so it is only fetched when needed) ----
 type Lib = Record<string, IconCmp>

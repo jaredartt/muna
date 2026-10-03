@@ -1,8 +1,8 @@
 import { useSyncExternalStore } from 'react'
 
 // Tiny hash router (#/calendar). Hash routes work on GitHub Pages with no server config.
-export type Route = '/' | '/calendar' | '/chat' | '/profile' | '/updates' | '/products' | '/meals' | '/pantry' | '/uni'
-const ROUTES: Route[] = ['/', '/calendar', '/chat', '/profile', '/updates', '/products', '/meals', '/pantry', '/uni']
+export type Route = '/' | '/calendar' | '/chat' | '/profile' | '/updates' | '/products' | '/meals' | '/pantry' | '/uni' | '/hobbies'
+const ROUTES: Route[] = ['/', '/calendar', '/chat', '/profile', '/updates', '/products', '/meals', '/pantry', '/uni', '/hobbies']
 
 function current(): Route {
   const h = window.location.hash.replace(/^#/, '').split('?')[0] || '/'

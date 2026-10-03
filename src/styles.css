@@ -23,6 +23,7 @@
   --sky-bg: #e0e8ff; --sky-fg: #4d70e0;
   --butter-bg: #faf0c8; --butter-fg: #b08a0b;
   --rose-bg: #fde1e7; --rose-fg: #d9547a;
+  --coral-bg: #fddcd8; --coral-fg: #e2615f;
 
   --font: 'Quicksand', system-ui, -apple-system, 'Segoe UI', sans-serif;
   color-scheme: light;
@@ -43,6 +44,7 @@
   --sky-bg: #2a3558; --sky-fg: #a3b8ff;
   --butter-bg: #473f1f; --butter-fg: #f2d86f;
   --rose-bg: #4d2c36; --rose-fg: #ff9db8;
+  --coral-bg: #4f2a2a; --coral-fg: #ff8f8a;
   color-scheme: dark;
 }
 
@@ -106,6 +108,7 @@ button:disabled { cursor: default; opacity: 0.5; }
 .c-sky { background: var(--sky-bg); color: var(--sky-fg); }
 .c-butter { background: var(--butter-bg); color: var(--butter-fg); }
 .c-rose { background: var(--rose-bg); color: var(--rose-fg); }
+.c-coral { background: var(--coral-bg); color: var(--coral-fg); }
 
 /* ---------- Buttons & fields ---------- */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 18px; border-radius: 16px; min-height: 44px; }
@@ -650,3 +653,15 @@ input.sl-suggest { color: var(--muted); }
 .uni-day { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 14px; background: var(--bg); }
 .uni-block { display: flex; gap: 10px; align-items: baseline; }
 .uni-block .muted { flex: none; min-width: 84px; }
+
+.uni-weekno { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.uni-weekno span { color: var(--muted); font-size: 14px; }
+.uni-weekno input { width: 76px; text-align: center; }
+
+/* ---------- Hobbies ---------- */
+.plain-icon.coral { color: var(--coral-fg); }
+.hobby-card { background: var(--coral-bg); }
+.hobby-card h3 { color: var(--coral-fg); }
+.hobby-card .tile { background: var(--card); }
+.hobby-card .add-pill { background: var(--card); color: var(--coral-fg); }
+.hobby-head { text-align: left; width: 100%; }

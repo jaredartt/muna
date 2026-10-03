@@ -28,6 +28,13 @@ export default function Uni() {
   const list = items.filter((i) => i.week === shown)
   const prog = weekProgress(items, tasks, shown, today)
   const [planning, setPlanning] = useState(false)
+  const [weekText, setWeekText] = useState(String(shown))
+  useEffect(() => setWeekText(String(shown)), [shown])
+  function typeWeek(v: string) {
+    setWeekText(v.replace(/\D/g, '').slice(0, 2))
+    const n = Number(v)
+    if (Number.isInteger(n) && n >= 1 && n <= 99) setWeek(n)
+  }
 
   // add form
   const [title, setTitle] = useState('')
@@ -75,6 +82,10 @@ export default function Uni() {
             </button>
           )}
         </div>
+        <label className="uni-weekno">
+          <span>Which week are you in? Type the number</span>
+          <input type="number" inputMode="numeric" min="1" max="99" value={weekText} onChange={(e) => typeWeek(e.target.value)} onBlur={() => setWeekText(String(shown))} aria-label="Week number" />
+        </label>
         <div className="uni-sum">
           <strong>Week {shown}</strong>
           <span className="muted small">
@@ -93,7 +104,7 @@ export default function Uni() {
         <div className="uni-add">
           <input value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void add()} placeholder="e.g. Read chapter 4" aria-label="What is it?" />
           <label className="uni-hours">
-            <input type="number" inputMode="decimal" min="0.25" step="0.25" value={hours} onChange={(e) => setHours(e.target.value)} aria-label="Hours you plan to spend" />
+            <input type="text" inputMode="decimal" autoComplete="off" value={hours} onChange={(e) => setHours(e.target.value.replace(/[^0-9.,]/g, '').slice(0, 5))} aria-label="Hours you plan to spend" />
             <span>h</span>
           </label>
           <button className="btn primary" onClick={() => void add()} disabled={!title.trim()} aria-label="Add">
@@ -128,10 +139,12 @@ function Row({ item, today }: { item: UniItem; today: string }) {
   const [confirm, setConfirm] = useState(false)
   const [title, setTitle] = useState(item.title)
   const [hours, setHours] = useState(hoursText(item.minutes))
+  const [wk, setWk] = useState(String(item.week))
   useEffect(() => {
     setTitle(item.title)
     setHours(hoursText(item.minutes))
-  }, [item.title, item.minutes])
+    setWk(String(item.week))
+  }, [item.title, item.minutes, item.week])
   const st = itemState(item, tasks, today)
   const first = st.upcoming[0]
   const status = st.done
@@ -161,6 +174,12 @@ function Row({ item, today }: { item: UniItem; today: string }) {
     else setHours(hoursText(item.minutes))
   }
 
+  function saveWeek() {
+    const n = Number(wk)
+    if (Number.isInteger(n) && n >= 1 && n <= 99 && n !== item.week) void updateUniItem(item.id, { week: n })
+    else setWk(String(item.week))
+  }
+
   return (
     <div className={'uni-item' + (st.done ? ' done' : '')}>
       <div className="uni-top">
@@ -181,10 +200,14 @@ function Row({ item, today }: { item: UniItem; today: string }) {
           <div className="uni-add">
             <input value={title} onChange={(e) => setTitle(e.target.value)} onBlur={saveTitle} aria-label="Name" />
             <label className="uni-hours">
-              <input type="number" inputMode="decimal" min="0.25" step="0.25" value={hours} onChange={(e) => setHours(e.target.value)} onBlur={saveHours} aria-label="Hours" />
+              <input type="text" inputMode="decimal" autoComplete="off" value={hours} onChange={(e) => setHours(e.target.value.replace(/[^0-9.,]/g, '').slice(0, 5))} onBlur={saveHours} aria-label="Hours" />
               <span>h</span>
             </label>
           </div>
+          <label className="uni-weekno">
+            <span>Week</span>
+            <input type="number" inputMode="numeric" min="1" max="99" value={wk} onChange={(e) => setWk(e.target.value.replace(/\D/g, '').slice(0, 2))} onBlur={saveWeek} aria-label="Week of this item" />
+          </label>
           {st.linked.some((t) => !t.completed) && (
             <button
               type="button"
