@@ -319,12 +319,6 @@ export default function DayView({ label, isToday, items, onMove, onAdd, onCreate
                 <button className={'tick' + (it.done ? ' on' : '')} data-nodrag onClick={(e) => { e.stopPropagation(); it.toggle() }} aria-label={it.done ? 'Mark as not done' : 'Mark as done'}>
                   {it.done && <IconCheck size={12} stroke={3.2} />}
                 </button>
-                {it.movable && (
-                  <>
-                    <span className="blk-resize top" data-nodrag onPointerDown={(e) => onResizeDown(e, it, 'top')} onClick={(e) => e.stopPropagation()} />
-                    <span className="blk-resize bottom" data-nodrag onPointerDown={(e) => onResizeDown(e, it, 'bottom')} onClick={(e) => e.stopPropagation()} />
-                  </>
-                )}
               </div>
             ))}
           </div>
@@ -364,6 +358,12 @@ export default function DayView({ label, isToday, items, onMove, onAdd, onCreate
                 <button className={'tick' + (it.done ? ' on' : '')} data-nodrag onClick={(e) => { e.stopPropagation(); it.toggle() }} aria-label={it.done ? 'Mark as not done' : 'Mark as done'}>
                   {it.done && <IconCheck size={12} stroke={3.2} />}
                 </button>
+                {it.movable && (
+                  <>
+                    <span className="blk-resize top" data-nodrag onPointerDown={(e) => onResizeDown(e, it, 'top')} onClick={(e) => e.stopPropagation()} />
+                    <span className="blk-resize bottom" data-nodrag onPointerDown={(e) => onResizeDown(e, it, 'bottom')} onClick={(e) => e.stopPropagation()} />
+                  </>
+                )}
               </div>
             )
           })}
