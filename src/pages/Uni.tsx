@@ -8,9 +8,10 @@ import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
 import { useAnimatedClose } from '../hooks/useAnimatedClose'
 import { addDays, parseDateStr, todayStr } from '../lib/dates'
 import { navigate } from '../lib/router'
-import { addUniItem, commitPlan, currentWeekOf, deleteUniItem, duration, fmtMin, itemState, looseUniTasks, reorderUniItems, setCurrentWeek, unplanItem, updateUniItem, useUniItems, useUniSettings, weekProgress, type UniItem } from '../lib/uni'
+import { addCourse, addUniItem, commitPlan, currentWeekOf, deleteCourse, deleteUniItem, duration, fmtMin, itemState, looseUniTasks, reorderUniItems, setCurrentWeek, unplanItem, updateCourse, updateUniItem, useUniCourses, useUniItems, useUniSettings, weekProgress, type UniCourse, type UniItem } from '../lib/uni'
 import { daysBetween, planStudy, type Span } from '../lib/uniPlan'
 import { assigneeColor } from '../lib/people'
+import { TASK_COLORS } from '../lib/icons'
 import SkipDays from '../components/SkipDays'
 import { useSkips } from '../lib/skips'
 import { useReorder } from '../hooks/useReorder'
@@ -28,12 +29,19 @@ export default function Uni() {
   const setting = useUniSettings().find((s) => s.user_id === uid)
   const today = todayStr()
   const current = currentWeekOf(items, tasks, setting, today)
-  const weeks = useMemo(() => [...new Set([...items.map((i) => i.week), ...(current ? [current] : [])])].sort((a, b) => a - b), [items, current])
+  // courses first: 'all', 'none' (no course) or the id of a course; then that course's weeks
+  const courses = useUniCourses().filter((c) => c.created_by === uid)
+  const [courseSel, setCourseSel] = useState<string>('all')
+  const selCourse = courses.find((c) => c.id === courseSel) ?? null
+  const scope = selCourse ? selCourse.id : courseSel === 'none' ? 'none' : 'all'
+  const scoped = useMemo(() => (scope === 'all' ? items : scope === 'none' ? items.filter((i) => !i.course_id) : items.filter((i) => i.course_id === scope)), [items, scope])
+  const hasLoneItems = courses.length > 0 && items.some((i) => !i.course_id)
+  const weeks = useMemo(() => [...new Set([...scoped.map((i) => i.week), ...(current ? [current] : [])])].sort((a, b) => a - b), [scoped, current])
   const [week, setWeek] = useState<number | null>(null)
   const shown = week ?? current ?? 1
-  const list = items.filter((i) => i.week === shown)
+  const list = scoped.filter((i) => i.week === shown)
   const loose = looseUniTasks(items, tasks, uid, today).sort((a, b) => Number(a.completed) - Number(b.completed) || (a.due_date ?? '').localeCompare(b.due_date ?? '') || (a.start_time ?? '').localeCompare(b.start_time ?? ''))
-  const prog = weekProgress(items, tasks, shown, today, shown === current ? loose : [])
+  const prog = weekProgress(scoped, tasks, shown, today, shown === current && scope === 'all' ? loose : [])
   const [planning, setPlanning] = useState(false)
   const rd = useReorder({ columns: [list.map((i) => i.id)], onChange: (c) => void reorderUniItems(c[0]), enabled: !planning })
   const [weekText, setWeekText] = useState(String(shown))
@@ -48,12 +56,30 @@ export default function Uni() {
   const [title, setTitle] = useState('')
   const [hours, setHours] = useState('1')
   const [err, setErr] = useState('')
+  const [addCourseId, setAddCourseId] = useState('')
+  useEffect(() => setAddCourseId(selCourse ? selCourse.id : ''), [selCourse?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // course editing
+  const [newCourse, setNewCourse] = useState<{ name: string; color: string } | null>(null)
+  const [editCourse, setEditCourse] = useState(false)
+  const [courseName, setCourseName] = useState('')
+  useEffect(() => {
+    setCourseName(selCourse?.name ?? '')
+    setEditCourse(false)
+  }, [selCourse?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const { confirm } = useConfirm()
+  async function createCourse() {
+    if (!profile || !newCourse?.name.trim()) return
+    const r = await addCourse(profile.household_id, uid, newCourse.name, newCourse.color)
+    if (r.error) return setErr(r.error)
+    setNewCourse(null)
+    if (r.id) setCourseSel(r.id)
+  }
   async function add() {
     const m = Math.round(Number(hours.replace(',', '.')) * 60)
     if (!profile || !title.trim()) return
     if (!(m >= 5)) return setErr('How long do you plan to spend? For example 1.5 (hours).')
     setErr('')
-    const e = await addUniItem(profile.household_id, uid, shown, title, Math.min(2400, Math.round(m / 5) * 5))
+    const e = await addUniItem(profile.household_id, uid, shown, title, Math.min(2400, Math.round(m / 5) * 5), [], addCourseId || null)
     if (e) setErr(e)
     else {
       setTitle('')
@@ -77,6 +103,78 @@ export default function Uni() {
       </header>
 
       <section className="card">
+        <div className="ml-slotline" role="tablist" aria-label="Uni courses">
+          <button className={'ml-toggle' + (scope === 'all' ? ' on' : '')} onClick={() => setCourseSel('all')} aria-pressed={scope === 'all'}>
+            All courses
+          </button>
+          {courses.map((c) => (
+            <button key={c.id} className={'ml-toggle' + (scope === c.id ? ' on' : '')} onClick={() => setCourseSel(c.id)} aria-pressed={scope === c.id}>
+              <i className={'course-dot c-' + c.color} /> {c.name}
+            </button>
+          ))}
+          {hasLoneItems && (
+            <button className={'ml-toggle' + (scope === 'none' ? ' on' : '')} onClick={() => setCourseSel('none')} aria-pressed={scope === 'none'}>
+              No course
+            </button>
+          )}
+          <button className="ml-toggle" onClick={() => setNewCourse(newCourse ? null : { name: '', color: TASK_COLORS[courses.length % TASK_COLORS.length] })} aria-label="Add a course">
+            <IconPlus size={14} /> New course
+          </button>
+        </div>
+        {newCourse && (
+          <div className="uni-edit course-edit">
+            <div className="uni-add">
+              <input value={newCourse.name} onChange={(e) => setNewCourse({ ...newCourse, name: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && void createCourse()} placeholder="Course name, e.g. Art history" maxLength={40} autoFocus aria-label="Course name" />
+              <button className="btn primary" onClick={() => void createCourse()} disabled={!newCourse.name.trim()} aria-label="Add course">
+                <IconPlus size={20} />
+              </button>
+            </div>
+            <div className="swatches">
+              {TASK_COLORS.map((c) => (
+                <button type="button" key={c} className={`swatch c-${c}` + (newCourse.color === c ? ' selected' : '')} onClick={() => setNewCourse({ ...newCourse, color: c })} aria-label={c} />
+              ))}
+            </div>
+          </div>
+        )}
+        {selCourse && (
+          <>
+            <button className="ml-toggle" style={{ alignSelf: 'flex-start' }} onClick={() => setEditCourse((o) => !o)} aria-expanded={editCourse}>
+              {editCourse ? 'Close' : `Edit ${selCourse.name}`}
+            </button>
+            {editCourse && (
+              <div className="uni-edit course-edit">
+                <input
+                  value={courseName}
+                  onChange={(e) => setCourseName(e.target.value)}
+                  onBlur={() => {
+                    const n = courseName.trim()
+                    if (n && n !== selCourse.name) void updateCourse(selCourse.id, { name: n })
+                    else setCourseName(selCourse.name)
+                  }}
+                  maxLength={40}
+                  aria-label="Course name"
+                />
+                <div className="swatches">
+                  {TASK_COLORS.map((c) => (
+                    <button type="button" key={c} className={`swatch c-${c}` + (selCourse.color === c ? ' selected' : '')} onClick={() => void updateCourse(selCourse.id, { color: c })} aria-label={c} />
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="ml-toggle"
+                  onClick={async () => {
+                    if (await confirm({ message: <>Delete the course <strong>{selCourse.name}</strong>? Its assignments stay, under “No course”.</> })) {
+                      await deleteCourse(selCourse.id)
+                      setCourseSel('all')
+                    }
+                  }}
+                >
+                  <IconTrashFilled size={14} /> Delete course
+                </button>
+              </div>
+            )}
+          </>
+        )}
         <div className="ml-slotline" role="tablist" aria-label="Uni weeks">
           {weeks.map((w) => (
             <button key={w} className={'ml-toggle' + (w === shown ? ' on' : '')} onClick={() => setWeek(w)} aria-pressed={w === shown}>
@@ -95,7 +193,7 @@ export default function Uni() {
           <input type="number" inputMode="numeric" min="1" max="99" value={weekText} onChange={(e) => typeWeek(e.target.value)} onBlur={() => setWeekText(String(shown))} aria-label="Week number" />
         </label>
         <div className="uni-sum">
-          <strong>Week {shown}</strong>
+          <strong>{selCourse ? `${selCourse.name} · ` : ''}Week {shown}</strong>
           <span className="muted small">
             {prog.total ? `${duration(prog.done)} done of ${duration(prog.total)} planned` : 'Nothing added yet'}
           </span>
@@ -109,6 +207,16 @@ export default function Uni() {
 
       <section className="card">
         <h3>Add an assignment or reading</h3>
+        {courses.length > 0 && (
+          <select value={addCourseId} onChange={(e) => setAddCourseId(e.target.value)} aria-label="Course">
+            <option value="">No course</option>
+            {courses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        )}
         <div className="uni-add">
           <input value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void add()} placeholder="e.g. Read chapter 4" aria-label="What is it?" />
           <label className="uni-hours">
@@ -124,13 +232,13 @@ export default function Uni() {
       </section>
 
       <section className="card">
-        <h3>Week {shown}</h3>
+        <h3>{selCourse ? `${selCourse.name} · ` : ''}Week {shown}</h3>
         {list.length === 0 && <p className="muted small">Add what you have to do this week, then let Muna find the time for it.</p>}
         {list.length > 1 && <p className="muted small">Press and hold an item to move it.</p>}
         <div className="uni-list" ref={rd.column(0)}>
           {list.map((i) => (
             <div key={i.id} {...rd.item(i.id)}>
-              <Row item={i} today={today} />
+              <Row item={i} today={today} courses={courses} showCourse={scope === 'all'} />
             </div>
           ))}
         </div>
@@ -141,7 +249,7 @@ export default function Uni() {
         )}
       </section>
 
-      {loose.length > 0 && (
+      {scope === 'all' && loose.length > 0 && (
         <section className="card">
           <h3>Other uni tasks this week</h3>
           <p className="muted small">Tasks you marked as Uni in the calendar. They count in your Uni block too.</p>
@@ -164,7 +272,7 @@ export default function Uni() {
   )
 }
 
-function Row({ item, today }: { item: UniItem; today: string }) {
+function Row({ item, today, courses, showCourse }: { item: UniItem; today: string; courses: UniCourse[]; showCourse: boolean }) {
   const { tasks, toggleTask, deleteTask } = useTasksCtx()
   const { confirm } = useConfirm()
   const [open, setOpen] = useState(false)
@@ -224,6 +332,7 @@ function Row({ item, today }: { item: UniItem; today: string }) {
             {item.title} <IconChevronDown size={16} className={'pt-chev' + (open ? ' open' : '')} />
           </strong>
           <span className="muted small">
+            {showCourse && courses.find((c) => c.id === item.course_id) ? `${courses.find((c) => c.id === item.course_id)!.name} · ` : ''}
             {duration(item.minutes)} · {status}
           </span>
         </button>
@@ -237,6 +346,19 @@ function Row({ item, today }: { item: UniItem; today: string }) {
               <span>h</span>
             </label>
           </div>
+          {courses.length > 0 && (
+            <label className="uni-weekno">
+              <span>Course</span>
+              <select value={item.course_id ?? ''} onChange={(e) => void updateUniItem(item.id, { course_id: e.target.value || null })} aria-label="Course of this item">
+                <option value="">No course</option>
+                {courses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="uni-weekno">
             <span>Week</span>
             <input type="number" inputMode="numeric" min="1" max="99" value={wk} onChange={(e) => setWk(e.target.value.replace(/\D/g, '').slice(0, 2))} onBlur={saveWeek} aria-label="Week of this item" />
