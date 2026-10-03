@@ -396,3 +396,4 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 - Fixed: DayView resize handles (.blk-resize) were inside the all-day pill; now inside the timed .blk. Not tested with a real mouse.
 - Uni: item counts as done when every linked calendar block is ticked (uni.ts itemState), no longer requires doneMin >= planned minutes.
 - Uni courses: tables uni_courses + uni_items.course_id (migration 31, applied live). Uni page: course chips -> week chips; add form + item edit have a course select; planner (PlanSheet) still plans by week across all courses; Muna chat has no uni tools. Not tested on device.
+- Uni course picker is a dropdown (All courses / each course / + New course); no 'No course' chip or option (items without a course only show under All courses).

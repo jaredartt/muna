@@ -676,6 +676,7 @@ input.sl-suggest { color: var(--muted); }
 .uni-weekno { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .uni-weekno span { color: var(--muted); font-size: 14px; }
 .uni-weekno input { width: 76px; text-align: center; }
+.uni-course-pick select { flex: 1 1 180px; min-width: 0; }
 
 /* ---------- Hobbies ---------- */
 .plain-icon.coral { color: var(--coral-fg); }

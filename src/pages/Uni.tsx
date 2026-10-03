@@ -29,13 +29,12 @@ export default function Uni() {
   const setting = useUniSettings().find((s) => s.user_id === uid)
   const today = todayStr()
   const current = currentWeekOf(items, tasks, setting, today)
-  // courses first: 'all', 'none' (no course) or the id of a course; then that course's weeks
+  // courses first (a dropdown: all courses or one course); then that course's weeks
   const courses = useUniCourses().filter((c) => c.created_by === uid)
   const [courseSel, setCourseSel] = useState<string>('all')
   const selCourse = courses.find((c) => c.id === courseSel) ?? null
-  const scope = selCourse ? selCourse.id : courseSel === 'none' ? 'none' : 'all'
-  const scoped = useMemo(() => (scope === 'all' ? items : scope === 'none' ? items.filter((i) => !i.course_id) : items.filter((i) => i.course_id === scope)), [items, scope])
-  const hasLoneItems = courses.length > 0 && items.some((i) => !i.course_id)
+  const scope = selCourse ? selCourse.id : 'all'
+  const scoped = useMemo(() => (scope === 'all' ? items : items.filter((i) => i.course_id === scope)), [items, scope])
   const weeks = useMemo(() => [...new Set([...scoped.map((i) => i.week), ...(current ? [current] : [])])].sort((a, b) => a - b), [scoped, current])
   const [week, setWeek] = useState<number | null>(null)
   const shown = week ?? current ?? 1
@@ -103,24 +102,29 @@ export default function Uni() {
       </header>
 
       <section className="card">
-        <div className="ml-slotline" role="tablist" aria-label="Uni courses">
-          <button className={'ml-toggle' + (scope === 'all' ? ' on' : '')} onClick={() => setCourseSel('all')} aria-pressed={scope === 'all'}>
-            All courses
-          </button>
-          {courses.map((c) => (
-            <button key={c.id} className={'ml-toggle' + (scope === c.id ? ' on' : '')} onClick={() => setCourseSel(c.id)} aria-pressed={scope === c.id}>
-              <i className={'course-dot c-' + c.color} /> {c.name}
-            </button>
-          ))}
-          {hasLoneItems && (
-            <button className={'ml-toggle' + (scope === 'none' ? ' on' : '')} onClick={() => setCourseSel('none')} aria-pressed={scope === 'none'}>
-              No course
-            </button>
-          )}
-          <button className="ml-toggle" onClick={() => setNewCourse(newCourse ? null : { name: '', color: TASK_COLORS[courses.length % TASK_COLORS.length] })} aria-label="Add a course">
-            <IconPlus size={14} /> New course
-          </button>
-        </div>
+        <label className="uni-weekno uni-course-pick">
+          <span>Course</span>
+          <select
+            value={scope}
+            onChange={(e) => {
+              if (e.target.value === '__new') setNewCourse({ name: '', color: TASK_COLORS[courses.length % TASK_COLORS.length] })
+              else {
+                setNewCourse(null)
+                setCourseSel(e.target.value)
+              }
+            }}
+            aria-label="Course"
+          >
+            <option value="all">All courses</option>
+            {courses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+            <option value="__new">+ New course…</option>
+          </select>
+          {selCourse && <i className={'course-dot c-' + selCourse.color} />}
+        </label>
         {newCourse && (
           <div className="uni-edit course-edit">
             <div className="uni-add">
@@ -163,7 +167,7 @@ export default function Uni() {
                   type="button"
                   className="ml-toggle"
                   onClick={async () => {
-                    if (await confirm({ message: <>Delete the course <strong>{selCourse.name}</strong>? Its assignments stay, under “No course”.</> })) {
+                    if (await confirm({ message: <>Delete the course <strong>{selCourse.name}</strong>? Its assignments stay, they just have no course.</> })) {
                       await deleteCourse(selCourse.id)
                       setCourseSel('all')
                     }
@@ -209,7 +213,7 @@ export default function Uni() {
         <h3>Add an assignment or reading</h3>
         {courses.length > 0 && (
           <select value={addCourseId} onChange={(e) => setAddCourseId(e.target.value)} aria-label="Course">
-            <option value="">No course</option>
+            {!addCourseId && <option value="">Choose a course</option>}
             {courses.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -349,8 +353,8 @@ function Row({ item, today, courses, showCourse }: { item: UniItem; today: strin
           {courses.length > 0 && (
             <label className="uni-weekno">
               <span>Course</span>
-              <select value={item.course_id ?? ''} onChange={(e) => void updateUniItem(item.id, { course_id: e.target.value || null })} aria-label="Course of this item">
-                <option value="">No course</option>
+              <select value={item.course_id ?? ''} onChange={(e) => e.target.value && void updateUniItem(item.id, { course_id: e.target.value })} aria-label="Course of this item">
+                {!item.course_id && <option value="">Choose a course</option>}
                 {courses.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
