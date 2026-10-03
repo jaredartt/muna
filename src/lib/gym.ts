@@ -5,7 +5,7 @@ import { afterWorkout, type Outcome, type SetIn } from './gymLogic'
 import type { TimeOfDay } from './hobbyPlan'
 import type { Task } from './types'
 
-export type GymSplit = { id: string; household_id: string; created_by: string; name: string; position: number; created_at: string }
+export type GymSplit = { id: string; household_id: string; created_by: string; name: string; icon: string; position: number; created_at: string }
 export type GymExercise = {
   id: string
   household_id: string
@@ -54,14 +54,24 @@ export function startGymSync(householdId: string): () => void {
 }
 
 // ---------- splits ----------
-export async function addSplit(householdId: string, userId: string, name: string): Promise<{ id?: string; error?: string }> {
+/** A fitting icon for a training day, from its name (Push, Pull, Legs...). */
+export function guessSplitIcon(name: string): string {
+  const n = name.toLowerCase()
+  if (n.includes('push')) return 'IconFlameFilled'
+  if (n.includes('pull')) return 'IconAnchor'
+  if (n.includes('leg') || n.includes('lower')) return 'IconBikeFilled'
+  if (n.includes('upper')) return 'IconBoltFilled'
+  if (n.includes('full')) return 'IconStarFilled'
+  return 'IconBarbellFilled'
+}
+export async function addSplit(householdId: string, userId: string, name: string, icon?: string): Promise<{ id?: string; error?: string }> {
   const position = Math.max(-1, ...splits.all().filter((s) => s.created_by === userId).map((s) => s.position)) + 1
-  const { data, error } = await supabase.from('gym_splits').insert({ household_id: householdId, created_by: userId, name: name.trim(), position }).select().single()
+  const { data, error } = await supabase.from('gym_splits').insert({ household_id: householdId, created_by: userId, name: name.trim(), icon: icon || guessSplitIcon(name), position }).select().single()
   if (error) return { error: error.message }
   splits.upsert(data as GymSplit)
   return { id: (data as GymSplit).id }
 }
-export async function updateSplit(id: string, patch: Partial<Pick<GymSplit, 'name'>>): Promise<string | null> {
+export async function updateSplit(id: string, patch: Partial<Pick<GymSplit, 'name' | 'icon'>>): Promise<string | null> {
   const old = splits.all().find((s) => s.id === id)
   if (old) splits.upsert({ ...old, ...patch })
   const { error } = await supabase.from('gym_splits').update(patch).eq('id', id)

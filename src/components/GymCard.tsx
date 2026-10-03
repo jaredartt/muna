@@ -1,6 +1,7 @@
 import { IconBarbell, IconCheck, IconPlus } from '@tabler/icons-react'
 import { useAuth } from '../context/AuthContext'
 import { useTasksCtx } from '../context/TasksContext'
+import { TaskIcon } from '../lib/icons'
 import { dayWord } from './HobbiesCard'
 import { navigate } from '../lib/router'
 import { todayStr } from '../lib/dates'
@@ -34,17 +35,27 @@ export default function GymCard({ anim }: { anim: Anim }) {
         {splits.length > 0 && !next && <p className="muted small">Nothing planned yet. Tap Gym to let Muna plan your week.</p>}
         {next && (
           <button className="gym-home-next" onClick={() => navigate('/gym')}>
-            <strong>{next.split.name}</strong>
-            <span className="muted small">
-              {dayWord(next.session.day, today)}
-              {next.task?.start_time ? ` · ${next.task.start_time.slice(0, 5)}` : ''}
+            <span className="gym-ico big">
+              <TaskIcon name={next.split.icon} size={26} />
             </span>
-            {goals.slice(0, 3).map((e) => (
-              <span key={e.id} className="gym-home-goal small">
-                {e.name} <b>{goalText(e)}</b>
+            <span className="gym-home-title">
+              <strong>{next.split.name}</strong>
+              <span className="muted small">
+                {dayWord(next.session.day, today)}
+                {next.task?.start_time ? ` · ${next.task.start_time.slice(0, 5)}` : ''}
               </span>
-            ))}
-            {goals.length > 3 && <span className="muted small">+{goals.length - 3} more</span>}
+            </span>
+            {goals.length > 0 && (
+              <span className="gym-home-goals">
+                <span className="muted small">Goal to beat</span>
+                {goals.slice(0, 3).map((e) => (
+                  <span key={e.id} className="gym-home-goal small">
+                    {e.name} <b>{goalText(e)}</b>
+                  </span>
+                ))}
+                {goals.length > 3 && <span className="muted small">+{goals.length - 3} more</span>}
+              </span>
+            )}
           </button>
         )}
       </div>

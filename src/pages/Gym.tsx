@@ -10,6 +10,7 @@ import { useReorder } from '../hooks/useReorder'
 import { navigate } from '../lib/router'
 import { parseDateStr, todayStr } from '../lib/dates'
 import { addSplit, deleteDayLogs, reorderSplits, upcomingSessions, useGymExercises, useGymLogs, useGymSessions, useGymSettings, useGymSplits, type GymSplit } from '../lib/gym'
+import { TaskIcon } from '../lib/icons'
 import { comparisons, goalText, pointsOf, type Compare } from '../lib/gymLogic'
 
 const PRESETS: { label: string; days: string[] }[] = [
@@ -138,6 +139,9 @@ export default function Gym() {
         ) : nextSplit ? (
           <>
             <div className="gym-next">
+              <span className="gym-ico big">
+                <TaskIcon name={nextSplit.icon} size={26} />
+              </span>
               <strong className="gym-next-name">{nextSplit.name}</strong>
               <span className="muted small">{next ? `${dayWord(next.session.day, today)}${next.task?.start_time ? ' · ' + next.task.start_time.slice(0, 5) : ''}` : 'Not planned yet'}</span>
             </div>
@@ -172,6 +176,9 @@ export default function Gym() {
           <h3>Coming up</h3>
           {upcoming.slice(0, 6).map((u) => (
             <button key={u.session.id} className="ml-row" onClick={() => setWorkout({ split: u.split, session: u.session, task: u.task })}>
+              <span className="gym-ico">
+                <TaskIcon name={u.split.icon} size={20} />
+              </span>
               <span className="ml-row-main">
                 <strong>{u.split.name}</strong>
                 <span className="muted small">
@@ -190,10 +197,12 @@ export default function Gym() {
         <h3>My split</h3>
         {splits.length > 1 && <p className="muted small">Muna follows this order. Press and hold a day to move it.</p>}
         <div className="gym-split-list" ref={sp.column(0)}>
-          {splits.map((s, i) => (
+          {splits.map((s) => (
             <div key={s.id} {...sp.item(s.id)}>
               <button className="ml-row gym-split-row" onClick={() => setEditing(s)}>
-                <span className="gym-num">{i + 1}</span>
+                <span className="gym-ico">
+                  <TaskIcon name={s.icon} size={20} />
+                </span>
                 <span className="ml-row-main">
                   <strong>{s.name}</strong>
                   <span className="muted small">{exOf(s.id).length} exercise{exOf(s.id).length === 1 ? '' : 's'}</span>

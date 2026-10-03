@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { useTasksCtx } from '../context/TasksContext'
 import { useConfirm } from './Confirm'
 import SkipDays from './SkipDays'
+import IconPicker from './IconPicker'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
 import { useAnimatedClose } from '../hooks/useAnimatedClose'
 import { useReorder } from '../hooks/useReorder'
@@ -19,7 +20,7 @@ import { planGym } from '../lib/gymPlan'
 import { DAY_NAMES, TIMES } from '../lib/hobbies'
 import type { TimeOfDay } from '../lib/hobbyPlan'
 import {
-  addExercise, addSessions, addSplit, deleteExercise, deleteSplit, emptyExercise, reorderExercises, removeSessions, saveSettings, saveWorkout, updateExercise, updateSplit,
+  addExercise, addSessions, addSplit, guessSplitIcon, deleteExercise, deleteSplit, emptyExercise, reorderExercises, removeSessions, saveSettings, saveWorkout, updateExercise, updateSplit,
   useGymExercises, useGymLogs, useGymSessions, useGymSettings, type ExerciseDraft, type GymExercise, type GymSession, type GymSplit, type WorkoutResult,
 } from '../lib/gym'
 import type { Task } from '../lib/types'
@@ -136,6 +137,7 @@ function ExerciseForm({ initial, saveLabel, onSave, onDelete }: { initial: Exerc
 }
 
 // ======================= a day of your split =======================
+const SPLIT_ICONS = ['IconBarbellFilled', 'IconFlameFilled', 'IconAnchor', 'IconBikeFilled', 'IconBoltFilled', 'IconStarFilled', 'IconHeartFilled', 'IconTrophyFilled', 'IconRun', 'IconMountain', 'IconShieldFilled', 'IconSunFilled', 'IconMoonFilled', 'IconDiamondFilled']
 export function SplitSheet({ split, onClose }: { split: GymSplit | null; onClose: () => void }) {
   const { session, profile } = useAuth()
   const { tasks, deleteTask } = useTasksCtx()
@@ -143,6 +145,7 @@ export function SplitSheet({ split, onClose }: { split: GymSplit | null; onClose
   const uid = session?.user.id ?? ''
   const [id, setId] = useState(split?.id ?? null)
   const [name, setName] = useState(split?.name ?? '')
+  const [icon, setIcon] = useState(split?.icon ?? '')
   const [err, setErr] = useState('')
   const [open, setOpen] = useState<string | 'new' | null>(split ? null : null)
   const all = useGymExercises()
@@ -155,7 +158,7 @@ export function SplitSheet({ split, onClose }: { split: GymSplit | null; onClose
 
   async function create() {
     if (!profile || !name.trim()) return
-    const r = await addSplit(profile.household_id, uid, name)
+    const r = await addSplit(profile.household_id, uid, name, icon || undefined)
     if (r.error) setErr(r.error)
     else {
       setId(r.id!)
@@ -168,6 +171,14 @@ export function SplitSheet({ split, onClose }: { split: GymSplit | null; onClose
     const e = await updateSplit(id, { name: name.trim() })
     if (e) setErr(e)
   }
+  // the icon of an existing day saves at once
+  async function pickIcon(v: string) {
+    setIcon(v)
+    if (!id) return
+    const e = await updateSplit(id, { icon: v })
+    if (e) setErr(e)
+  }
+  const shownIcon = icon || guessSplitIcon(name)
 
   return (
     <Sheet title={id ? 'Training day' : 'New training day'} onClose={onClose}>
@@ -175,6 +186,10 @@ export function SplitSheet({ split, onClose }: { split: GymSplit | null; onClose
         <span>Name</span>
         <input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => void rename()} placeholder="e.g. Push, Pull, Legs, Full upper" maxLength={40} onKeyDown={(e) => e.key === 'Enter' && (id ? (e.target as HTMLInputElement).blur() : void create())} />
       </label>
+      <div className="field">
+        <span>Icon</span>
+        <IconPicker value={shownIcon} onChange={(v) => void pickIcon(v)} suggestions={SPLIT_ICONS} colorClass="c-mint" />
+      </div>
       {!id && (
         <div className="sheet-actions">
           <button className="btn primary grow" onClick={() => void create()} disabled={!name.trim()}>
@@ -452,7 +467,7 @@ export function PlanSheet({ splits, onClose }: { splits: GymSplit[]; onClose: ()
         due_date: p.date,
         start_time: fmtMin(p.start) + ':00',
         end_time: fmtMin(p.end) + ':00',
-        icon: 'IconBarbell',
+        icon: splits.find((x) => x.id === p.splitId)?.icon ?? 'IconBarbellFilled',
         color,
       }
     })
