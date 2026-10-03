@@ -398,3 +398,4 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 - Uni courses: tables uni_courses + uni_items.course_id (migration 31, applied live). Uni page: course chips -> week chips; add form + item edit have a course select; planner (PlanSheet) still plans by week across all courses; Muna chat has no uni tools. Not tested on device.
 - Uni course picker is a dropdown (All courses / each course / + New course); no 'No course' chip or option (items without a course only show under All courses).
 - Uni: changing the start/end time of a linked calendar block updates uni_items.minutes (syncUniMinutes in uni.ts, called from useTasks.updateTask) = sum of all its blocks. Event-driven only (not on realtime changes from another device).
+- Uni done: with linked calendar blocks, done = all blocks ticked (item.done only used when no blocks). Fixes stale item.done after unticking in the calendar.

@@ -157,8 +157,9 @@ export function itemState(item: UniItem, tasks: Task[], today: string): UniState
   const linked = item.task_ids.map((id) => byId.get(id)).filter((t): t is Task => Boolean(t))
   const doneMin = linked.filter((t) => t.completed).reduce((a, t) => a + taskMinutes(t), 0)
   const upcoming = linked.filter((t) => !t.completed && (t.due_date ?? '') >= today).sort((a, b) => (a.due_date ?? '').localeCompare(b.due_date ?? '') || (a.start_time ?? '').localeCompare(b.start_time ?? ''))
-  // done = you ticked it, or every calendar block of it is ticked (even if the blocks are shorter than the time you first planned)
-  const done = item.done || (linked.length > 0 && linked.every((t) => t.completed))
+  // done = every calendar block of it is ticked (even if the blocks are shorter than the time you first planned)
+  // with calendar blocks, the blocks decide (tick or untick in the calendar and Uni follows); without any, the item's own tick counts
+  const done = linked.length > 0 ? linked.every((t) => t.completed) : item.done
   return { linked, upcoming, doneMin, remaining: done ? 0 : Math.max(0, item.minutes - doneMin), done, planned: upcoming.length > 0 }
 }
 
