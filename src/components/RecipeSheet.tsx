@@ -3,7 +3,7 @@ import { IconPlus, IconSearch, IconTrashFilled, IconX } from '@tabler/icons-reac
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
 import { deleteRecipe, first, inStock, missingIngredients, recipeMacros, round, saveRecipe, SLOTS, type Ingredient, type PantryRow, type Recipe, type Slot } from '../lib/meals'
 import { todayStr } from '../lib/dates'
-import type { Product } from '../lib/products'
+import { matchesProduct, type Product } from '../lib/products'
 import type { Member } from '../lib/types'
 
 type Props = {
@@ -58,7 +58,7 @@ export default function RecipeSheet({ householdId, recipe, members, productList,
   const found = useMemo(() => {
     const t = q.trim().toLowerCase()
     if (!t) return []
-    return productList.filter((p) => `${p.name} ${p.brand ?? ''}`.toLowerCase().includes(t)).slice(0, 8)
+    return productList.filter((p) => matchesProduct(p, t)).slice(0, 8)
   }, [q, productList])
 
   function addProduct(p: Product) {

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { IconBarcode, IconMinus, IconPlus, IconSearch, IconTrashFilled } from '@tabler/icons-react'
+import { IconBarcode, IconChevronDown, IconMinus, IconPlus, IconSearch, IconTrashFilled } from '@tabler/icons-react'
 import { useAuth } from '../context/AuthContext'
 import { navigate } from '../lib/router'
-import { formatDateNice } from '../lib/dates'
-import { useProducts, type Product } from '../lib/products'
-import { addToPantry, isLow, predictRunOut, remainingPacks, removeFromPantry, setPantry, usePantry, usePantryLog, type PantryLog, type PantryRow } from '../lib/meals'
+import ShoppingSuggestion from '../components/ShoppingSuggestion'
+import { formatDateNice, todayStr } from '../lib/dates'
+import { matchesProduct, setNickname, useProducts, type Product } from '../lib/products'
+import { addToPantry, isLow, predictRunOut, remainingPacks, removeFromPantry, setBoughtAt, setPantry, usePantry, usePantryLog, type PantryLog, type PantryRow } from '../lib/meals'
 
 type Filter = 'all' | 'food' | 'other' | 'low'
 const FILTERS: { key: Filter; label: string }[] = [
@@ -18,6 +19,8 @@ const isFood = (p: Product) => p.kcal_100 != null
 /** One thing at home: how many packs, how full the open pack is, and when it will probably run out. */
 function Item({ householdId, row, product, log }: { householdId: string; row: PantryRow; product: Product; log: PantryLog[] }) {
   const [pct, setPct] = useState(row.pct_left)
+  const [open, setOpen] = useState(false) // the details under the name (when it was bought)
+  const [confirmDel, setConfirmDel] = useState(false)
   const timer = useRef<number | undefined>(undefined)
   useEffect(() => setPct(row.pct_left), [row.pct_left, row.packs])
   useEffect(() => () => window.clearTimeout(timer.current), [])
@@ -37,14 +40,56 @@ function Item({ householdId, row, product, log }: { householdId: string; row: Pa
     <div className={'pt-item' + (out ? ' out' : '')}>
       <div className="pt-top">
         <span className="prod-thumb">{product.image_url ? <img src={product.image_url} alt="" loading="lazy" /> : <IconBarcode size={22} />}</span>
-        <span className="prod-body">
-          <strong>{product.name}</strong>
-          <span className="muted small">{[product.brand, product.pack_size, again ? '' : 'One-time purchase'].filter(Boolean).join(' · ') || 'No brand'}</span>
-        </span>
-        <button className="icon-btn" onClick={() => void removeFromPantry(row.product_id)} aria-label={`Remove ${product.name} from the house`}>
+        <button type="button" className="prod-body pt-name" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label={`${product.name}: ${open ? 'hide' : 'show'} details`}>
+          <strong>
+            {product.name} <IconChevronDown size={16} className={'pt-chev' + (open ? ' open' : '')} />
+          </strong>
+          <span className="muted small">{[product.nickname ? `“${product.nickname}”` : '', product.brand, product.pack_size, again ? '' : 'One-time purchase'].filter(Boolean).join(' · ') || 'No brand'}</span>
+        </button>
+        <button className="icon-btn" onClick={() => setConfirmDel(true)} aria-label={`Remove ${product.name} from the house`}>
           <IconTrashFilled size={18} />
         </button>
       </div>
+
+      {confirmDel && (
+        <div className="pt-confirm" role="alertdialog" aria-label={`Remove ${product.name}?`}>
+          <span>
+            Remove <strong>{product.name}</strong> from the house?
+          </span>
+          <span className="pt-confirm-btns">
+            <button type="button" className="ml-toggle" onClick={() => setConfirmDel(false)}>
+              Keep it
+            </button>
+            <button type="button" className="ml-toggle danger" onClick={() => void removeFromPantry(row.product_id)}>
+              Yes, remove
+            </button>
+          </span>
+        </div>
+      )}
+
+      {open && (
+        <div className="pt-details">
+          <label className="pt-bought">
+            <span>
+              <strong>Nickname</strong>
+              <span className="muted small"> Your own name for it, so searching for it in English works too.</span>
+            </span>
+            <input key={product.nickname ?? ''} defaultValue={product.nickname ?? ''} maxLength={80} placeholder={`e.g. what you call ${product.name}`} onBlur={(e) => e.target.value.trim() !== (product.nickname ?? '') && void setNickname(product.id, e.target.value)} aria-label={`Nickname for ${product.name}`} />
+          </label>
+          <label className="pt-bought">
+            <span>
+              <strong>Bought on</strong>
+              <span className="muted small"> Muna uses this to work out how fast you use it.</span>
+            </span>
+            <input type="date" value={row.bought_at ?? ''} max={todayStr()} onChange={(e) => void setBoughtAt(row.product_id, e.target.value || null)} aria-label={`The day you bought ${product.name}`} />
+          </label>
+          {row.bought_at && (
+            <button type="button" className="prod-manual" onClick={() => void setBoughtAt(row.product_id, null)}>
+              I do not remember
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="pt-row">
         <div className="pt-stepper" role="group" aria-label="Packs at home">
@@ -68,14 +113,6 @@ function Item({ householdId, row, product, log }: { householdId: string; row: Pa
             Open pack: <strong>{pct}% left</strong>
           </span>
           <input type="range" min={0} max={100} step={5} value={pct} style={{ '--p': pct / 100 } as React.CSSProperties} onChange={(e) => slide(Number(e.target.value))} aria-label={`How much is left of the open ${product.name}`} />
-          <span className="pt-quick">
-            <button type="button" className="ml-toggle" onClick={() => slide(Math.max(0, pct - 25))}>
-              Used 25%
-            </button>
-            <button type="button" className="ml-toggle" onClick={() => slide(0)}>
-              Finished this pack
-            </button>
-          </span>
         </label>
       )}
 
@@ -85,8 +122,8 @@ function Item({ householdId, row, product, log }: { householdId: string; row: Pa
             ? 'None left. It goes on your next shopping list.'
             : 'None left. It was a one-time purchase, so Muna will not list it again. You can take it out of the house.'
           : guess
-            ? `About ${guess.daysLeft < 1 ? 'less than a day' : Math.round(guess.daysLeft) + ' day' + (Math.round(guess.daysLeft) === 1 ? '' : 's')} left (runs out around ${formatDateNice(guess.date)}), from how fast you use it.`
-            : 'Move the slider when you use some. After a few times Muna learns when it runs out.'}
+            ? `About ${guess.daysLeft < 1 ? 'less than a day' : Math.round(guess.daysLeft) + ' day' + (Math.round(guess.daysLeft) === 1 ? '' : 's')} left (runs out around ${formatDateNice(guess.date)}), ${guess.basis === 'bought' ? 'counted from the day you bought it' : 'from how fast you use it'}.`
+            : 'Tap the name and say when you bought it, or move the slider when you use some. Muna learns when it runs out.'}
       </p>
     </div>
   )
@@ -112,7 +149,7 @@ export default function Pantry() {
         if (filter === 'food' && !isFood(product)) return false
         if (filter === 'other' && isFood(product)) return false
         if (filter === 'low' && !(product.rebuy !== false && (row.packs <= 0 || isLow(row)))) return false
-        return !t || `${product.name} ${product.brand ?? ''}`.toLowerCase().includes(t)
+        return matchesProduct(product, t)
       })
       .sort((a, b) => remainingPacks(a.row) - remainingPacks(b.row) || a.product.name.localeCompare(b.product.name))
   }, [pantry, pmap, filter, q])
@@ -122,7 +159,7 @@ export default function Pantry() {
     const t = adding.trim().toLowerCase()
     if (!t) return []
     const have = new Set(pantry.filter((r) => r.packs > 0).map((r) => r.product_id))
-    return products.filter((p) => !have.has(p.id) && `${p.name} ${p.brand ?? ''}`.toLowerCase().includes(t)).slice(0, 8)
+    return products.filter((p) => !have.has(p.id) && matchesProduct(p, t)).slice(0, 8)
   }, [adding, products, pantry])
 
   if (!profile) return null
@@ -133,6 +170,8 @@ export default function Pantry() {
       <header className="page-head">
         <h1>Pantry</h1>
       </header>
+
+      <ShoppingSuggestion />
 
       <section className="card">
         <h3>Put something in the house</h3>
@@ -152,7 +191,7 @@ export default function Pantry() {
           >
             <span className="ml-row-main">
               <strong>{p.name}</strong>
-              <span className="muted small">{[p.brand, p.pack_size].filter(Boolean).join(' · ') || 'Tap to add one pack'}</span>
+              <span className="muted small">{[p.nickname ? `“${p.nickname}”` : '', p.brand, p.pack_size].filter(Boolean).join(' · ') || 'Tap to add one pack'}</span>
             </span>
             <IconPlus size={18} />
           </button>

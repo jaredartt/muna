@@ -3,7 +3,7 @@ import { AppIcon } from '../lib/icons'
 import { DAY_START, HOURS_SHOWN, fmtMin, layoutLanes, yOf, type DayItem } from '../lib/dayItems'
 import { parseDateStr } from '../lib/dates'
 
-const WH = 40 // pixels per hour in the week view
+const WH = 72 // pixels per hour in the week view (18 px per quarter hour: four 15-minute items fit in an hour)
 const WPAD = 12 // breathing space above the first hour line
 const LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
@@ -53,7 +53,7 @@ export default function WeekView({ days, today, selected, itemsByDay, onPickDay 
                 .map((it) => {
                   const l = lanes[di].get(it.key) ?? { lane: 0, lanes: 1 }
                   const vs = Math.max(it.start, DAY_START)
-                  const h = Math.max(20, ((Math.max(it.end, vs + 30) - vs) / 60) * WH - 2)
+                  const h = Math.max(14, ((Math.max(it.end, vs + 15) - vs) / 60) * WH - 2)
                   return (
                     <button
                       key={it.key}

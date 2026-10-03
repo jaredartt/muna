@@ -5,6 +5,7 @@ import BottomNav from './components/BottomNav'
 import Muna from './components/Muna'
 import IconSync from './components/IconSync'
 import ShoppingSync from './components/ShoppingSync'
+import HolidaySync from './components/HolidaySync'
 import Login from './pages/Login'
 import Home from './pages/Home'
 import CalendarPage from './pages/CalendarPage'
@@ -63,6 +64,7 @@ function Shell() {
     <TasksProvider>
       <IconSync />
       <ShoppingSync />
+      <HolidaySync />
       <Screens />
       <BottomNav />
     </TasksProvider>

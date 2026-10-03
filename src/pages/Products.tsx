@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import BarcodeScanner from '../components/BarcodeScanner'
 import ProductSheet from '../components/ProductSheet'
 import ProductPicker from '../components/ProductPicker'
-import { emptyDraft, findByBarcode, lookupBarcode, unbarcoded, useProducts, type Edc, type LookupResult, type Product, type ProductDraft, type Tri } from '../lib/products'
+import { emptyDraft, findByBarcode, lookupBarcode, matchesProduct, unbarcoded, useProducts, type Edc, type LookupResult, type Product, type ProductDraft, type Tri } from '../lib/products'
 
 type Open = { initial: ProductDraft; id?: string; note?: string; toHouse?: boolean }
 type Pick = { code: string; lookup: LookupResult | null }
@@ -37,7 +37,7 @@ export default function Products() {
 
   const shown = useMemo(() => {
     const t = q.trim().toLowerCase()
-    return t ? products.filter((p) => `${p.name} ${p.brand ?? ''} ${p.barcode ?? ''}`.toLowerCase().includes(t)) : products
+    return t ? products.filter((p) => matchesProduct(p, t)) : products
   }, [products, q])
 
   if (!profile) return null
@@ -134,7 +134,7 @@ export default function Products() {
             <span className="prod-thumb">{p.image_url ? <img src={p.image_url} alt="" loading="lazy" /> : <IconBarcode size={22} />}</span>
             <span className="prod-body">
               <strong>{p.name}</strong>
-              <span className="muted small">{[p.brand, p.pack_size].filter(Boolean).join(' · ') || 'No brand'}</span>
+              <span className="muted small">{[p.nickname ? `“${p.nickname}”` : '', p.brand, p.pack_size].filter(Boolean).join(' · ') || 'No brand'}</span>
               <span className="prod-macros">{macroLine(p)}</span>
               <span className="prod-badges">
                 <span className={'prod-badge ' + p.gluten}>{triLabel(p.gluten, 'Gluten')}</span>

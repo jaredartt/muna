@@ -40,6 +40,13 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     },
     [addTask, updateTask],
   )
+  // an existing task being edited: saved in place, the sheet stays open
+  const handleAutosave = useCallback(
+    async (draft: TaskDraft, id: string) => {
+      await updateTask(id, draft)
+    },
+    [updateTask],
+  )
   const handleDelete = useCallback(
     async (id: string) => {
       await deleteTask(id)
@@ -60,6 +67,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           onSave={handleSave}
           onDelete={handleDelete}
           onChecklist={handleChecklist}
+          onAutosave={handleAutosave}
           onClose={() => setEditor(null)}
         />
       )}

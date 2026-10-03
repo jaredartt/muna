@@ -24,7 +24,7 @@ export default function ShoppingSync() {
       first.current = false
       return
     }
-    const t = window.setTimeout(() => void runRef.current(), 2000 + Math.random() * 3000)
+    const t = window.setTimeout(() => void runRef.current({ create: false }), 2000 + Math.random() * 3000)
     return () => window.clearTimeout(t)
   }, [signature])
 
@@ -43,7 +43,7 @@ export default function ShoppingSync() {
       } catch {
         /* fine */
       }
-      void runRef.current()
+      void runRef.current({ create: false })
     }, 6000 + Math.random() * 3000)
     return () => window.clearTimeout(t)
   }, [])

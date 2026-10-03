@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { IconCheck, IconSearch, IconX } from '@tabler/icons-react'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
-import { learnBarcode, unbarcoded, useProducts, type LookupResult, type Product } from '../lib/products'
+import { learnBarcode, matchesProduct, unbarcoded, useProducts, type LookupResult, type Product } from '../lib/products'
 
 type Props = {
   code: string
@@ -33,7 +33,7 @@ export default function ProductPicker({ code, lookup, onLearned, onNew, onClose 
   const foundName = lookup?.draft?.name?.trim() ?? ''
   const list = useMemo(() => {
     const t = q.trim().toLowerCase()
-    const rows = unbarcoded(foundName).filter(({ product: p }) => !t || `${p.name} ${p.brand ?? ''}`.toLowerCase().includes(t))
+    const rows = unbarcoded(foundName).filter(({ product: p }) => !t || matchesProduct(p, t))
     return rows
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, foundName, products])

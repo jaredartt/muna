@@ -11,6 +11,8 @@ export type Product = {
   household_id: string
   barcode: string | null
   name: string
+  /** Our own name for it (often English: "Mint" for Minze). Searched together with the real name. */
+  nickname: string | null
   brand: string | null
   pack_size: string | null
   unit: 'g' | 'ml'
@@ -36,7 +38,7 @@ export type Product = {
 export type ProductDraft = Omit<Product, 'id' | 'household_id' | 'created_at'>
 
 const COLS =
-  'id, household_id, barcode, name, brand, pack_size, unit, kcal_100, protein_100, carbs_100, sugar_100, fat_100, sat_fat_100, fibre_100, salt_100, gluten, lactose, image_url, source, notes, edc, edc_note, rebuy, created_at'
+  'id, household_id, barcode, name, nickname, brand, pack_size, unit, kcal_100, protein_100, carbs_100, sugar_100, fat_100, sat_fat_100, fibre_100, salt_100, gluten, lactose, image_url, source, notes, edc, edc_note, rebuy, created_at'
 const CACHE_KEY = 'muna.products.v1'
 
 let items: Product[] = []
@@ -178,6 +180,30 @@ export async function saveProduct(householdId: string, draft: ProductDraft, id?:
   return { error: null, product: data as Product }
 }
 
+/** Does this product match what was typed? Looks in the real name, the nickname, the brand and the barcode (ignores capitals and accents: ü = u, ß = ss). */
+const fold = (s: string) => s.toLowerCase().replace(/ß/g, 'ss').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+export function matchesProduct(p: Pick<Product, 'name' | 'nickname' | 'brand' | 'barcode'>, query: string): boolean {
+  const t = fold(query.trim())
+  if (!t) return true
+  return fold(`${p.name} ${p.nickname ?? ''} ${p.brand ?? ''} ${p.barcode ?? ''}`).includes(t)
+}
+
+/** The product whose name or nickname is exactly this text (ignoring capitals and accents), or null. */
+export function findProductByText(text: string): Product | null {
+  const t = fold(text.trim())
+  if (!t) return null
+  return items.find((p) => fold(p.name) === t || (p.nickname != null && fold(p.nickname) === t)) ?? null
+}
+
+/** Changes only the nickname of a product. */
+export async function setNickname(productId: string, nickname: string): Promise<boolean> {
+  const nick = nickname.trim().slice(0, 80) || null
+  const { data, error } = await supabase.from('products').update({ nickname: nick, updated_at: new Date().toISOString() }).eq('id', productId).select(COLS).single()
+  if (error || !data) return false
+  upsertLocal(data as Product)
+  return true
+}
+
 export async function deleteProduct(id: string): Promise<boolean> {
   const { error } = await supabase.from('products').delete().eq('id', id)
   if (error) return false
@@ -190,6 +216,7 @@ export async function deleteProduct(id: string): Promise<boolean> {
 export const emptyDraft = (barcode: string | null = null): ProductDraft => ({
   barcode,
   name: '',
+  nickname: null,
   brand: null,
   pack_size: null,
   unit: 'g',
@@ -362,6 +389,7 @@ export async function lookupBarcode(code: string): Promise<LookupResult> {
     const draft: ProductDraft = {
       barcode: clean,
       name,
+      nickname: null,
       brand: typeof p.brands === 'string' ? p.brands.split(',')[0].trim() || null : null,
       pack_size: quantity,
       unit: quantity && /\d\s*(ml|cl|l)\b/i.test(quantity) ? 'ml' : 'g',

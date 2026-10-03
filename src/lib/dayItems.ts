@@ -14,7 +14,9 @@ export type DayItem = {
   toggle: () => void // tick done / not done
 }
 
-export const HOUR_H = 56 // pixels per hour in the day view
+// Pixels per hour in the day view. A quarter of an hour is 28 px: exactly one line of text (13 px font), so four 15-minute items
+// fit in one hour and a 15-minute item is half as tall as a 30-minute one, at the same font size.
+export const HOUR_H = 112
 export const TOP_PAD = 16 // breathing space above the first hour line (the grid has the same space below the last one)
 export const SNAP = 15 // minutes
 export const DAY_START = 360 // the day view and week view show 06:00 ...

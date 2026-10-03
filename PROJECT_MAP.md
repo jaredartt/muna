@@ -4,20 +4,20 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 
 ## Most connected files (change these carefully)
 
-- `src/context/AuthContext.tsx`: used by 20 files
-- `src/lib/dates.ts`: used by 15 files
+- `src/context/AuthContext.tsx`: used by 21 files
+- `src/lib/dates.ts`: used by 17 files
+- `src/lib/supabase.ts`: used by 14 files
 - `src/lib/types.ts`: used by 14 files
-- `src/lib/supabase.ts`: used by 13 files
+- `src/lib/products.ts`: used by 13 files
 - `src/lib/icons.tsx`: used by 11 files
-- `src/lib/meals.ts`: used by 10 files
-- `src/lib/products.ts`: used by 10 files
+- `src/lib/meals.ts`: used by 11 files
 - `src/lib/router.ts`: used by 9 files
 
 ## Source files (src/)
 
-- `src/App.tsx` (78 lines)
+- `src/App.tsx` (80 lines)
   - exports: App
-  - imports: components/BottomNav.tsx, components/IconSync.tsx, components/Muna.tsx, components/ShoppingSync.tsx, context/AuthContext.tsx, context/TasksContext.tsx, lib/router.ts, pages/CalendarPage.tsx, pages/Chat.tsx, pages/Home.tsx, pages/Login.tsx, pages/Meals.tsx, pages/Pantry.tsx, pages/Products.tsx, pages/Profile.tsx, pages/Updates.tsx
+  - imports: components/BottomNav.tsx, components/HolidaySync.tsx, components/IconSync.tsx, components/Muna.tsx, components/ShoppingSync.tsx, context/AuthContext.tsx, context/TasksContext.tsx, lib/router.ts, pages/CalendarPage.tsx, pages/Chat.tsx, pages/Home.tsx, pages/Login.tsx, pages/Meals.tsx, pages/Pantry.tsx, pages/Products.tsx, pages/Profile.tsx, pages/Updates.tsx
   - used by: main.tsx
 - `src/components/Avatar.tsx` (9 lines)
   - exports: Avatar
@@ -41,6 +41,10 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: EventSheet
   - imports: components/IconPicker.tsx, context/AuthContext.tsx, hooks/useSheetScrollGuard.ts, lib/dates.ts, lib/eventStyles.ts, lib/google.ts, lib/icons.tsx
   - used by: context/TasksContext.tsx
+- `src/components/HolidaySync.tsx` (78 lines)
+  - exports: HolidaySync
+  - imports: context/AuthContext.tsx, lib/dates.ts, lib/events.ts, lib/holidays.ts, lib/supabase.ts
+  - used by: App.tsx
 - `src/components/HomeRings.tsx` (244 lines)
   - exports: SleepCard, CaloriesCard, CategoryCard
   - imports: components/Ring.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useSheetScrollGuard.ts, lib/dates.ts, lib/meals.ts, lib/products.ts, lib/router.ts, lib/sleep.ts, lib/types.ts
@@ -64,7 +68,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: ProductPicker
   - imports: hooks/useSheetScrollGuard.ts, lib/products.ts
   - used by: pages/Products.tsx
-- `src/components/ProductSheet.tsx` (293 lines)
+- `src/components/ProductSheet.tsx` (299 lines)
   - exports: ProductSheet
   - imports: components/BarcodeScanner.tsx, hooks/useSheetScrollGuard.ts, lib/productImage.ts, lib/products.ts
   - used by: pages/Products.tsx
@@ -83,6 +87,10 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/components/Ring.tsx` (28 lines) - Circular progress ring (like the Goals / Calories cards in the Figma design).
   - exports: Ring
   - used by: components/HomeRings.tsx, pages/Home.tsx
+- `src/components/ShoppingSuggestion.tsx` (132 lines)
+  - exports: ShoppingSuggestion
+  - imports: hooks/useShopping.ts, lib/dates.ts, lib/holidays.ts, lib/meals.ts, lib/products.ts
+  - used by: pages/Pantry.tsx
 - `src/components/ShoppingSync.tsx` (51 lines) - Keeps the shopping task up to date by itself (renders nothing): a moment after the meal plan or the pantry changes,
   - exports: ShoppingSync
   - imports: hooks/useShopping.ts, lib/meals.ts
@@ -90,9 +98,9 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/components/TaskRow.tsx` (43 lines)
   - exports: TaskRow
   - imports: lib/dates.ts, lib/icons.tsx, lib/types.ts
-- `src/components/TaskSheet.tsx` (205 lines)
+- `src/components/TaskSheet.tsx` (291 lines)
   - exports: TaskSheet
-  - imports: components/IconPicker.tsx, components/RepeatEditor.tsx, context/AuthContext.tsx, hooks/useSheetScrollGuard.ts, lib/icons.tsx, lib/meals.ts, lib/recurrence.ts, lib/types.ts
+  - imports: components/IconPicker.tsx, components/RepeatEditor.tsx, context/AuthContext.tsx, hooks/useSheetScrollGuard.ts, lib/icons.tsx, lib/meals.ts, lib/products.ts, lib/recurrence.ts, lib/types.ts
   - used by: context/TasksContext.tsx
 - `src/components/WeatherCard.tsx` (114 lines)
   - exports: Plan, WeatherCard
@@ -115,8 +123,8 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/context/AuthContext.tsx` (301 lines)
   - exports: AuthProvider, useAuth
   - imports: lib/google.ts, lib/supabase.ts, lib/theme.ts, lib/types.ts
-  - used by: App.tsx, components/EventRow.tsx, components/EventSheet.tsx, components/HomeRings.tsx, components/IconSync.tsx, components/MyIcons.tsx, components/TaskSheet.tsx, components/WeatherPlaceCard.tsx, hooks/useGoogleEvents.ts, hooks/useShopping.ts, hooks/useTasks.ts, lib/weather.ts, pages/CalendarPage.tsx, pages/Chat.tsx, pages/Home.tsx, pages/Login.tsx, pages/Meals.tsx, pages/Pantry.tsx, pages/Products.tsx, pages/Profile.tsx
-- `src/context/TasksContext.tsx` (84 lines)
+  - used by: App.tsx, components/EventRow.tsx, components/EventSheet.tsx, components/HolidaySync.tsx, components/HomeRings.tsx, components/IconSync.tsx, components/MyIcons.tsx, components/TaskSheet.tsx, components/WeatherPlaceCard.tsx, hooks/useGoogleEvents.ts, hooks/useShopping.ts, hooks/useTasks.ts, lib/weather.ts, pages/CalendarPage.tsx, pages/Chat.tsx, pages/Home.tsx, pages/Login.tsx, pages/Meals.tsx, pages/Pantry.tsx, pages/Products.tsx, pages/Profile.tsx
+- `src/context/TasksContext.tsx` (92 lines)
   - exports: TasksProvider, useTasksCtx
   - imports: components/EventSheet.tsx, components/TaskSheet.tsx, hooks/useTasks.ts, lib/events.ts, lib/google.ts, lib/types.ts
   - used by: App.tsx, components/HomeRings.tsx, hooks/useShopping.ts, pages/CalendarPage.tsx, pages/Home.tsx
@@ -129,10 +137,10 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/hooks/useSheetScrollGuard.ts` (37 lines)
   - exports: useSheetScrollGuard
   - used by: components/EventSheet.tsx, components/HomeRings.tsx, components/ProductPicker.tsx, components/ProductSheet.tsx, components/RecipePicker.tsx, components/RecipeSheet.tsx, components/TaskSheet.tsx
-- `src/hooks/useShopping.ts` (30 lines)
-  - exports: useShopping
-  - imports: context/AuthContext.tsx, context/TasksContext.tsx, hooks/useGoogleEvents.ts, lib/dates.ts, lib/meals.ts
-  - used by: components/ShoppingSync.tsx, pages/Meals.tsx
+- `src/hooks/useShopping.ts` (62 lines)
+  - exports: useShopping, useShoppingPlan
+  - imports: context/AuthContext.tsx, context/TasksContext.tsx, hooks/useGoogleEvents.ts, lib/dates.ts, lib/meals.ts, lib/products.ts
+  - used by: components/ShoppingSuggestion.tsx, components/ShoppingSync.tsx, pages/Meals.tsx
 - `src/hooks/useTasks.ts` (177 lines)
   - exports: useTasks
   - imports: context/AuthContext.tsx, lib/dates.ts, lib/events.ts, lib/google.ts, lib/recurrence.ts, lib/supabase.ts, lib/types.ts
@@ -143,8 +151,8 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - used by: components/IconPicker.tsx, components/IconSync.tsx, components/MyIcons.tsx, lib/icons.tsx
 - `src/lib/dates.ts` (50 lines)
   - exports: pad, toDateStr, todayStr, parseDateStr, addDays, formatTime, formatDateNice, WEEKDAYS_MON_FIRST…
-  - used by: components/EventSheet.tsx, components/HomeRings.tsx, components/RecipeSheet.tsx, components/TaskRow.tsx, components/WeatherCard.tsx, components/WeekView.tsx, hooks/useShopping.ts, hooks/useTasks.ts, lib/google.ts, lib/meals.ts, lib/sleep.ts, pages/CalendarPage.tsx, pages/Home.tsx, pages/Meals.tsx, pages/Pantry.tsx
-- `src/lib/dayItems.ts` (60 lines) - What the day and week views draw: one small description per task or Google event, so the views know nothing about either.
+  - used by: components/EventSheet.tsx, components/HolidaySync.tsx, components/HomeRings.tsx, components/RecipeSheet.tsx, components/ShoppingSuggestion.tsx, components/TaskRow.tsx, components/WeatherCard.tsx, components/WeekView.tsx, hooks/useShopping.ts, hooks/useTasks.ts, lib/google.ts, lib/meals.ts, lib/sleep.ts, pages/CalendarPage.tsx, pages/Home.tsx, pages/Meals.tsx, pages/Pantry.tsx
+- `src/lib/dayItems.ts` (62 lines) - What the day and week views draw: one small description per task or Google event, so the views know nothing about either.
   - exports: DayItem, HOUR_H, TOP_PAD, SNAP, DAY_START, DAY_END, HOURS_SHOWN, yOf…
   - used by: components/DayView.tsx, components/WeekView.tsx, pages/CalendarPage.tsx
 - `src/lib/draft.ts` (20 lines) - Remembers the message you were typing to Muna (but have not sent), on THIS phone only.
@@ -156,11 +164,14 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - used by: components/EventRow.tsx, components/EventSheet.tsx, components/IconSync.tsx, pages/CalendarPage.tsx, pages/Home.tsx
 - `src/lib/events.ts` (5 lines) - Lets the chat tell the task list "something changed, please reload".
   - exports: TASKS_CHANGED, notifyTasksChanged
-  - used by: context/TasksContext.tsx, hooks/useGoogleEvents.ts, hooks/useTasks.ts, pages/CalendarPage.tsx, pages/Chat.tsx
+  - used by: components/HolidaySync.tsx, context/TasksContext.tsx, hooks/useGoogleEvents.ts, hooks/useTasks.ts, pages/CalendarPage.tsx, pages/Chat.tsx
 - `src/lib/google.ts` (119 lines) - Only what Muna needs: read and write events on your own calendar.
   - exports: GOOGLE_CALENDAR_SCOPE, GoogleEvent, ListResult, fetchGoogleEvents, EventScope, EventEdit, EventResult, updateGoogleEvent…
   - imports: lib/dates.ts, lib/supabase.ts
   - used by: components/EventRow.tsx, components/EventSheet.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useGoogleEvents.ts, hooks/useTasks.ts, lib/eventStyles.ts, pages/CalendarPage.tsx, pages/Home.tsx
+- `src/lib/holidays.ts` (79 lines) - Public holidays in Hesse (Frankfurt am Main), worked out from the date of Easter, so no internet is needed.
+  - exports: holidaysOf, holidayName, shopsClosed, upcomingHolidays
+  - used by: components/HolidaySync.tsx, components/ShoppingSuggestion.tsx, lib/meals.ts
 - `src/lib/icons.tsx` (157 lines)
   - exports: IconCmp, TASK_ICONS, AVATAR_SUGGESTIONS, TASK_COLORS, loadTablerLib, useTablerLib, filledIconNames, allIconNames…
   - imports: lib/customIcons.ts, lib/phosphor.ts, lib/svgIcons.tsx
@@ -169,10 +180,10 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: liveTable
   - imports: lib/supabase.ts
   - used by: lib/meals.ts, lib/sleep.ts
-- `src/lib/meals.ts` (404 lines) - ---------- Types ----------
+- `src/lib/meals.ts` (504 lines) - ---------- Types ----------
   - exports: Slot, SLOTS, Ingredient, Recipe, RecipeDraft, PlanRow, PantryRow, PantryLog…
-  - imports: lib/dates.ts, lib/liveTable.ts, lib/products.ts, lib/supabase.ts, lib/types.ts
-  - used by: components/HomeRings.tsx, components/IconSync.tsx, components/RecipePicker.tsx, components/RecipeSheet.tsx, components/ShoppingSync.tsx, components/TaskSheet.tsx, hooks/useShopping.ts, pages/Meals.tsx, pages/Pantry.tsx, pages/Products.tsx
+  - imports: lib/dates.ts, lib/holidays.ts, lib/liveTable.ts, lib/products.ts, lib/supabase.ts, lib/types.ts
+  - used by: components/HomeRings.tsx, components/IconSync.tsx, components/RecipePicker.tsx, components/RecipeSheet.tsx, components/ShoppingSuggestion.tsx, components/ShoppingSync.tsx, components/TaskSheet.tsx, hooks/useShopping.ts, pages/Meals.tsx, pages/Pantry.tsx, pages/Products.tsx
 - `src/lib/munaUndo.ts` (38 lines) - The one last change Muna made for this person (table muna_undo, one row per person). It is kept in the database, not on the phone, so it is
   - exports: LastChange, timeAgo, useLastChange
   - imports: lib/supabase.ts
@@ -185,10 +196,10 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: isOurImage, uploadProductImage, removeProductImage
   - imports: lib/supabase.ts
   - used by: components/ProductSheet.tsx
-- `src/lib/products.ts` (389 lines) - The home's product list (table "products"). Kept in memory, cached on the phone, live through realtime.
+- `src/lib/products.ts` (417 lines) - The home's product list (table "products"). Kept in memory, cached on the phone, live through realtime.
   - exports: Tri, Edc, Product, ProductDraft, useProducts, productsReady, allProducts, startProductSync…
   - imports: lib/supabase.ts
-  - used by: components/HomeRings.tsx, components/IconSync.tsx, components/ProductPicker.tsx, components/ProductSheet.tsx, components/RecipePicker.tsx, components/RecipeSheet.tsx, lib/meals.ts, pages/Meals.tsx, pages/Pantry.tsx, pages/Products.tsx
+  - used by: components/HomeRings.tsx, components/IconSync.tsx, components/ProductPicker.tsx, components/ProductSheet.tsx, components/RecipePicker.tsx, components/RecipeSheet.tsx, components/ShoppingSuggestion.tsx, components/TaskSheet.tsx, hooks/useShopping.ts, lib/meals.ts, pages/Meals.tsx, pages/Pantry.tsx, pages/Products.tsx
 - `src/lib/recorder.ts` (120 lines) - Records the microphone and returns a small 16 kHz mono WAV (what Muna's Gemini brain can listen to).
   - exports: WavRecorder
   - used by: pages/Chat.tsx
@@ -204,7 +215,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - used by: components/HomeRings.tsx, components/IconSync.tsx
 - `src/lib/supabase.ts` (11 lines) - These two values are PUBLIC by design (they are safe to be in the browser).
   - exports: supabase
-  - used by: context/AuthContext.tsx, hooks/useTasks.ts, lib/customIcons.ts, lib/eventStyles.ts, lib/google.ts, lib/liveTable.ts, lib/meals.ts, lib/munaUndo.ts, lib/productImage.ts, lib/products.ts, lib/sleep.ts, pages/Chat.tsx, pages/Profile.tsx
+  - used by: components/HolidaySync.tsx, context/AuthContext.tsx, hooks/useTasks.ts, lib/customIcons.ts, lib/eventStyles.ts, lib/google.ts, lib/liveTable.ts, lib/meals.ts, lib/munaUndo.ts, lib/productImage.ts, lib/products.ts, lib/sleep.ts, pages/Chat.tsx, pages/Profile.tsx
 - `src/lib/svgIcons.tsx` (130 lines) - A tiny, safe description of an SVG icon: a list of shapes. We never store or show raw SVG text,
   - exports: SvgNode, SvgIconData, MAX_ICON_BYTES, parseSvgIcon, SvgGlyph
   - used by: components/MyIcons.tsx, lib/customIcons.ts, lib/icons.tsx, lib/phosphor.ts
@@ -245,9 +256,9 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: Meals
   - imports: components/RecipePicker.tsx, components/RecipeSheet.tsx, context/AuthContext.tsx, hooks/useShopping.ts, lib/dates.ts, lib/meals.ts, lib/products.ts
   - used by: App.tsx
-- `src/pages/Pantry.tsx` (191 lines)
+- `src/pages/Pantry.tsx` (230 lines)
   - exports: Pantry
-  - imports: context/AuthContext.tsx, lib/dates.ts, lib/meals.ts, lib/products.ts, lib/router.ts
+  - imports: components/ShoppingSuggestion.tsx, context/AuthContext.tsx, lib/dates.ts, lib/meals.ts, lib/products.ts, lib/router.ts
   - used by: App.tsx
 - `src/pages/Products.tsx` (191 lines)
   - exports: Products
@@ -287,6 +298,6 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 ## Server functions (supabase/functions)
 
 - `google-calendar` (494 lines) - actions: delete_event, list, restore_event, sync, update_event
-- `muna-chat` (903 lines) - Muna tools: create_tasks, update_task, set_tasks_completed, delete_tasks, get_weather, list_tasks, list_calendar_events, update_calendar_event, delete_calendar_event
+- `muna-chat` (906 lines) - Muna tools: create_tasks, update_task, set_tasks_completed, delete_tasks, get_weather, list_tasks, list_calendar_events, update_calendar_event, delete_calendar_event
 - `muna-voice` (148 lines)
 - `recurrence.ts` exists in THREE places (src/lib, google-calendar, muna-chat): keep the copies in sync.

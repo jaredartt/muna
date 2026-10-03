@@ -210,7 +210,7 @@ export default function DayView({ label, isToday, items, onMove, onAdd }: Props)
           {timed.map((it) => {
             const l = lanes.get(it.key) ?? { lane: 0, lanes: 1 }
             const vs = Math.max(it.start, DAY_START)
-            const h = Math.max(26, ((Math.max(it.end, vs + 30) - vs) / 60) * HOUR_H - 3)
+            const h = Math.max(22, ((Math.max(it.end, vs + 15) - vs) / 60) * HOUR_H - 3)
             return (
               <div
                 key={it.key}
@@ -233,7 +233,7 @@ export default function DayView({ label, isToday, items, onMove, onAdd }: Props)
             )
           })}
           {drag?.zone === 'grid' && (
-            <div className={`blk preview c-${drag.item.color}`} style={{ top: yOf(drag.min, HOUR_H) + 1, height: Math.max(26, (prevDur / 60) * HOUR_H - 3), left: 0, right: 4 }}>
+            <div className={`blk preview c-${drag.item.color}`} style={{ top: yOf(drag.min, HOUR_H) + 1, height: Math.max(22, (prevDur / 60) * HOUR_H - 3), left: 0, right: 4 }}>
               <span className="blk-text">
                 <span className="blk-title">{fmtMin(drag.min)}–{fmtMin(drag.min + prevDur)}</span>
               </span>

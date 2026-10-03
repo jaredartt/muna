@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { liveTable } from './liveTable'
-import { addDays, todayStr } from './dates'
+import { addDays, formatDateNice, parseDateStr, todayStr } from './dates'
+import { shopsClosed } from './holidays'
 import type { Member, Task, TaskDraft } from './types'
 import { allProducts, type Product } from './products'
 
@@ -26,7 +27,7 @@ export type Recipe = {
 }
 export type RecipeDraft = Omit<Recipe, 'id' | 'household_id'>
 export type PlanRow = { id: string; household_id: string; plan_date: string; slot: Slot; recipe_id: string }
-export type PantryRow = { id: string; household_id: string; product_id: string; packs: number; pct_left: number; updated_at: string; created_at?: string }
+export type PantryRow = { id: string; household_id: string; product_id: string; packs: number; pct_left: number; updated_at: string; created_at?: string; bought_at?: string | null }
 /** One use (a part of a pack was used up) or buy (packs bought), kept to learn how fast the home uses a product. amount = packs. */
 export type PantryLog = { id: string; household_id: string; product_id: string; kind: 'use' | 'buy'; amount: number; created_at: string }
 export type Macros = { kcal: number; protein: number; carbs: number; fat: number }
@@ -94,10 +95,10 @@ function tidy(packs: number, pct: number): { packs: number; pct_left: number } {
   return { packs: p, pct_left: q }
 }
 
-async function writePantry(householdId: string, productId: string, packs: number, pct: number, logs: { kind: 'use' | 'buy'; amount: number }[] = []): Promise<void> {
+async function writePantry(householdId: string, productId: string, packs: number, pct: number, logs: { kind: 'use' | 'buy'; amount: number }[] = [], boughtAt?: string): Promise<void> {
   const { data } = await supabase
     .from('pantry')
-    .upsert({ household_id: householdId, product_id: productId, packs, pct_left: pct, updated_at: new Date().toISOString() }, { onConflict: 'household_id,product_id' })
+    .upsert({ household_id: householdId, product_id: productId, packs, pct_left: pct, updated_at: new Date().toISOString(), ...(boughtAt ? { bought_at: boughtAt } : {}) }, { onConflict: 'household_id,product_id' })
     .select('*')
     .single()
   if (data) pantryStore.upsert(data as PantryRow)
@@ -119,13 +120,22 @@ export async function buyProduct(householdId: string, productId: string, delta =
   const had = remainingPacks(cur)
   const packs = Math.max(0, (cur?.packs ?? 0) + delta)
   const t = tidy(packs, !cur || cur.packs === 0 ? 100 : cur.pct_left)
-  await writePantry(householdId, productId, t.packs, t.pct_left, delta > 0 ? [{ kind: 'buy', amount: Math.max(0, remainingPacks(t) - had) }] : [])
+  // a pack bought while nothing was left starts a new "bought on" date
+  await writePantry(householdId, productId, t.packs, t.pct_left, delta > 0 ? [{ kind: 'buy', amount: Math.max(0, remainingPacks(t) - had) }] : [], delta > 0 && had <= 0 ? todayStr() : undefined)
 }
 
 /** Puts a product in the house (one full pack) if it is not there yet. */
 export async function addToPantry(householdId: string, productId: string): Promise<void> {
   if (pantryStore.all().some((p) => p.product_id === productId && p.packs > 0)) return
-  await writePantry(householdId, productId, 1, 100, [{ kind: 'buy', amount: 1 }])
+  await writePantry(householdId, productId, 1, 100, [{ kind: 'buy', amount: 1 }], todayStr())
+}
+
+/** The day the pack at home was bought (you may add something at home that you bought weeks ago). null = unknown. */
+export async function setBoughtAt(productId: string, date: string | null): Promise<void> {
+  const cur = pantryStore.all().find((p) => p.product_id === productId)
+  if (!cur) return
+  pantryStore.upsert({ ...cur, bought_at: date })
+  await supabase.from('pantry').update({ bought_at: date }).eq('id', cur.id)
 }
 
 /** The person says how many whole packs there are and how full the open one is. Less than before = used, and it is remembered. */
@@ -144,19 +154,36 @@ export async function removeFromPantry(productId: string): Promise<void> {
 }
 
 const DAY_MS = 86400000
-/** How fast this home uses a product (from the "used" moments we saw) and when it will run out. null = not enough history yet. */
-export function predictRunOut(row: PantryRow | undefined, log: PantryLog[], now = Date.now()): { perDay: number; daysLeft: number; date: string } | null {
+export type RunOut = { perDay: number; daysLeft: number; date: string; basis: 'history' | 'bought' }
+
+/**
+ * How fast this home uses a product and when it will run out. null = not enough to go on yet.
+ * Two sources: the "used" moments Muna saw (history), or, when you told Muna the day the pack was bought, how much of the
+ * open pack is gone since then (bought). With little history, the bought day wins, because history only starts the day the product was added.
+ */
+export function predictRunOut(row: PantryRow | undefined, log: PantryLog[], now = Date.now()): RunOut | null {
   if (!row) return null
   const mine = log.filter((l) => l.product_id === row.product_id && now - Date.parse(l.created_at) < 120 * DAY_MS)
   const uses = mine.filter((l) => l.kind === 'use')
-  if (uses.length < 2) return null
-  const used = uses.reduce((s, l) => s + l.amount, 0)
-  const start = Math.min(...mine.map((l) => Date.parse(l.created_at)), row.created_at ? Date.parse(row.created_at) : now)
-  const days = Math.max(3, (now - start) / DAY_MS)
-  const perDay = used / days
+
+  let perDay = 0
+  let basis: RunOut['basis'] = 'history'
+  if (uses.length >= 2) {
+    const used = uses.reduce((s, l) => s + l.amount, 0)
+    const start = Math.min(...mine.map((l) => Date.parse(l.created_at)), row.created_at ? Date.parse(row.created_at) : now)
+    perDay = used / Math.max(3, (now - start) / DAY_MS)
+  }
+  if (row.bought_at && uses.length < 4) {
+    const days = (now - Date.parse(row.bought_at + 'T12:00:00')) / DAY_MS
+    const gone = 1 - row.pct_left / 100 // how much of the open pack is gone since it was bought
+    if (days >= 2 && gone >= 0.05) {
+      perDay = gone / days
+      basis = 'bought'
+    }
+  }
   if (perDay <= 0.0005) return null
   const daysLeft = Math.min(365, remainingPacks(row) / perDay)
-  return { perDay, daysLeft, date: addDays(todayStr(), Math.round(daysLeft)) }
+  return { perDay, daysLeft, date: addDays(todayStr(), Math.round(daysLeft)), basis }
 }
 
 // ---------- Recipes ----------
@@ -287,24 +314,116 @@ export async function loadStarter(householdId: string, members: Member[], existi
   return null
 }
 
-// ---------- One shopping trip for everything the plan needs ----------
+// ---------- Muna's shopping suggestions: what is needed, when, and which things go on the same trip ----------
 export const SHOPPING_TITLE = 'Grocery shopping'
-type Need = { product_id: string; name: string; unit: string; grams: number; first: string }
 
-/** The earliest day before `needed` that is not busy; when everything is busy, the quietest one. load(date) = how many things are on that day. */
-export function pickShoppingDay(today: string, needed: string, load: (d: string) => number): string {
-  const last = needed > today ? addDays(needed, -1) : today
-  let best = today
+/** One product that has to be bought, and the last day it should be at home. */
+export type Need = {
+  product_id: string
+  name: string
+  unit: string
+  grams: number // from the meal plan (0 for something that is simply running low)
+  needBy: string // the day it runs out (or the first meal that needs it)
+  kind: 'meal' | 'low'
+  out: boolean // nothing left at home
+  daysLeft: number | null // from how fast it is used; null = Muna cannot tell yet
+  basis: 'history' | 'bought' | null
+}
+/** One shopping trip: the day, and everything that goes on it. */
+/** note = why the day is not the obvious one (shops closed on a Sunday or a holiday). */
+export type Trip = { day: string; deadline: string; needs: Need[]; note?: string }
+
+const BUFFER_DAYS = 1 // shop a day before it runs out
+const GROUP_DAYS = 6 // things that run out within 6 days after the trip go on the same trip (one trip instead of two)
+const HORIZON_DAYS = 14 // what runs out later than this is not worth planning for yet
+
+/** What has to be bought: ingredients of the next 7 days of meals that are not at home, and things at home with less than half a pack left. */
+export function collectNeeds(today = todayStr()): Need[] {
+  const horizon = addDays(today, 7)
+  const recipes = recipeStore.all()
+  const pantry = pantryStore.all()
+  const prods = productMap(allProducts())
+  const need = new Map<string, Need>()
+  for (const row of planStore.all()) {
+    if (row.plan_date < today || row.plan_date > horizon) continue
+    const r = recipes.find((x) => x.id === row.recipe_id)
+    if (!r) continue
+    for (const ing of r.ingredients) {
+      if (!ing.product_id || inStock(pantry, ing.product_id)) continue
+      const grams = Object.values(ing.amounts).reduce((sum, n) => sum + n, 0)
+      const cur = need.get(ing.product_id)
+      if (cur) {
+        cur.grams += grams
+        if (row.plan_date < cur.needBy) cur.needBy = row.plan_date
+      } else {
+        need.set(ing.product_id, { product_id: ing.product_id, name: ing.name, unit: ing.unit, grams, needBy: row.plan_date, kind: 'meal', out: true, daysLeft: null, basis: null })
+      }
+    }
+  }
+  const log = logStore.all()
+  for (const row of pantry) {
+    if (!isLow(row) || need.has(row.product_id)) continue
+    const p = prods.get(row.product_id)
+    if (!p || p.rebuy === false) continue // a one-time purchase is never bought again by itself
+    const out = row.packs <= 0
+    const guess = out ? null : predictRunOut(row, log)
+    // no guess yet (Muna has not learned this product): a nearly empty pack is needed tomorrow, a half one in three days
+    const needBy = out ? today : guess ? guess.date : addDays(today, remainingPacks(row) < 0.25 ? 1 : 3)
+    need.set(row.product_id, { product_id: row.product_id, name: p.name, unit: p.unit, grams: 0, needBy, kind: 'low', out, daysLeft: guess ? guess.daysLeft : null, basis: guess ? guess.basis : null })
+  }
+  return [...need.values()]
+}
+
+/** Why a day is not a shopping day: "Sunday" or the name of the holiday ("German Unity Day"). Shops in Frankfurt are closed on both. */
+const closedLabel = (d: string) => `${parseDateStr(d).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })} (${shopsClosed(d)})`
+
+/**
+ * Which day to go: an OPEN day (shops are closed on Sundays and Frankfurt's public holidays), close to the day the first thing runs out
+ * (up to 3 days earlier), on the quietest day. When the day it is needed is closed, the last open day before it; when there is none
+ * (it is needed today and today is a holiday), the first open day after it.
+ */
+function pickTripDay(today: string, deadline: string, load: (d: string) => number): { day: string; note?: string } {
+  const start = addDays(deadline, -3) > today ? addDays(deadline, -3) : today
+  let best: string | null = null
   let bestLoad = Infinity
-  for (let d = today; d <= last; d = addDays(d, 1)) {
-    const l = load(d)
-    if (l <= 2) return d
-    if (l < bestLoad) {
-      best = d
+  for (let d = start; d <= deadline; d = addDays(d, 1)) {
+    if (shopsClosed(d)) continue
+    const l = Math.max(2, load(d)) // up to 2 things on a day still counts as free
+    if (l <= bestLoad) {
+      best = d // on a tie the later day wins: it is closer to the day the thing really runs out
       bestLoad = l
     }
   }
-  return best
+  if (!best) for (let d = addDays(start, -1); d >= today && !best; d = addDays(d, -1)) if (!shopsClosed(d)) best = d
+  if (best) return { day: best, note: shopsClosed(deadline) ? `Shops are closed on ${closedLabel(deadline)}.` : undefined }
+  // nothing open before the deadline: the first open day after it
+  let d = addDays(deadline, 1)
+  const closed = [deadline]
+  for (let i = 0; i < 10 && shopsClosed(d); i++, d = addDays(d, 1)) closed.push(d)
+  return { day: d, note: `Shops are closed on ${closed.map(closedLabel).join(' and ')}, so ${formatDateNice(d)} is the first day to shop.` }
+}
+
+/** Groups the needs into trips: the first trip is on a quiet day just before the first thing runs out, and takes everything that runs out soon after it. */
+export function planTrips(needs: Need[], today: string, load: (d: string) => number, maxTrips = 3): Trip[] {
+  const left = needs.filter((n) => n.needBy <= addDays(today, HORIZON_DAYS)).sort((a, b) => a.needBy.localeCompare(b.needBy) || a.name.localeCompare(b.name))
+  const trips: Trip[] = []
+  while (left.length && trips.length < maxTrips) {
+    const wanted = addDays(left[0].needBy, -BUFFER_DAYS)
+    const deadline = wanted > today ? wanted : today
+    const { day, note } = pickTripDay(today, deadline, load)
+    const group = left.filter((n) => n.needBy <= addDays(day, n.kind === 'meal' ? 7 : GROUP_DAYS))
+    trips.push({ day, deadline, needs: group, ...(note ? { note } : {}) })
+    for (const g of group) left.splice(left.indexOf(g), 1)
+  }
+  return trips
+}
+
+/** The short line under a product on the shopping list or the suggestion. */
+export function needNote(n: Need): string {
+  if (n.kind === 'meal') return n.grams > 0 ? `${Math.round(n.grams / 5) * 5 || 5} ${n.unit} for your meals` : 'for your meals'
+  if (n.out) return 'none left'
+  if (n.daysLeft != null) return n.daysLeft < 1 ? 'runs out today' : `about ${Math.round(n.daysLeft)} day${Math.round(n.daysLeft) === 1 ? '' : 's'} left`
+  return 'running low'
 }
 
 type SyncArgs = {
@@ -313,45 +432,25 @@ type SyncArgs = {
   addTask: (d: TaskDraft) => Promise<string | null>
   updateTask: (id: string, patch: Partial<Task>) => Promise<string | null>
   load: (date: string) => number
+  /** false = only keep an existing shopping task up to date, never make a new one (the suggestion has to be accepted first) */
+  create?: boolean
+  /** the day chosen by the person when accepting a suggestion */
+  day?: string
 }
 let syncing = false
 
 /**
- * Looks at the meals planned for the next 7 days, finds what is not at home, and puts it all in ONE "Grocery shopping" task
- * on the first day that is not busy, with a to-do line per product. Returns a short message for the screen.
+ * Keeps the ONE "Grocery shopping" task up to date: the first trip's things, one to-do line each. When there is no task yet it is only
+ * made if create is not false (a button was pressed or a suggestion accepted). An existing task is never moved to another day by Muna
+ * (it is yours to push), and new things keep being added to it. Returns a short message for the screen.
  */
 export async function syncShopping(a: SyncArgs): Promise<string> {
   if (syncing) return ''
   syncing = true
   try {
     const today = todayStr()
-    const horizon = addDays(today, 7)
-    const recipes = recipeStore.all()
-    const pantry = pantryStore.all()
-    const need = new Map<string, Need>()
-    for (const row of planStore.all()) {
-      if (row.plan_date < today || row.plan_date > horizon) continue
-      const r = recipes.find((x) => x.id === row.recipe_id)
-      if (!r) continue
-      for (const ing of r.ingredients) {
-        if (!ing.product_id || inStock(pantry, ing.product_id)) continue
-        const grams = Object.values(ing.amounts).reduce((s, n) => s + n, 0)
-        const cur = need.get(ing.product_id)
-        if (cur) {
-          cur.grams += grams
-          if (row.plan_date < cur.first) cur.first = row.plan_date
-        } else need.set(ing.product_id, { product_id: ing.product_id, name: ing.name, unit: ing.unit, grams, first: row.plan_date })
-      }
-    }
-    // things at home that are running low (less than half a pack) go on the list too, by the day they are predicted to run out
-    const prods = productMap(allProducts())
-    for (const row of pantryStore.all()) {
-      if (!isLow(row) || need.has(row.product_id)) continue
-      const p = prods.get(row.product_id)
-      if (!p || p.rebuy === false) continue // a one-time purchase is never bought again by itself
-      const guess = predictRunOut(row, logStore.all())
-      need.set(row.product_id, { product_id: row.product_id, name: p.name, unit: p.unit, grams: 0, first: guess?.date ?? addDays(today, 2) })
-    }
+    const needs = collectNeeds(today)
+    const trip = planTrips(needs, today, a.load)[0]
     // look at the real list right now (the other phone may just have made it), not only at what this phone knew
     const { data: fresh } = await supabase
       .from('tasks')
@@ -360,37 +459,38 @@ export async function syncShopping(a: SyncArgs): Promise<string> {
       .eq('title', SHOPPING_TITLE)
       .eq('completed', false)
       .is('repeat', null)
-      .gte('due_date', today)
       .order('created_at', { ascending: true })
       .limit(1)
-    const existing = ((fresh?.[0] as Task | undefined) ?? a.tasks.find((t) => t.title === SHOPPING_TITLE && !t.completed && !t.repeat && t.due_date && t.due_date >= today))
+    // any open shopping task counts, even when you pushed it to another day or it is overdue: everything piles up on that one task
+    const existing = (fresh?.[0] as Task | undefined) ?? a.tasks.find((t) => t.title === SHOPPING_TITLE && !t.completed && !t.repeat)
+    if (!existing && a.create === false) return ''
+
     const oldItems = existing?.checklist ?? []
-    const wanted = [...need.values()].map((n) => ({ id: 'p:' + n.product_id, text: n.grams > 0 ? `${n.name} · ${Math.round(n.grams / 5) * 5 || 5} ${n.unit}` : `${n.name} · running low`, done: false, product_id: n.product_id }))
+    // when the task is on a later day than something runs out, say so on its line (the day itself is yours to choose)
+    const sooner = (n: Need) => (existing?.due_date && n.needBy < existing.due_date ? ` · needed by ${formatDateNice(n.needBy)}` : '')
+    const wanted = (trip?.needs ?? []).map((n) => ({ id: 'p:' + n.product_id, text: `${n.name} · ${needNote(n)}${sooner(n)}`, done: false, product_id: n.product_id }))
     if (wanted.length === 0) {
-      if (existing && oldItems.some((i) => !i.done)) {
-        await a.updateTask(existing.id, { checklist: oldItems.filter((i) => i.done) })
+      if (existing && oldItems.some((i) => !i.done && i.id.startsWith('p:'))) {
+        await a.updateTask(existing.id, { checklist: oldItems.filter((i) => i.done || !i.id.startsWith('p:')) })
         return 'Everything you need is at home, so I cleared the shopping list.'
       }
-      return need.size === 0 && planStore.all().some((p) => p.plan_date >= today && p.plan_date <= horizon) ? 'Everything for the next 7 days is at home.' : ''
+      return needs.length === 0 && planStore.all().some((p) => p.plan_date >= today && p.plan_date <= addDays(today, 7)) ? 'Everything for the next 7 days is at home.' : ''
     }
-    const firstNeeded = [...need.values()].map((n) => n.first).sort()[0]
     if (existing) {
-      const keep = oldItems.filter((i) => i.done || !i.product_id) // bought lines and your own lines stay
-      const have = new Set(keep.map((i) => i.id))
-      const merged = [...keep, ...wanted.filter((w) => !have.has(w.id))]
+      // Muna's own lines have an id like "p:<product>"; bought lines and every line you typed stay, only Muna's open lines are refreshed
+      const mine = (i: { id: string }) => i.id.startsWith('p:')
+      const keep = oldItems.filter((i) => i.done || !mine(i))
+      const have = new Set(keep.flatMap((i) => [i.id, i.product_id ?? '']))
+      const merged = [...keep, ...wanted.filter((w) => !have.has(w.id) && !have.has(w.product_id))]
       const patch: Partial<Task> = {}
       if (JSON.stringify(merged) !== JSON.stringify(oldItems)) patch.checklist = merged
-      if (existing.due_date && firstNeeded <= existing.due_date) {
-        const day = pickShoppingDay(today, firstNeeded, a.load)
-        if (day !== existing.due_date) patch.due_date = day
-      }
       if (Object.keys(patch).length) await a.updateTask(existing.id, patch)
       return `Updated your shopping task: ${wanted.length} thing${wanted.length === 1 ? '' : 's'} to buy.`
     }
-    const day = pickShoppingDay(today, firstNeeded, a.load)
+    const day = a.day ?? trip.day
     await a.addTask({
       title: SHOPPING_TITLE,
-      notes: 'Made by Muna from your meal plan. Tick a line when you have bought it and it goes into the pantry.',
+      notes: 'Made by Muna from what is running low and your meal plan. Tick a line when you have bought it and it goes into the pantry.',
       due_date: day,
       icon: 'shopping',
       color: 'peach',

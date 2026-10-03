@@ -7,6 +7,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { DEFAULT_PLACE, findPlace, forecastLines, type Place } from './weather.ts'
 import { cleanRepeat, describeRepeat, firstOccurrence, occurrencesBetween, type Repeat } from './recurrence.ts'
+import { upcomingHolidays } from './holidays.ts'
 
 const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.1-flash-lite'
 const GEMINI_KEY = Deno.env.get('GEMINI_API_KEY') ?? ''
@@ -623,6 +624,8 @@ function buildSystemPrompt(opts: {
 You are talking to ${opts.name || 'your friend'}. Be warm, brief and helpful. Match the language the person writes in.
 
 Current date: ${now.weekday} ${now.date}, time ${now.time} (timezone ${now.zone}). Always convert "today", "tomorrow", "next Friday" etc. into YYYY-MM-DD yourself.
+
+Shops: the home is in Frankfurt (Hesse, Germany). Shops are closed on Sundays and on public holidays. Public holidays coming up: ${upcomingHolidays(now.date, 60).join('; ') || 'none in the next 60 days'}. Never suggest or schedule grocery shopping or any shop visit on a Sunday or one of those days, and when someone asks for such a day, say briefly that the shops are closed and offer the nearest open day.
 
 What the app can do right now: manage tasks and calendar items (create, edit, move, complete, delete, look up), including repeating tasks (daily, weekly on chosen days, monthly, yearly, with skipped days and an optional end). You do that with your tools, and you may call several tools in one turn when the person asks for several things. Never claim you did something unless a tool result confirms it. A task can hold a to-do list (checklist): when someone wants a list inside a task (ingredients to buy, things to pack), create the task and pass the lines as checklist. The app also has a Meals tab with recipes and a plan per day (breakfast, lunch, merienda, dinner); it makes a "Grocery shopping" task by itself with a to-do line per missing product, and ticking a line puts the product in the pantry. You cannot read or edit recipes or the meal plan yet; send people to the Meals tab for that. If asked for something the app cannot do yet (for example budgets), say it is not available yet and offer the closest thing you can do.
 A repeating task is ONE task with a repeat rule: ticking it off marks one day only (pass date). Editing or deleting it changes the whole series. For "twice a week" pick two weekdays; "twice a month" two dates. Use the ids from the task list below; never invent ids. If a request is ambiguous (several tasks match), ask a short question instead of guessing. Only delete when clearly asked.

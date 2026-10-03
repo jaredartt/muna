@@ -50,6 +50,7 @@ export default function ProductSheet({ householdId, initial, id, note, onSaved, 
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
   const [name, setName] = useState(initial.name)
+  const [nickname, setNickname] = useState(initial.nickname ?? '')
   const [brand, setBrand] = useState(initial.brand ?? '')
   const [barcode, setBarcode] = useState(initial.barcode ?? '')
   const [pack, setPack] = useState(initial.pack_size ?? '')
@@ -106,6 +107,7 @@ export default function ProductSheet({ householdId, initial, id, note, onSaved, 
       source: initial.source,
       barcode: code || null,
       name: name.trim(),
+      nickname: nickname.trim().slice(0, 80) || null,
       brand: brand.trim() || null,
       pack_size: pack.trim() || null,
       unit,
@@ -179,6 +181,10 @@ export default function ProductSheet({ householdId, initial, id, note, onSaved, 
         <label className="field">
           <span>Name</span>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Skyr natur" maxLength={160} />
+        </label>
+        <label className="field">
+          <span>Nickname (optional)</span>
+          <input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="Your own name, e.g. Mint for Minze" maxLength={80} />
         </label>
         <div className="prod-grid">
           <label className="field">

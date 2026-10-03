@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
 import { IconCheck, IconPlus, IconTrashFilled, IconX } from '@tabler/icons-react'
 import IconPicker from './IconPicker'
@@ -7,6 +7,7 @@ import { cleanRepeat, firstOccurrence, type Repeat } from '../lib/recurrence'
 import { TASK_COLORS, TASK_ICONS } from '../lib/icons'
 import { useAuth } from '../context/AuthContext'
 import { buyProduct } from '../lib/meals'
+import { findProductByText, matchesProduct, useProducts, type Product } from '../lib/products'
 import type { Category, ChecklistItem, Task, TaskDraft } from '../lib/types'
 
 type Props = {
@@ -15,10 +16,11 @@ type Props = {
   onSave: (draft: TaskDraft, id?: string) => Promise<void>
   onDelete?: (id: string) => Promise<void>
   onChecklist?: (id: string, items: ChecklistItem[]) => void // saves the to-do list at once (ticks should not wait for Save)
+  onAutosave?: (draft: TaskDraft, id: string) => Promise<void> // saves an existing task while you edit it (the sheet stays open)
   onClose: () => void
 }
 
-export default function TaskSheet({ task, defaultDate, onSave, onDelete, onChecklist, onClose }: Props) {
+export default function TaskSheet({ task, defaultDate, onSave, onDelete, onChecklist, onAutosave, onClose }: Props) {
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
   const { members, session, profile } = useAuth()
@@ -35,6 +37,14 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onCheck
   const [items, setItems] = useState<ChecklistItem[]>(task?.checklist ?? [])
   const [newItem, setNewItem] = useState('')
   const [saving, setSaving] = useState(false)
+  const products = useProducts()
+  // while typing a line: your products that look like it ("pizza" -> "Pizza Margherita"), so a line can be linked to a product
+  const suggestions = useMemo(() => {
+    const t = newItem.trim()
+    if (t.length < 2) return []
+    const linked = new Set(items.map((i) => i.product_id))
+    return products.filter((p) => !linked.has(p.id) && matchesProduct(p, t)).slice(0, 5)
+  }, [newItem, products, items])
 
   // Every change to the to-do list is saved straight away for an existing task. Ticking something to buy puts it in the pantry.
   function changeItems(next: ChecklistItem[]) {
@@ -44,46 +54,105 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onCheck
   function tick(i: number) {
     const it = items[i]
     const done = !it.done
-    changeItems(items.map((x, j) => (j === i ? { ...x, done } : x)))
-    if (task && it.product_id && profile) void buyProduct(profile.household_id, it.product_id, done ? 1 : -1)
+    // a line you typed that is exactly the name (or nickname) of one of your products counts as that product
+    const productId = it.product_id ?? (done ? findProductByText(it.text)?.id : undefined)
+    changeItems(items.map((x, j) => (j === i ? { ...x, done, ...(productId ? { product_id: productId } : {}) } : x)))
+    if (task && productId && profile) void buyProduct(profile.household_id, productId, done ? 1 : -1)
   }
-  function addItem() {
+  // a line is linked to a product when you pick one from the suggestions, or when what you typed is exactly a product's name or nickname
+  function lineFor(text: string, product?: Product | null): ChecklistItem {
+    const p = product ?? findProductByText(text)
+    return { id: crypto.randomUUID(), text: (p ? p.name : text).slice(0, 200), done: false, ...(p ? { product_id: p.id } : {}) }
+  }
+  function addItem(product?: Product) {
     const text = newItem.trim()
-    if (!text) return
-    changeItems([...items, { id: crypto.randomUUID(), text: text.slice(0, 200), done: false }])
+    if (!text && !product) return
+    changeItems([...items, lineFor(text, product)])
     setNewItem('')
   }
 
+  // everything on the sheet as a task. A repeating task starts on the first day it really happens (e.g. the first Tuesday if you picked Tuesdays).
+  function makeDraft(withNewLine: boolean): TaskDraft {
+    const rule = repeat && date ? cleanRepeat(repeat) : null
+    return {
+      title: title.trim(),
+      notes: notes.trim(),
+      due_date: rule && date ? firstOccurrence(date, rule) : date || null,
+      repeat: rule,
+      start_time: start || null,
+      end_time: start && end ? end : null,
+      icon,
+      color,
+      assigned_to: assignee || null,
+      category,
+      checklist: withNewLine && newItem.trim() ? [...items, lineFor(newItem.trim())] : items,
+      sync_google: true,
+    }
+  }
+
+  // A NEW task is made with the button. An EXISTING task saves itself a moment after you stop changing something.
   async function save() {
     if (!title.trim() || saving) return
     setSaving(true)
-    // A repeating task starts on the first day it really happens (e.g. the first Tuesday if you picked Tuesdays).
-    const rule = repeat && date ? cleanRepeat(repeat) : null
-    await onSave(
-      {
-        title: title.trim(),
-        notes: notes.trim(),
-        due_date: rule && date ? firstOccurrence(date, rule) : date || null,
-        repeat: rule,
-        start_time: start || null,
-        end_time: start && end ? end : null,
-        icon,
-        color,
-        assigned_to: assignee || null,
-        category,
-        checklist: newItem.trim() ? [...items, { id: crypto.randomUUID(), text: newItem.trim().slice(0, 200), done: false }] : items,
-        sync_google: true,
-      },
-      task?.id,
-    )
+    await onSave(makeDraft(true), task?.id)
     setSaving(false)
   }
+
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'name'>('idle')
+  const latest = useRef({ makeDraft, title })
+  latest.current = { makeDraft, title }
+  const dirty = useRef(false)
+  const timer = useRef<number | undefined>(undefined)
+  const firstRun = useRef(true)
+  const taskId = task?.id
+
+  async function autosave() {
+    window.clearTimeout(timer.current)
+    if (!taskId || !onAutosave || !dirty.current) return
+    if (!latest.current.title.trim()) {
+      setStatus('name') // a task needs a name: nothing is saved until it has one
+      return
+    }
+    dirty.current = false
+    setStatus('saving')
+    await onAutosave(latest.current.makeDraft(false), taskId)
+    setStatus(dirty.current ? 'saving' : 'saved')
+  }
+  const autosaveRef = useRef(autosave)
+  autosaveRef.current = autosave
+
+  // watch every field of the sheet (the to-do list saves itself separately, straight away)
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false
+      return
+    }
+    if (!taskId) return
+    dirty.current = true
+    setStatus('saving')
+    window.clearTimeout(timer.current)
+    timer.current = window.setTimeout(() => void autosaveRef.current(), 800)
+  }, [taskId, title, notes, date, start, end, icon, color, assignee, repeat, category])
+
+  // closing the sheet (or leaving) right after a change still saves it
+  useEffect(
+    () => () => {
+      window.clearTimeout(timer.current)
+      if (dirty.current) void autosaveRef.current()
+    },
+    [],
+  )
 
   return (
     <div className="sheet-backdrop" ref={backdropRef} onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={task ? 'Edit task' : 'New task'}>
         <div className="sheet-head">
           <h2>{task ? 'Edit task' : 'New task'}</h2>
+          {task && status !== 'idle' && (
+            <span className={'muted small autosave-state' + (status === 'name' ? ' warn' : '')} role="status" aria-live="polite">
+              {status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved ✓' : 'Give it a name to save'}
+            </span>
+          )}
           <button className="icon-btn" onClick={onClose} aria-label="Close">
             <IconX size={22} />
           </button>
@@ -163,10 +232,24 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onCheck
                 placeholder="Add a line…"
                 maxLength={200}
               />
-              <button type="button" className="btn soft" onClick={addItem} disabled={!newItem.trim()} aria-label="Add line">
+              <button type="button" className="btn soft" onClick={() => addItem()} disabled={!newItem.trim()} aria-label="Add line">
                 <IconPlus size={18} />
               </button>
             </div>
+            {suggestions.length > 0 && (
+              <div className="cl-sug" role="listbox" aria-label="Your products">
+                <span className="muted small">Is it one of your products? Tap it, and it goes into the pantry when you tick it.</span>
+                {suggestions.map((p) => (
+                  <button key={p.id} type="button" className="ml-row" role="option" aria-selected={false} onClick={() => addItem(p)}>
+                    <span className="ml-row-main">
+                      <strong>{p.name}</strong>
+                      <span className="muted small">{[p.nickname ? `“${p.nickname}”` : '', p.brand, p.pack_size].filter(Boolean).join(' · ') || 'Your product'}</span>
+                    </span>
+                    <IconPlus size={18} />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -195,9 +278,12 @@ export default function TaskSheet({ task, defaultDate, onSave, onDelete, onCheck
               <IconTrashFilled size={18} /> {task.repeat ? 'Delete all' : 'Delete'}
             </button>
           )}
-          <button className="btn primary grow" onClick={save} disabled={!title.trim() || saving}>
-            {saving ? 'Saving…' : 'Save'}
-          </button>
+          {!task && (
+            <button className="btn primary grow" onClick={save} disabled={!title.trim() || saving}>
+              {saving ? 'Adding…' : 'Add task'}
+            </button>
+          )}
+
         </div>
       </div>
     </div>
