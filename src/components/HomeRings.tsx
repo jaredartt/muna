@@ -9,7 +9,7 @@ import { productMap, recipeMacros, round, SLOTS, usePlan, useRecipes } from '../
 import { deleteSleep, hm, saveSleep, SLEEP_GOAL_MIN, sleepAverage, sleepDefaults, sleepMinutes, useSleep } from '../lib/sleep'
 import { addDays, formatDateNice, parseDateStr, todayStr } from '../lib/dates'
 import { navigate } from '../lib/router'
-import { currentWeekOf, duration, useUniItems, useUniSettings, weekProgress } from '../lib/uni'
+import { currentWeekOf, duration, looseUniTasks, useUniItems, useUniSettings, weekProgress } from '../lib/uni'
 import type { Category, Task } from '../lib/types'
 
 type Anim = { className: string; style: CSSProperties }
@@ -253,7 +253,8 @@ export function UniCard({ anim }: { anim: Anim }) {
   const setting = useUniSettings().find((s) => s.user_id === uid)
   const today = todayStr()
   const week = currentWeekOf(items, tasks, setting, today)
-  const { done, total } = week === null ? { done: 0, total: 0 } : weekProgress(items, tasks, week, today)
+  const loose = looseUniTasks(items, tasks, uid, today)
+  const { done, total } = week === null && !loose.length ? { done: 0, total: 0 } : weekProgress(items, tasks, week ?? 0, today, loose)
   const pct = total ? Math.round((done / total) * 100) : 0
   return (
     <section className={'card ring-card tap' + anim.className} style={anim.style}>
@@ -264,7 +265,7 @@ export function UniCard({ anim }: { anim: Anim }) {
             <IconSchool size={24} />
           </span>
         </div>
-        <Ring pct={pct} color="var(--blue)" value={total ? `${pct}%` : '–'} label={total ? `Week ${week}\n${duration(done)} of ${duration(total)}` : 'add your assignments'} labelBelow />
+        <Ring pct={pct} color="var(--blue)" value={total ? `${pct}%` : '–'} label={total ? `${week === null ? 'This week' : `Week ${week}`}\n${duration(done)} of ${duration(total)}` : 'add your assignments'} labelBelow />
       </button>
     </section>
   )

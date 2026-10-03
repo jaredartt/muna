@@ -6,7 +6,7 @@ import { useGoogleEvents } from '../hooks/useGoogleEvents'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
 import { addDays, parseDateStr, todayStr } from '../lib/dates'
 import { navigate } from '../lib/router'
-import { addUniItem, commitPlan, currentWeekOf, deleteUniItem, duration, fmtMin, itemState, setCurrentWeek, unplanItem, updateUniItem, useUniItems, useUniSettings, weekProgress, type UniItem } from '../lib/uni'
+import { addUniItem, commitPlan, currentWeekOf, deleteUniItem, duration, fmtMin, itemState, looseUniTasks, setCurrentWeek, unplanItem, updateUniItem, useUniItems, useUniSettings, weekProgress, type UniItem } from '../lib/uni'
 import { daysBetween, planStudy, type Span } from '../lib/uniPlan'
 
 const niceDay = (d: string) => parseDateStr(d).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
@@ -15,7 +15,7 @@ const hoursText = (min: number) => String(Math.round((min / 60) * 100) / 100)
 
 export default function Uni() {
   const { session, profile } = useAuth()
-  const { tasks } = useTasksCtx()
+  const { tasks, toggleTask, openEditor } = useTasksCtx()
   const uid = session?.user.id ?? ''
   const all = useUniItems()
   const items = useMemo(() => all.filter((i) => i.created_by === uid), [all, uid])
@@ -26,7 +26,8 @@ export default function Uni() {
   const [week, setWeek] = useState<number | null>(null)
   const shown = week ?? current ?? 1
   const list = items.filter((i) => i.week === shown)
-  const prog = weekProgress(items, tasks, shown, today)
+  const loose = looseUniTasks(items, tasks, uid, today).sort((a, b) => Number(a.completed) - Number(b.completed) || (a.due_date ?? '').localeCompare(b.due_date ?? '') || (a.start_time ?? '').localeCompare(b.start_time ?? ''))
+  const prog = weekProgress(items, tasks, shown, today, shown === current ? loose : [])
   const [planning, setPlanning] = useState(false)
   const [weekText, setWeekText] = useState(String(shown))
   useEffect(() => setWeekText(String(shown)), [shown])
@@ -127,6 +128,24 @@ export default function Uni() {
           </button>
         )}
       </section>
+
+      {loose.length > 0 && (
+        <section className="card">
+          <h3>Other uni tasks this week</h3>
+          <p className="muted small">Tasks you marked as Uni in the calendar. They count in your Uni block too.</p>
+          {loose.map((t) => (
+            <div key={t.id} className={'cl-row' + (t.completed ? ' done' : '')}>
+              <button type="button" className={'check' + (t.completed ? ' checked' : '')} onClick={() => void toggleTask(t)} aria-label={t.completed ? 'Mark as not done' : 'Mark as done'} aria-pressed={t.completed}>
+                {t.completed && <IconCheck size={16} stroke={3} />}
+              </button>
+              <button type="button" className="cl-text" style={{ textAlign: 'left' }} onClick={() => openEditor(t)}>
+                {t.title}
+                <small className="muted"> {niceDay(t.due_date ?? today)}{t.start_time ? ` ${t.start_time.slice(0, 5)}` : ''}</small>
+              </button>
+            </div>
+          ))}
+        </section>
+      )}
 
       {planning && <PlanSheet weeks={weeks} startWeek={shown} items={items} onClose={() => setPlanning(false)} />}
     </div>

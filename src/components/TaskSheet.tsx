@@ -22,6 +22,14 @@ type Props = {
   onClose: () => void
 }
 
+/** What a task is called in the sheet, and the look it gets until you pick your own icon and colour. */
+const KINDS: Record<string, { noun: string; icon: string; color: string }> = {
+  none: { noun: 'task', icon: 'checklist', color: 'mint' },
+  uni: { noun: 'uni task', icon: 'school', color: 'sky' },
+  goal: { noun: 'Goal', icon: 'star', color: 'butter' },
+}
+const kindOf = (c: Category | null) => KINDS[c ?? 'none']
+
 export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd, onSave, onDelete, onChecklist, onAutosave, onClose }: Props) {
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
@@ -37,6 +45,14 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
   const [repeat, setRepeat] = useState<Repeat | null>(task?.repeat ?? null)
   const [category, setCategory] = useState<Category | null>(task?.category ?? null)
   const [items, setItems] = useState<ChecklistItem[]>(task?.checklist ?? [])
+  // choosing what it is also sets its look (icon and colour) unless you already picked your own
+  function chooseCategory(v: Category | null) {
+    const was = kindOf(category)
+    const now = kindOf(v)
+    if (icon === was.icon) setIcon(now.icon)
+    if (color === was.color) setColor(now.color)
+    setCategory(v)
+  }
   const [newItem, setNewItem] = useState('')
   const [saving, setSaving] = useState(false)
   const products = useProducts()
@@ -147,9 +163,9 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
 
   return (
     <div className="sheet-backdrop" ref={backdropRef} onClick={onClose}>
-      <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={task ? 'Edit task' : 'New task'}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`${task ? 'Edit' : 'New'} ${kindOf(category).noun}`}>
         <div className="sheet-head">
-          <h2>{task ? 'Edit task' : 'New task'}</h2>
+          <h2>{task ? 'Edit' : 'New'} {kindOf(category).noun}</h2>
           {task && status !== 'idle' && (
             <span className={'muted small autosave-state' + (status === 'name' ? ' warn' : '')} role="status" aria-live="polite">
               {status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved ✓' : 'Give it a name to save'}
@@ -197,8 +213,8 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
         <div className="field">
           <span>Counts for</span>
           <div className="segmented" role="radiogroup" aria-label="Category">
-            {([[null, 'Nothing'], ['uni', 'Uni'], ['goal', 'Goals']] as [Category | null, string][]).map(([v, label]) => (
-              <button key={label} type="button" role="radio" aria-checked={category === v} className={category === v ? 'active' : ''} onClick={() => setCategory(v)}>
+            {([[null, 'Task'], ['uni', 'Uni'], ['goal', 'Goals']] as [Category | null, string][]).map(([v, label]) => (
+              <button key={label} type="button" role="radio" aria-checked={category === v} className={category === v ? 'active' : ''} onClick={() => chooseCategory(v)}>
                 {label}
               </button>
             ))}
@@ -282,7 +298,7 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
           )}
           {!task && (
             <button className="btn primary grow" onClick={save} disabled={!title.trim() || saving}>
-              {saving ? 'Adding…' : 'Add task'}
+              {saving ? 'Adding…' : `Add ${kindOf(category).noun}`}
             </button>
           )}
 

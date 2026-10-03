@@ -49,10 +49,38 @@ export function currentWeekOf(items: UniItem[], tasks: Task[], setting: UniSetti
   return weeks.find((w) => items.some((i) => i.week === w && !itemState(i, tasks, today).done)) ?? weeks[weeks.length - 1]
 }
 
-/** Minutes done and minutes planned in total for one week (items count by the time you planned for them). */
-export function weekProgress(items: UniItem[], tasks: Task[], week: number, today: string): { done: number; total: number } {
+const dayNum = (s: string) => Math.floor(Date.parse(s + 'T00:00:00Z') / 86400000)
+/** The Monday of the week a date is in. */
+const mondayOf = (s: string) => new Date((dayNum(s) - ((new Date(s + 'T00:00:00Z').getUTCDay() + 6) % 7)) * 86400000).toISOString().slice(0, 10)
+
+/**
+ * Tasks you marked "Uni" yourself (not the ones Muna planned from your list) that belong to this week: due this week, or overdue and not done.
+ * They count in the Uni block with the time they take (30 minutes when they have no times).
+ */
+export function looseUniTasks(items: UniItem[], tasks: Task[], userId: string, today: string): Task[] {
+  const linked = new Set(items.flatMap((i) => i.task_ids))
+  const mon = mondayOf(today)
+  const sun = new Date((dayNum(mon) + 6) * 86400000).toISOString().slice(0, 10)
+  return tasks.filter(
+    (t) =>
+      t.category === 'uni' &&
+      !t.repeat &&
+      !linked.has(t.id) &&
+      (!t.assigned_to || t.assigned_to === userId) &&
+      t.due_date != null &&
+      ((t.due_date >= mon && t.due_date <= sun) || (t.due_date < mon && !t.completed)),
+  )
+}
+
+/** Minutes done and minutes planned in total for one week (items count by the time you planned for them; loose Uni tasks count in your current week). */
+export function weekProgress(items: UniItem[], tasks: Task[], week: number, today: string, loose: Task[] = []): { done: number; total: number } {
   let done = 0
   let total = 0
+  for (const t of loose) {
+    const m = taskMinutes(t)
+    total += m
+    if (t.completed) done += m
+  }
   for (const i of items) {
     if (i.week !== week) continue
     const st = itemState(i, tasks, today)

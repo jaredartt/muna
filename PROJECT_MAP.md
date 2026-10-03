@@ -53,7 +53,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: HolidaySync
   - imports: context/AuthContext.tsx, lib/dates.ts, lib/events.ts, lib/holidays.ts, lib/supabase.ts
   - used by: App.tsx
-- `src/components/HomeRings.tsx` (271 lines)
+- `src/components/HomeRings.tsx` (272 lines)
   - exports: SleepCard, CaloriesCard, CategoryCard, UniCard
   - imports: components/Ring.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useSheetScrollGuard.ts, lib/dates.ts, lib/meals.ts, lib/products.ts, lib/router.ts, lib/sleep.ts, lib/types.ts, lib/uni.ts
   - used by: pages/Home.tsx
@@ -106,7 +106,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/components/TaskRow.tsx` (43 lines)
   - exports: TaskRow
   - imports: lib/dates.ts, lib/icons.tsx, lib/types.ts
-- `src/components/TaskSheet.tsx` (293 lines)
+- `src/components/TaskSheet.tsx` (309 lines)
   - exports: TaskSheet
   - imports: components/IconPicker.tsx, components/RepeatEditor.tsx, context/AuthContext.tsx, hooks/useSheetScrollGuard.ts, lib/icons.tsx, lib/meals.ts, lib/products.ts, lib/recurrence.ts, lib/types.ts
   - used by: context/TasksContext.tsx
@@ -246,8 +246,8 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: ThemePref, Place, Targets, Profile, Member, ChecklistItem, Category, Task…
   - imports: lib/recurrence.ts
   - used by: components/HomeRings.tsx, components/RecipePicker.tsx, components/RecipeSheet.tsx, components/TaskRow.tsx, components/TaskSheet.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useTasks.ts, lib/hobbies.ts, lib/meals.ts, lib/theme.ts, lib/uni.ts, lib/weather.ts, pages/CalendarPage.tsx, pages/Chat.tsx, pages/Profile.tsx
-- `src/lib/uni.ts` (183 lines)
-  - exports: UniItem, UniSetting, useUniSettings, useUniItems, startUniSync, setCurrentWeek, currentWeekOf, weekProgress…
+- `src/lib/uni.ts` (211 lines)
+  - exports: UniItem, UniSetting, useUniSettings, useUniItems, startUniSync, setCurrentWeek, currentWeekOf, looseUniTasks…
   - imports: lib/events.ts, lib/google.ts, lib/liveTable.ts, lib/supabase.ts, lib/types.ts, lib/uniPlan.ts
   - used by: components/HomeRings.tsx, components/IconSync.tsx, pages/Uni.tsx
 - `src/lib/uniPlan.ts` (115 lines) - Muna's study planner: puts the time you plan for each Uni item into the free hours of the days you choose.
@@ -298,7 +298,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: Profile
   - imports: components/Avatar.tsx, components/IconPicker.tsx, components/MyIcons.tsx, components/WeatherPlaceCard.tsx, context/AuthContext.tsx, lib/icons.tsx, lib/router.ts, lib/supabase.ts, lib/types.ts
   - used by: App.tsx
-- `src/pages/Uni.tsx` (453 lines)
+- `src/pages/Uni.tsx` (472 lines)
   - exports: Uni
   - imports: context/AuthContext.tsx, context/TasksContext.tsx, hooks/useGoogleEvents.ts, hooks/useSheetScrollGuard.ts, lib/dates.ts, lib/router.ts, lib/uni.ts, lib/uniPlan.ts
   - used by: App.tsx
