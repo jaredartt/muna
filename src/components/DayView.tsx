@@ -9,18 +9,25 @@ type Props = {
   items: DayItem[]
   onMove: (item: DayItem, startMin: number | null) => void // null = make it all-day
   onAdd: () => void
+  /** Long press on an empty spot, dragged and let go: open a new task there. startMin null = dropped in the all-day strip. */
+  onCreate: (startMin: number | null, endMin: number) => void
 }
 
 type Drag = { item: DayItem; x: number; y: number; zone: 'all' | 'grid'; min: number }
 type Pending = { item: DayItem; x0: number; y0: number; x: number; y: number; grab: number; touch: boolean; timer: number }
 
 const snap = (m: number) => Math.round(m / SNAP) * SNAP
+const NEW_KEY = '__new' // the see-through task that appears while you hold an empty spot
+const NEW_MIN = 60 // how long a task made this way starts out
+const newItem = (): DayItem => ({ key: NEW_KEY, kind: 'task', title: 'New task', color: 'peach', icon: 'checklist', done: false, allDay: false, start: 0, end: NEW_MIN, movable: true, open: () => {}, toggle: () => {} })
 
 /**
  * One day as a cosy column of hours. Tasks without a time sit in the all-day strip, which stays at the top while you scroll.
  * Press and hold a task (or just drag with a mouse) to move it: drop it on an hour to give it a time, or into the strip to make it all-day.
+ * Press and hold an EMPTY spot: a new task appears under your finger, drag it to the right time and let go to open the task editor
+ * (nothing is saved until you add a name and press Add task).
  */
-export default function DayView({ label, isToday, items, onMove, onAdd }: Props) {
+export default function DayView({ label, isToday, items, onMove, onAdd, onCreate }: Props) {
   const gridRef = useRef<HTMLDivElement>(null)
   const allRef = useRef<HTMLDivElement>(null)
   const stickyRef = useRef<HTMLDivElement>(null)
@@ -30,6 +37,8 @@ export default function DayView({ label, isToday, items, onMove, onAdd }: Props)
   const suppressClick = useRef(false)
   const onMoveRef = useRef(onMove)
   onMoveRef.current = onMove
+  const onCreateRef = useRef(onCreate)
+  onCreateRef.current = onCreate
   const [now, setNow] = useState(() => new Date())
 
   const allItems = useMemo(() => items.filter((i) => i.allDay), [items])
@@ -111,7 +120,12 @@ export default function DayView({ label, isToday, items, onMove, onAdd }: Props)
     if (d && p) {
       suppressClick.current = true
       setTimeout(() => (suppressClick.current = false), 350)
-      if (d.zone === 'all') {
+      if (d.item.key === NEW_KEY) {
+        // open the editor a moment later, so the click that follows the lift of the finger does not land on the new sheet and close it
+        const min = d.min
+        const zone = d.zone
+        window.setTimeout(() => onCreateRef.current(zone === 'all' ? null : min, min + NEW_MIN), 160)
+      } else if (d.zone === 'all') {
         if (!d.item.allDay) onMoveRef.current(d.item, null)
       } else if (d.item.allDay || d.min !== d.item.start) onMoveRef.current(d.item, d.min)
     }
@@ -129,6 +143,19 @@ export default function DayView({ label, isToday, items, onMove, onAdd }: Props)
     const p: Pending = { item, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, grab: item.allDay ? 14 : e.clientY - rect.top, touch, timer: 0 }
     pending.current = p
     if (touch) p.timer = window.setTimeout(() => pending.current === p && begin(p), 320)
+    window.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointerup', handleUp)
+    window.addEventListener('pointercancel', handleCancel)
+  }
+
+  // Press and hold an empty spot of the hours: a new task appears there and can be dragged right away.
+  function onGridDown(e: ReactPointerEvent) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return
+    if ((e.target as HTMLElement).closest('.blk, [data-nodrag]')) return // that is a task: it has its own press
+    const item = newItem()
+    const p: Pending = { item, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, grab: 14, touch: true, timer: 0 } // touch: true = hold first, moving before that is only scrolling
+    pending.current = p
+    p.timer = window.setTimeout(() => pending.current === p && begin(p), 420)
     window.addEventListener('pointermove', handleMove)
     window.addEventListener('pointerup', handleUp)
     window.addEventListener('pointercancel', handleCancel)
@@ -200,10 +227,11 @@ export default function DayView({ label, isToday, items, onMove, onAdd }: Props)
         </div>
       </div>
 
-      <div className="hours" ref={gridRef} style={{ height: HOURS_SHOWN * HOUR_H + 2 * TOP_PAD }}>
+      <div className="hours" ref={gridRef} style={{ height: HOURS_SHOWN * HOUR_H + 2 * TOP_PAD }} onPointerDown={onGridDown}>
         {Array.from({ length: HOURS_SHOWN + 1 }, (_, i) => (
           <div key={i} className={'hour' + (i === HOURS_SHOWN ? ' last' : '')} style={{ top: TOP_PAD + i * HOUR_H }}>
             <span className="hour-label">{`${String((DAY_START / 60 + i) % 24).padStart(2, '0')}:00`}</span>
+            {i < HOURS_SHOWN && [1, 2, 3].map((q) => <i key={q} className="qline" style={{ top: (HOUR_H / 4) * q - 1 }} />)}
           </div>
         ))}
         <div className="slots" style={{ top: TOP_PAD }}>

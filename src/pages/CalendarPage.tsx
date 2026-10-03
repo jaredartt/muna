@@ -209,7 +209,7 @@ export default function CalendarPage() {
       )}
       {note && <p className="notice">{note}</p>}
 
-      {mode === 'day' && <DayView key="day" label={dayLabel} isToday={selected === today} items={dayItems} onMove={onMove} onAdd={() => openEditor({ date: selected })} />}
+      {mode === 'day' && <DayView key="day" label={dayLabel} isToday={selected === today} items={dayItems} onMove={onMove} onAdd={() => openEditor({ date: selected })} onCreate={(startMin, endMin) => openEditor(startMin == null ? { date: selected } : { date: selected, start: fmtMin(startMin), end: fmtMin(Math.min(1439, endMin)) })} />}
       {mode === 'week' && <WeekView key="week" days={weekDays} today={today} selected={selected} itemsByDay={itemsByDay} onPickDay={pickDay} />}
 
       {mode === 'month' && (

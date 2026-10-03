@@ -13,6 +13,8 @@ import type { Category, ChecklistItem, Task, TaskDraft } from '../lib/types'
 type Props = {
   task?: Task | null
   defaultDate?: string | null
+  defaultStart?: string | null // HH:MM, for a new task made by long-pressing the calendar
+  defaultEnd?: string | null
   onSave: (draft: TaskDraft, id?: string) => Promise<void>
   onDelete?: (id: string) => Promise<void>
   onChecklist?: (id: string, items: ChecklistItem[]) => void // saves the to-do list at once (ticks should not wait for Save)
@@ -20,15 +22,15 @@ type Props = {
   onClose: () => void
 }
 
-export default function TaskSheet({ task, defaultDate, onSave, onDelete, onChecklist, onAutosave, onClose }: Props) {
+export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd, onSave, onDelete, onChecklist, onAutosave, onClose }: Props) {
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
   const { members, session, profile } = useAuth()
   const [title, setTitle] = useState(task?.title ?? '')
   const [notes, setNotes] = useState(task?.notes ?? '')
   const [date, setDate] = useState(task ? task.due_date ?? '' : defaultDate ?? '')
-  const [start, setStart] = useState(task?.start_time?.slice(0, 5) ?? '')
-  const [end, setEnd] = useState(task?.end_time?.slice(0, 5) ?? '')
+  const [start, setStart] = useState(task?.start_time?.slice(0, 5) ?? (task ? '' : defaultStart ?? ''))
+  const [end, setEnd] = useState(task?.end_time?.slice(0, 5) ?? (task ? '' : defaultEnd ?? ''))
   const [icon, setIcon] = useState(task?.icon ?? 'checklist')
   const [color, setColor] = useState(task?.color ?? 'mint')
   const [assignee, setAssignee] = useState(task?.assigned_to ?? '')

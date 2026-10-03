@@ -30,7 +30,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: BottomNav
   - imports: lib/router.ts
   - used by: App.tsx
-- `src/components/DayView.tsx` (257 lines)
+- `src/components/DayView.tsx` (285 lines)
   - exports: DayView
   - imports: lib/dayItems.ts, lib/icons.tsx
   - used by: pages/CalendarPage.tsx
@@ -98,7 +98,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/components/TaskRow.tsx` (43 lines)
   - exports: TaskRow
   - imports: lib/dates.ts, lib/icons.tsx, lib/types.ts
-- `src/components/TaskSheet.tsx` (291 lines)
+- `src/components/TaskSheet.tsx` (293 lines)
   - exports: TaskSheet
   - imports: components/IconPicker.tsx, components/RepeatEditor.tsx, context/AuthContext.tsx, hooks/useSheetScrollGuard.ts, lib/icons.tsx, lib/meals.ts, lib/products.ts, lib/recurrence.ts, lib/types.ts
   - used by: context/TasksContext.tsx
@@ -124,7 +124,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: AuthProvider, useAuth
   - imports: lib/google.ts, lib/supabase.ts, lib/theme.ts, lib/types.ts
   - used by: App.tsx, components/EventRow.tsx, components/EventSheet.tsx, components/HolidaySync.tsx, components/HomeRings.tsx, components/IconSync.tsx, components/MyIcons.tsx, components/TaskSheet.tsx, components/WeatherPlaceCard.tsx, hooks/useGoogleEvents.ts, hooks/useShopping.ts, hooks/useTasks.ts, lib/weather.ts, pages/CalendarPage.tsx, pages/Chat.tsx, pages/Home.tsx, pages/Login.tsx, pages/Meals.tsx, pages/Pantry.tsx, pages/Products.tsx, pages/Profile.tsx
-- `src/context/TasksContext.tsx` (92 lines)
+- `src/context/TasksContext.tsx` (94 lines)
   - exports: TasksProvider, useTasksCtx
   - imports: components/EventSheet.tsx, components/TaskSheet.tsx, hooks/useTasks.ts, lib/events.ts, lib/google.ts, lib/types.ts
   - used by: App.tsx, components/HomeRings.tsx, hooks/useShopping.ts, pages/CalendarPage.tsx, pages/Home.tsx
