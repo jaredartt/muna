@@ -673,6 +673,12 @@ input.sl-suggest { color: var(--muted); }
 
 .course-edit { padding-left: 0; }
 .course-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.uni-two { display: flex; gap: 10px; align-self: stretch; align-items: flex-end; }
+.uni-two label { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.uni-two label span { color: var(--muted); font-size: 14px; }
+.uni-two input { width: 76px; text-align: center; }
+.uni-two label.grow { flex: 1; min-width: 0; }
+.uni-two label.grow select { width: 100%; }
 .uni-weekno { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .uni-weekno span { color: var(--muted); font-size: 14px; }
 .uni-weekno input { width: 76px; text-align: center; }

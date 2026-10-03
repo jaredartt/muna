@@ -360,23 +360,25 @@ function Row({ item, today, courses, showCourse }: { item: UniItem; today: strin
               <span>h</span>
             </label>
           </div>
-          {courses.length > 0 && (
-            <label className="uni-weekno">
-              <span>Course</span>
-              <select value={item.course_id ?? ''} onChange={(e) => e.target.value && void updateUniItem(item.id, { course_id: e.target.value })} aria-label="Course of this item">
-                {!item.course_id && <option value="">Choose a course</option>}
-                {courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+          <div className="uni-two">
+            <label>
+              <span>Week</span>
+              <input type="number" inputMode="numeric" min="1" max="99" value={wk} onChange={(e) => setWk(e.target.value.replace(/\D/g, '').slice(0, 2))} onBlur={saveWeek} aria-label="Week of this item" />
             </label>
-          )}
-          <label className="uni-weekno">
-            <span>Week</span>
-            <input type="number" inputMode="numeric" min="1" max="99" value={wk} onChange={(e) => setWk(e.target.value.replace(/\D/g, '').slice(0, 2))} onBlur={saveWeek} aria-label="Week of this item" />
-          </label>
+            {courses.length > 0 && (
+              <label className="grow">
+                <span>Course</span>
+                <select value={item.course_id ?? ''} onChange={(e) => e.target.value && void updateUniItem(item.id, { course_id: e.target.value })} aria-label="Course of this item">
+                  {!item.course_id && <option value="">Choose a course</option>}
+                  {courses.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
           {st.linked.some((t) => !t.completed) && (
             <button
               type="button"
@@ -391,7 +393,7 @@ function Row({ item, today, courses, showCourse }: { item: UniItem; today: strin
           )}
           <button
             type="button"
-            className="ml-toggle"
+            className="ml-toggle danger"
             onClick={async () => {
               const ok = await confirm({ message: <>Delete <strong>{item.title}</strong>{st.linked.some((t) => !t.completed) ? ' and its blocks in your calendar' : ''}?</> })
               if (!ok) return
