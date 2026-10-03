@@ -33,6 +33,7 @@ export type UpdateEntry = {
 
 // Newest first. Add one entry here for every change we make (see "Working agreements" in project_status.md).
 export const UPDATES: UpdateEntry[] = [
+  { date: '2026-10-03', time: '17:00', title: 'Uni remembers where you were', text: 'The Uni page now opens on the course and the week you looked at last, even after you close the app.', Icon: IconSchool, color: 'sky' },
   { date: '2026-10-03', time: '16:40', title: 'Untick in the calendar, untick in Uni', text: 'If you untick a Uni block in the calendar, the assignment is open again in Uni. Before, an assignment you had ticked in Uni stayed ticked.', Icon: IconSchool, color: 'sky' },
   { date: '2026-10-03', time: '16:10', title: 'Uni follows your calendar times', text: 'When you drag a Uni block to another time, or make it longer or shorter in the calendar, the duration of that assignment in Uni changes too (for an assignment with several blocks, it is the total of its blocks).', Icon: IconSchool, color: 'sky' },
   { date: '2026-10-03', time: '15:00', title: 'Uni by courses, then weeks', text: 'The Uni page now starts with your courses. Pick a course from the dropdown (or choose + New course to make one) and you see only its weeks and assignments. All courses shows everything together. Choose the course when you add an assignment, or change it later inside the assignment. Edit a course to rename or delete it (its assignments stay). Your existing assignments have no course yet: pick one for each in its edit panel.', Icon: IconSchool, color: 'sky' },

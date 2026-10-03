@@ -17,6 +17,17 @@ import { useReorder } from '../hooks/useReorder'
 
 const niceDay = (d: string) => parseDateStr(d).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 const clock = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))
+// the course and week you looked at last time are remembered on this device (one copy per person)
+const viewKey = (uid: string) => `muna.uniView.v1.${uid}`
+function readView(uid: string): { course: string; week: number | null } {
+  try {
+    const v = JSON.parse(localStorage.getItem(viewKey(uid)) ?? 'null') as { course?: unknown; week?: unknown } | null
+    const w = Number(v?.week)
+    return { course: typeof v?.course === 'string' ? v.course : 'all', week: Number.isInteger(w) && w >= 1 && w <= 99 ? w : null }
+  } catch {
+    return { course: 'all', week: null }
+  }
+}
 const hoursText = (min: number) => String(Math.round((min / 60) * 100) / 100)
 
 export default function Uni() {
@@ -30,12 +41,20 @@ export default function Uni() {
   const current = currentWeekOf(items, tasks, setting, today)
   // courses first (a dropdown: all courses or one course); then that course's weeks
   const courses = useUniCourses().filter((c) => c.created_by === uid)
-  const [courseSel, setCourseSel] = useState<string>('all')
+  const [courseSel, setCourseSel] = useState<string>(() => readView(uid).course)
   const selCourse = courses.find((c) => c.id === courseSel) ?? null
   const scope = selCourse ? selCourse.id : 'all'
   const scoped = useMemo(() => (scope === 'all' ? items : items.filter((i) => i.course_id === scope)), [items, scope])
   const weeks = useMemo(() => [...new Set([...scoped.map((i) => i.week), ...(current ? [current] : [])])].sort((a, b) => a - b), [scoped, current])
-  const [week, setWeek] = useState<number | null>(null)
+  const [week, setWeek] = useState<number | null>(() => readView(uid).week)
+  useEffect(() => {
+    if (!uid) return
+    try {
+      localStorage.setItem(viewKey(uid), JSON.stringify({ course: courseSel, week }))
+    } catch {
+      /* fine */
+    }
+  }, [uid, courseSel, week])
   const shown = week ?? current ?? 1
   const list = scoped.filter((i) => i.week === shown)
   const loose = looseUniTasks(items, tasks, uid, today).sort((a, b) => Number(a.completed) - Number(b.completed) || (a.due_date ?? '').localeCompare(b.due_date ?? '') || (a.start_time ?? '').localeCompare(b.start_time ?? ''))

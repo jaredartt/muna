@@ -399,3 +399,4 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 - Uni course picker is a dropdown (All courses / each course / + New course); no 'No course' chip or option (items without a course only show under All courses).
 - Uni: changing the start/end time of a linked calendar block updates uni_items.minutes (syncUniMinutes in uni.ts, called from useTasks.updateTask) = sum of all its blocks. Event-driven only (not on realtime changes from another device).
 - Uni done: with linked calendar blocks, done = all blocks ticked (item.done only used when no blocks). Fixes stale item.done after unticking in the calendar.
+- Uni remembers last course + week per person in localStorage (muna.uniView.v1.<uid>), on that device only.
