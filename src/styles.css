@@ -325,7 +325,9 @@ input[type='checkbox']:focus-visible { outline: none; box-shadow: 0 0 0 4px colo
 .link-card { flex-direction: row; align-items: center; gap: 14px; text-align: left; width: 100%; }
 .link-card .link-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .updates-title { display: flex; align-items: center; gap: 6px; }
-.update-day { margin: 6px 4px -6px; color: var(--muted); font-size: 14px; }
+.update-day { margin: 10px 4px -6px; color: var(--muted); font-size: 14px; display: flex; align-items: baseline; gap: 4px; }
+.update-day strong { color: var(--ink, inherit); font-size: 16px; font-weight: 700; }
+.update-count { margin-left: auto; font-size: 12px; }
 .update-item { display: flex; align-items: flex-start; gap: 12px; }
 .update-item + .update-item { padding-top: 12px; border-top: 1px solid var(--line); }
 .update-item .task-icon { width: 40px; height: 40px; border-radius: 13px; }

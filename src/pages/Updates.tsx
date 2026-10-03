@@ -7,8 +7,20 @@ function niceDate(ymd: string) {
   return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+function dayLabel(ymd: string) {
+  const t = new Date()
+  const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const y = new Date(t.getFullYear(), t.getMonth(), t.getDate() - 1)
+  if (ymd === iso(t)) return 'Today'
+  if (ymd === iso(y)) return 'Yesterday'
+  return null
+}
+
 export default function Updates() {
-  const days = [...new Set(UPDATES.map((u) => u.date))]
+  // One group per day (newest day first); inside a day the newest change comes first, entries without a time go last.
+  const days = [...new Set(UPDATES.map((u) => u.date))].sort().reverse()
+  const itemsOf = (day: string) =>
+    UPDATES.filter((u) => u.date === day).sort((a, b) => (b.time ?? '').localeCompare(a.time ?? ''))
   return (
     <div className="page">
       <header className="page-head">
@@ -21,17 +33,21 @@ export default function Updates() {
       </header>
       {days.map((day) => (
         <section key={day} className="stack">
-          <p className="update-day">{niceDate(day)}</p>
+          <p className="update-day">
+            <strong>{dayLabel(day) ?? niceDate(day)}</strong>
+            {dayLabel(day) ? ` · ${niceDate(day)}` : ''}
+            <span className="update-count">{itemsOf(day).length} {itemsOf(day).length === 1 ? 'change' : 'changes'}</span>
+          </p>
           <div className="card">
-            {UPDATES.filter((u) => u.date === day).map((u) => (
-              <div key={u.title} className="update-item">
+            {itemsOf(day).map((u) => (
+              <div key={u.title + (u.time ?? '')} className="update-item">
                 <span className={`task-icon c-${u.color}`}>
                   <u.Icon size={20} />
                 </span>
                 <div className="update-body">
                   <strong>{u.title}</strong>
                   <span>{u.text}</span>
-                  <span className="update-date">{niceDate(u.date)}{u.time ? ` · ${u.time}` : ''}</span>
+                  {u.time && <span className="update-date">{u.time}</span>}
                 </div>
               </div>
             ))}
