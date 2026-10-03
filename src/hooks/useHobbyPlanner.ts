@@ -115,6 +115,7 @@ export function useHobbyPlanner() {
             end_time: fmt(s.end) + ':00',
             icon: h.icon,
             color: h.color,
+            category: 'hobby',
           }
         })
         const { data: made, error } = await supabase.from('tasks').insert(rows).select('id, due_date, start_time')

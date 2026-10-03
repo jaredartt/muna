@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext'
 import { buyProduct } from '../lib/meals'
 import { assigneeColor, sortMembers } from '../lib/people'
 import { findProductByText, matchesProduct, useProducts, type Product } from '../lib/products'
+import { useHobbies } from '../lib/hobbies'
 import type { Category, ChecklistItem, Task, TaskDraft } from '../lib/types'
 
 type Props = {
@@ -28,10 +29,12 @@ type Props = {
 }
 
 /** What a task is called in the sheet, and the look it gets until you pick your own icon and colour. */
-const KINDS: Record<string, { noun: string; icon: string; color: string }> = {
-  none: { noun: 'task', icon: 'checklist', color: 'mint' },
-  uni: { noun: 'uni task', icon: 'school', color: 'sky' },
-  goal: { noun: 'Goal', icon: 'star', color: 'butter' },
+const KINDS: Record<string, { noun: string; icon: string }> = {
+  none: { noun: 'task', icon: 'checklist' },
+  uni: { noun: 'uni task', icon: 'school' },
+  goal: { noun: 'Goal', icon: 'star' },
+  hobby: { noun: 'hobby task', icon: 'IconPaletteFilled' },
+  pantry: { noun: 'pantry task', icon: 'shopping' },
 }
 const kindOf = (c: Category | null) => KINDS[c ?? 'none']
 
@@ -61,19 +64,26 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
     const was = kindOf(category)
     const now = kindOf(v)
     if (icon === was.icon) setIcon(now.icon)
-    if (color === was.color) setColor(assigneeColor(assignee, members, session?.user.id ?? ''))
     setCategory(v)
   }
   const [newItem, setNewItem] = useState('')
   const [saving, setSaving] = useState(false)
   const products = useProducts()
-  // while typing a line: your products that look like it ("pizza" -> "Pizza Margherita"), so a line can be linked to a product
+  const hobbies = useHobbies()
+  // while typing a line: only in a PANTRY task, your products that look like it ("pizza" -> "Pizza Margherita"), so a line can be linked to a product
   const suggestions = useMemo(() => {
     const t = newItem.trim()
-    if (t.length < 2) return []
+    if (category !== 'pantry' || t.length < 2) return []
     const linked = new Set(items.map((i) => i.product_id))
     return products.filter((p) => !linked.has(p.id) && matchesProduct(p, t)).slice(0, 5)
-  }, [newItem, products, items])
+  }, [newItem, products, items, category])
+  // in a HOBBY task: the hobbies you already have
+  const hobbySuggestions = useMemo(() => {
+    const t = newItem.trim().toLowerCase()
+    if (category !== 'hobby' || t.length < 1) return []
+    const have = new Set(items.map((i) => i.text.toLowerCase()))
+    return hobbies.filter((h) => h.created_by === session?.user.id && h.name.toLowerCase().includes(t) && !have.has(h.name.toLowerCase())).slice(0, 5)
+  }, [newItem, hobbies, items, category, session])
 
   // Every change to the to-do list is saved straight away for an existing task. Ticking something to buy puts it in the pantry.
   function changeItems(next: ChecklistItem[]) {
@@ -84,13 +94,13 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
     const it = items[i]
     const done = !it.done
     // a line you typed that is exactly the name (or nickname) of one of your products counts as that product
-    const productId = it.product_id ?? (done ? findProductByText(it.text)?.id : undefined)
+    const productId = it.product_id ?? (done && category === 'pantry' ? findProductByText(it.text)?.id : undefined)
     changeItems(items.map((x, j) => (j === i ? { ...x, done, ...(productId ? { product_id: productId } : {}) } : x)))
     if (task && productId && profile) void buyProduct(profile.household_id, productId, done ? 1 : -1)
   }
   // a line is linked to a product when you pick one from the suggestions, or when what you typed is exactly a product's name or nickname
   function lineFor(text: string, product?: Product | null): ChecklistItem {
-    const p = product ?? findProductByText(text)
+    const p = product ?? (category === 'pantry' ? findProductByText(text) : null)
     return { id: crypto.randomUUID(), text: (p ? p.name : text).slice(0, 200), done: false, ...(p ? { product_id: p.id } : {}) }
   }
   function addItem(product?: Product) {
@@ -237,8 +247,8 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
 
         <div className="field">
           <span>Counts for</span>
-          <div className="segmented" role="radiogroup" aria-label="Category">
-            {([[null, 'Task'], ['uni', 'Uni'], ['goal', 'Goals']] as [Category | null, string][]).map(([v, label]) => (
+          <div className="segmented five" role="radiogroup" aria-label="Category">
+            {([[null, 'Task'], ['uni', 'Uni'], ['goal', 'Goals'], ['hobby', 'Hobby'], ['pantry', 'Pantry']] as [Category | null, string][]).map(([v, label]) => (
               <button key={label} type="button" role="radio" aria-checked={category === v} className={category === v ? 'active' : ''} onClick={() => chooseCategory(v)}>
                 {label}
               </button>
@@ -279,6 +289,20 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
                 <IconPlus size={18} />
               </button>
             </div>
+            {hobbySuggestions.length > 0 && (
+              <div className="cl-sug" role="listbox" aria-label="Your hobbies">
+                <span className="muted small">One of your hobbies? Tap it to add it.</span>
+                {hobbySuggestions.map((h) => (
+                  <button key={h.id} type="button" className="ml-row" role="option" aria-selected={false} onClick={() => changeItems([...items, { id: crypto.randomUUID(), text: h.name.slice(0, 200), done: false }])}>
+                    <span className="ml-row-main">
+                      <strong>{h.name}</strong>
+                      <span className="muted small">{h.description || 'Your hobby'}</span>
+                    </span>
+                    <IconPlus size={18} />
+                  </button>
+                ))}
+              </div>
+            )}
             {suggestions.length > 0 && (
               <div className="cl-sug" role="listbox" aria-label="Your products">
                 <span className="muted small">Is it one of your products? Tap it, and it goes into the pantry when you tick it.</span>

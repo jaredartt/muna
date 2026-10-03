@@ -238,6 +238,8 @@ input[type='date']::-webkit-date-and-time-value, input[type='time']::-webkit-dat
 .avatar-choice .avatar { width: 100% !important; height: auto !important; aspect-ratio: 1; }
 .segmented { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: var(--bg); padding: 5px; border-radius: 16px; }
 .segmented button { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 6px; border-radius: 12px; min-height: 44px; font-size: 15px; }
+.segmented.five { grid-template-columns: repeat(5, 1fr); gap: 3px; padding: 4px; }
+.segmented.five button { font-size: 13px; padding: 10px 2px; }
 .segmented button.active { background: var(--card); box-shadow: var(--shadow); color: var(--coral); }
 .code-row { display: flex; align-items: center; justify-content: space-between; background: var(--bg); border-radius: 14px; padding: 4px 6px 4px 16px; }
 .code-row code { font-family: ui-monospace, Menlo, monospace; font-size: 18px; letter-spacing: 0.12em; }

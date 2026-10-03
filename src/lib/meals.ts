@@ -484,6 +484,7 @@ export async function syncShopping(a: SyncArgs): Promise<string> {
       const merged = [...keep, ...wanted.filter((w) => !have.has(w.id) && !have.has(w.product_id))]
       const patch: Partial<Task> = {}
       if (JSON.stringify(merged) !== JSON.stringify(oldItems)) patch.checklist = merged
+      if (existing.category !== 'pantry') patch.category = 'pantry'
       if (Object.keys(patch).length) await a.updateTask(existing.id, patch)
       return `Updated your shopping task: ${wanted.length} thing${wanted.length === 1 ? '' : 's'} to buy.`
     }
@@ -494,6 +495,7 @@ export async function syncShopping(a: SyncArgs): Promise<string> {
       due_date: day,
       icon: 'shopping',
       color: 'peach',
+      category: 'pantry',
       checklist: wanted,
       sync_google: true,
     })

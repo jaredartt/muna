@@ -109,9 +109,9 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/components/TaskRow.tsx` (43 lines)
   - exports: TaskRow
   - imports: lib/dates.ts, lib/icons.tsx, lib/types.ts
-- `src/components/TaskSheet.tsx` (343 lines)
+- `src/components/TaskSheet.tsx` (367 lines)
   - exports: TaskSheet
-  - imports: components/Confirm.tsx, components/IconPicker.tsx, components/RepeatEditor.tsx, context/AuthContext.tsx, hooks/useSheetScrollGuard.ts, lib/icons.tsx, lib/meals.ts, lib/people.ts, lib/products.ts, lib/recurrence.ts, lib/types.ts
+  - imports: components/Confirm.tsx, components/IconPicker.tsx, components/RepeatEditor.tsx, context/AuthContext.tsx, hooks/useSheetScrollGuard.ts, lib/hobbies.ts, lib/icons.tsx, lib/meals.ts, lib/people.ts, lib/products.ts, lib/recurrence.ts, lib/types.ts
   - used by: context/TasksContext.tsx
 - `src/components/WeatherCard.tsx` (114 lines)
   - exports: Plan, WeatherCard
@@ -145,7 +145,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: useGoogleEvents
   - imports: context/AuthContext.tsx, lib/events.ts, lib/google.ts
   - used by: hooks/useShopping.ts, pages/CalendarPage.tsx, pages/Home.tsx, pages/Uni.tsx
-- `src/hooks/useHobbyPlanner.ts` (155 lines)
+- `src/hooks/useHobbyPlanner.ts` (156 lines)
   - exports: PlanOutcome, useHobbyPlanner, weeksToPlan
   - imports: context/AuthContext.tsx, context/TasksContext.tsx, lib/dates.ts, lib/events.ts, lib/google.ts, lib/hobbies.ts, lib/hobbyPlan.ts, lib/supabase.ts
   - used by: components/HobbySync.tsx, pages/Hobbies.tsx
@@ -187,7 +187,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/lib/hobbies.ts` (101 lines)
   - exports: Hobby, HobbySession, useHobbies, useHobbySessions, allHobbies, startHobbySync, DAY_NAMES, TIMES…
   - imports: lib/hobbyPlan.ts, lib/liveTable.ts, lib/supabase.ts, lib/types.ts
-  - used by: components/HobbiesCard.tsx, components/HobbySync.tsx, components/IconSync.tsx, hooks/useHobbyPlanner.ts, pages/Hobbies.tsx
+  - used by: components/HobbiesCard.tsx, components/HobbySync.tsx, components/IconSync.tsx, components/TaskSheet.tsx, hooks/useHobbyPlanner.ts, pages/Hobbies.tsx
 - `src/lib/hobbyPlan.ts` (133 lines) - Muna's weekly hobby planner. No imports on purpose (tested on its own). Times are minutes since midnight, dates YYYY-MM-DD.
   - exports: Span, TimeOfDay, HobbyIn, Session, PlanInput, PlanResult, weekdayOf, addDay…
   - used by: hooks/useHobbyPlanner.ts, lib/hobbies.ts
@@ -202,7 +202,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: liveTable
   - imports: lib/supabase.ts
   - used by: lib/hobbies.ts, lib/meals.ts, lib/sleep.ts, lib/uni.ts
-- `src/lib/meals.ts` (504 lines) - ---------- Types ----------
+- `src/lib/meals.ts` (506 lines) - ---------- Types ----------
   - exports: Slot, SLOTS, Ingredient, Recipe, RecipeDraft, PlanRow, PantryRow, PantryLog…
   - imports: lib/dates.ts, lib/holidays.ts, lib/liveTable.ts, lib/products.ts, lib/supabase.ts, lib/types.ts
   - used by: components/HomeRings.tsx, components/IconSync.tsx, components/RecipePicker.tsx, components/RecipeSheet.tsx, components/ShoppingSuggestion.tsx, components/ShoppingSync.tsx, components/TaskSheet.tsx, hooks/useShopping.ts, pages/Meals.tsx, pages/Pantry.tsx, pages/Products.tsx

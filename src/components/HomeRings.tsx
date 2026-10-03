@@ -176,12 +176,12 @@ const CAT = {
 } as const
 
 /** One-off tasks of a category that still matter: open ones, and ones finished in the last 30 days. */
-function relevant(tasks: Task[], cat: Category): Task[] {
+function relevant(tasks: Task[], cat: 'uni' | 'goal'): Task[] {
   const limit = Date.now() - 30 * 86400000
   return tasks.filter((t) => t.category === cat && !t.repeat && (!t.completed || !t.completed_at || new Date(t.completed_at).getTime() >= limit))
 }
 
-export function CategoryCard({ cat, anim }: { cat: Category; anim: Anim }) {
+export function CategoryCard({ cat, anim }: { cat: 'uni' | 'goal'; anim: Anim }) {
   const { tasks } = useTasksCtx()
   const [open, setOpen] = useState(false)
   const list = relevant(tasks, cat)
@@ -206,7 +206,7 @@ export function CategoryCard({ cat, anim }: { cat: Category; anim: Anim }) {
   )
 }
 
-function CategorySheet({ cat, onClose }: { cat: Category; onClose: () => void }) {
+function CategorySheet({ cat, onClose }: { cat: 'uni' | 'goal'; onClose: () => void }) {
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
   const { tasks, toggleTask, openEditor } = useTasksCtx()

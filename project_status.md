@@ -320,3 +320,10 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 
 ## Drop-down arrows (Oct 3)
 - Every `<select>` in the app now has the same round chevron drawn by the app (CSS in styles.css: appearance none, SVG chevron 16 px at `right 16px`, `padding-right: 44px`, long text gets an ellipsis) instead of the phone's own arrow that touched the edge. Checked in a phone-size browser mock only.
+
+## "Counts for": Hobby and Pantry kinds (3 Oct 2026)
+- The task sheet's "Counts for" now has five options: Task, Uni, Goals, Hobby, Pantry. Title and add button follow the kind ("Edit pantry task", "Add hobby task").
+- Typing suggestions in the to-do list: **Pantry** gives food/product suggestions (and ticking a line links the product, as before); **Hobby** suggests the hobbies already in the app; Task, Uni and Goals give none.
+- Hobby sessions Muna plans are saved with category `hobby`; the "Grocery shopping" task is `pantry`.
+- Migration 20261003000027_task_categories.sql (applied live): constraint now allows null/uni/goal/hobby/pantry.
+- Not done: Muna chat edge function still only knows uni/goal/none (not redeployed).

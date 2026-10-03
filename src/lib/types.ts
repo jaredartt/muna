@@ -22,7 +22,7 @@ export type Member = Pick<Profile, 'id' | 'display_name' | 'avatar' | 'avatar_co
 /** One line of a to-do list inside a task. A line with a product_id is something to buy: ticking it puts the product in the pantry. */
 export type ChecklistItem = { id: string; text: string; done: boolean; product_id?: string }
 
-export type Category = 'uni' | 'goal'
+export type Category = 'uni' | 'goal' | 'hobby' | 'pantry'
 
 export type Task = {
   id: string
@@ -44,7 +44,7 @@ export type Task = {
   google_owner: string | null
   repeat: Repeat | null // null = happens once
   checklist?: ChecklistItem[] // the to-do list inside the task
-  category?: Category | null // counts for the Uni or Goals ring on Home
+  category?: Category | null // what it counts for: uni, goal, hobby, pantry (null = a plain task)
 }
 
 /** One day of a repeating task (looks like a Task, with that day's date and tick). `series` is the real task. */
