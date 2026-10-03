@@ -368,3 +368,7 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 - Gym: tools `get_gym` (training days, goals, coming sessions, progress and week/month comparison of one exercise), `log_workout` (saves sets, moves goals with the same rules, ticks the planned day; ambiguous names -> asks), `set_skip_days` (uni/gym/hobbies). Undo covers all of them. She cannot create/edit training days or plan the gym week (Gym page "Plan the week").
 - New rule in her prompt: when not sure, ask a short question instead of acting; tools also return "ask the person" errors for unclear exercise names or days.
 - gymLogic.ts is a copy of src/lib/gymLogic.ts (keep in sync).
+
+## Weather block fix: one block, very small (3 Oct 2026, later)
+- Bug: Home rendered all THREE layout zones inside the two-column grid (`layout.map`), so the wide-strip zone (Weather) appeared twice. Now `layout.slice(0, 2)` for the grid; the wide strip is rendered once below it.
+- The Home Weather block is now tiny (`wx-mini`): icon, temperature, condition, today's high/low, place name. The 7-day strip, rain/wind facts, outdoor-plan warnings and the "looks lovely" tip are gone from Home; everything is on the Weather page (tap the block). WeatherCard takes no props now; Home no longer builds the `plans` list.

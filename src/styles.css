@@ -811,3 +811,11 @@ input.sl-suggest { color: var(--muted); }
 .masonry.dragging .col, .wide-zone.dragging { min-height: 72px; }
 .wide-zone { margin-top: 20px; }
 .wide-zone:empty { margin-top: 0; }
+
+/* The small Weather block on Home (works in a column or in the wide strip): now + today's high/low only */
+.wx-mini { gap: 6px; }
+.wx-mini .card-head { flex-wrap: wrap; row-gap: 0; }
+.wx-mini .wx-place { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wx-mini .wx-now { gap: 10px; flex-wrap: nowrap; }
+.wx-mini .wx-temp strong { font-size: 30px; }
+.wx-mini .wx-facts { margin-left: auto; text-align: right; white-space: nowrap; }

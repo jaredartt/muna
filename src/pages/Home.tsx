@@ -8,7 +8,7 @@ import GymCard from '../components/GymCard'
 import { useReorder } from '../hooks/useReorder'
 import { normalizeLayout, readLocalLayout, writeLocalLayout, type BlockId } from '../lib/homeLayout'
 import { supabase } from '../lib/supabase'
-import WeatherCard, { type Plan } from '../components/WeatherCard'
+import WeatherCard from '../components/WeatherCard'
 import { TaskIcon } from '../lib/icons'
 import { eventStyleKey, isEventDone, toggleEventDone, useEventDone, useEventStyles } from '../lib/eventStyles'
 import { useAuth } from '../context/AuthContext'
@@ -45,7 +45,7 @@ export default function Home() {
 
   // Today's Google Calendar events sit next to the tasks
   const dayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())
-  const dayEnd = new Date(dayStart.getFullYear(), dayStart.getMonth(), dayStart.getDate() + 8) // a week ahead: the weather card looks at outdoor plans
+  const dayEnd = new Date(dayStart.getFullYear(), dayStart.getMonth(), dayStart.getDate() + 8)
   const google = useGoogleEvents(dayStart, dayEnd)
   const todaysEvents = google.events
     .filter((e) => eventDays(e).includes(today))
@@ -73,14 +73,6 @@ export default function Home() {
       : remaining === 0
         ? 'Everything is done for today. Proud of you!'
         : `You have ${remaining === 1 ? 'a task' : 'some tasks'} today, you got this!`
-
-  // Everything planned in the next 7 days (tasks and Google events), for the weather warnings
-  const plans: Plan[] = []
-  for (let i = 0; i < 7; i++) {
-    const d = addDays(today, i)
-    for (const t of occurrencesOn(d)) if (!t.completed) plans.push({ title: t.title, date: d, text: `${t.title} ${t.notes ?? ''}` })
-    for (const e of google.events) if (eventDays(e).includes(d)) plans.push({ title: e.title, date: d, text: `${e.title} ${e.notes ?? ''}` })
-  }
 
   const shown = todays.slice(0, 4)
   const shownEvents = todaysEvents.slice(0, Math.max(0, 4 - shown.length))
@@ -165,7 +157,7 @@ export default function Home() {
     calories: <CaloriesCard anim={r6} />,
     weather: (
       <section
-        className={'card wx-card wx-link ' + (layout[2].includes('weather') ? 'wx-wide' : 'wx-half') + r7.className}
+        className={'card wx-card wx-link wx-mini' + r7.className}
         style={r7.style}
         onClick={() => navigate('/weather')}
         role="link"
@@ -175,7 +167,7 @@ export default function Home() {
           if (e.key === 'Enter') navigate('/weather')
         }}
       >
-        <WeatherCard plans={plans} />
+        <WeatherCard />
       </section>
     ),
   }
@@ -190,7 +182,7 @@ export default function Home() {
       </button>
 
       <div className={'masonry' + (rd.dragging ? ' dragging' : '')}>
-        {layout.map((col, ci) => (
+        {layout.slice(0, 2).map((col, ci) => (
           <div key={ci} className="col" ref={rd.column(ci)}>
             {col.map((id) => (
               <div key={id} {...rd.item(id)}>
