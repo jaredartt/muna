@@ -11,6 +11,9 @@ import { buyProduct } from '../lib/meals'
 import { assigneeColor, sortMembers } from '../lib/people'
 import { findProductByText, matchesProduct, useProducts, type Product } from '../lib/products'
 import { useHobbies } from '../lib/hobbies'
+import { currentWeekOf, duration, itemState, useUniItems, useUniSettings } from '../lib/uni'
+import { useTasksCtx } from '../context/TasksContext'
+import { todayStr } from '../lib/dates'
 import type { Category, ChecklistItem, Task, TaskDraft } from '../lib/types'
 
 type Props = {
@@ -18,7 +21,7 @@ type Props = {
   defaultDate?: string | null
   defaultStart?: string | null // HH:MM, for a new task made by long-pressing the calendar
   defaultEnd?: string | null
-  onSave: (draft: TaskDraft, id?: string) => Promise<void>
+  onSave: (draft: TaskDraft, id?: string, uni?: { itemId?: string | null; week: number | null }) => Promise<void>
   onDelete?: (id: string) => Promise<void>
   onChecklist?: (id: string, items: ChecklistItem[]) => void // saves the to-do list at once (ticks should not wait for Save)
   onAutosave?: (draft: TaskDraft, id: string) => Promise<void> // saves an existing task while you edit it (the sheet stays open)
@@ -85,6 +88,21 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
     return hobbies.filter((h) => h.created_by === session?.user.id && h.name.toLowerCase().includes(t) && !have.has(h.name.toLowerCase())).slice(0, 5)
   }, [newItem, hobbies, items, category, session])
 
+  // a new UNI task: your open assignments of the week you are in, so it can be attached to one instead of becoming a copy
+  const uniItems = useUniItems()
+  const uniSetting = useUniSettings().find((x) => x.user_id === session?.user.id)
+  const { tasks: allTasks } = useTasksCtx()
+  const [uniItemId, setUniItemId] = useState<string | null>(null)
+  const mine = useMemo(() => uniItems.filter((i) => i.created_by === session?.user.id), [uniItems, session])
+  const uniWeek = useMemo(() => currentWeekOf(mine, allTasks, uniSetting, todayStr()), [mine, allTasks, uniSetting])
+  const uniSuggestions = useMemo(() => {
+    if (task || category !== 'uni' || uniWeek == null) return []
+    const t = title.trim().toLowerCase()
+    return mine
+      .filter((i) => i.week === uniWeek && !itemState(i, allTasks, todayStr()).done && i.id !== uniItemId && (!t || i.title.toLowerCase().includes(t)))
+      .slice(0, 5)
+  }, [task, category, uniWeek, mine, allTasks, title, uniItemId])
+
   // Every change to the to-do list is saved straight away for an existing task. Ticking something to buy puts it in the pantry.
   function changeItems(next: ChecklistItem[]) {
     setItems(next)
@@ -133,7 +151,7 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
   async function save() {
     if (!title.trim() || saving) return
     setSaving(true)
-    await onSave(makeDraft(true), task?.id)
+    await onSave(makeDraft(true), task?.id, category === 'uni' ? { itemId: uniItemId, week: uniWeek } : undefined)
     setSaving(false)
   }
 
@@ -213,8 +231,47 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
 
         <label className="field">
           <span>What needs to be done?</span>
-          <input autoFocus={!task} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Buy oat milk" maxLength={300} />
+          <input
+            autoFocus={!task}
+            value={title}
+            onChange={(e) => {
+              setTitle(e.target.value)
+              // typing something else than the picked assignment makes it a new one again
+              const picked = uniItemId ? mine.find((i) => i.id === uniItemId) : null
+              if (picked && picked.title !== e.target.value) setUniItemId(null)
+            }}
+            placeholder="e.g. Buy oat milk"
+            maxLength={300}
+          />
         </label>
+        {!task && category === 'uni' && uniWeek != null && (
+          <div className="cl-sug" role="listbox" aria-label={`Your assignments of week ${uniWeek}`}>
+            {uniItemId ? (
+              <span className="muted small">Attached to this assignment in your Uni list. Muna will not replan anything.</span>
+            ) : (
+              <span className="muted small">{uniSuggestions.length ? `Is it one of your assignments of week ${uniWeek}? Tap it.` : `It will be added to your Uni list, week ${uniWeek}.`}</span>
+            )}
+            {uniSuggestions.map((i) => (
+              <button
+                key={i.id}
+                type="button"
+                className="ml-row"
+                role="option"
+                aria-selected={false}
+                onClick={() => {
+                  setTitle(i.title)
+                  setUniItemId(i.id)
+                }}
+              >
+                <span className="ml-row-main">
+                  <strong>{i.title}</strong>
+                  <span className="muted small">Week {i.week} · {duration(i.minutes)}</span>
+                </span>
+                <IconPlus size={18} />
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="row-2">
           <label className="field">

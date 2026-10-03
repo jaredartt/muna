@@ -2,6 +2,8 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState, type
 import { useTasks } from '../hooks/useTasks'
 import TaskSheet from '../components/TaskSheet'
 import EventSheet from '../components/EventSheet'
+import { useAuth } from './AuthContext'
+import { linkNewUniTask } from '../lib/uni'
 import { notifyTasksChanged } from '../lib/events'
 import type { GoogleEvent } from '../lib/google'
 import type { ChecklistItem, Occurrence, Task, TaskDraft } from '../lib/types'
@@ -19,6 +21,7 @@ const Ctx = createContext<TasksState | null>(null)
 
 export function TasksProvider({ children }: { children: ReactNode }) {
   const t = useTasks()
+  const { session, profile } = useAuth()
   const [editor, setEditor] = useState<Editor>(null)
   const [eventEditor, setEventEditor] = useState<GoogleEvent | null>(null)
   // the task sheet slides down before it disappears
@@ -53,12 +56,15 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   const handleChecklist = useCallback((id: string, items: ChecklistItem[]) => void updateTask(id, { checklist: items }), [updateTask])
 
   const handleSave = useCallback(
-    async (draft: TaskDraft, id?: string) => {
+    async (draft: TaskDraft, id?: string, uni?: { itemId?: string | null; week: number | null }) => {
       if (id) await updateTask(id, draft)
-      else await addTask(draft)
+      else if (draft.category === 'uni' && uni && profile?.household_id && session) {
+        // a new Uni task joins the Uni list (attached to the assignment you picked, or as a new one in your week)
+        await addTask(draft, (taskId) => linkNewUniTask(taskId, draft, { householdId: profile.household_id, userId: session.user.id, itemId: uni.itemId, week: uni.week }))
+      } else await addTask(draft)
       closeEditor()
     },
-    [addTask, updateTask, closeEditor],
+    [addTask, updateTask, closeEditor, profile, session],
   )
   // an existing task being edited: saved in place, the sheet stays open
   const handleAutosave = useCallback(

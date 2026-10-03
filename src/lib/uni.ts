@@ -121,8 +121,8 @@ export function itemState(item: UniItem, tasks: Task[], today: string): UniState
   return { linked, upcoming, doneMin, remaining: done ? 0 : Math.max(0, item.minutes - doneMin), done, planned: upcoming.length > 0 }
 }
 
-export async function addUniItem(householdId: string, userId: string, week: number, title: string, minutes: number): Promise<string | null> {
-  const { data, error } = await supabase.from('uni_items').insert({ household_id: householdId, created_by: userId, week, title: title.trim(), minutes }).select().single()
+export async function addUniItem(householdId: string, userId: string, week: number, title: string, minutes: number, taskIds: string[] = []): Promise<string | null> {
+  const { data, error } = await supabase.from('uni_items').insert({ household_id: householdId, created_by: userId, week, title: title.trim(), minutes, ...(taskIds.length ? { task_ids: taskIds } : {}) }).select().single()
   if (error) return error.message
   store.upsert(data as UniItem)
   return null
@@ -209,4 +209,25 @@ export async function commitPlan(blocks: Block[], replan: UniItem[], ctx: Ctx, t
   notifyTasksChanged()
   if (ctx.googleConnected && allNew.length) void syncTasksToGoogle(allNew).then(() => notifyTasksChanged())
   return null
+}
+
+/**
+ * A Uni task you made yourself in the task sheet joins your Uni list, so Uni tab and calendar always agree:
+ * it is attached to the assignment you picked, or becomes a new assignment of your current week (with the time the task takes).
+ * Nothing is replanned: the blocks Muna already made stay where they are.
+ */
+export async function linkNewUniTask(
+  taskId: string,
+  draft: { title: string; start_time?: string | null; end_time?: string | null; assigned_to?: string | null; repeat?: unknown },
+  opts: { householdId: string; userId: string; itemId?: string | null; week: number | null },
+): Promise<void> {
+  if (opts.itemId) {
+    const it = store.all().find((i) => i.id === opts.itemId)
+    if (it && !it.task_ids.includes(taskId)) await updateUniItem(it.id, { task_ids: [...it.task_ids, taskId] })
+    return
+  }
+  // only your own, one-off tasks go to your list
+  if (opts.week == null || draft.repeat || (draft.assigned_to && draft.assigned_to !== opts.userId)) return
+  const minutes = draft.start_time && draft.end_time ? Math.max(5, mins(draft.end_time) - mins(draft.start_time)) : 30
+  await addUniItem(opts.householdId, opts.userId, opts.week, draft.title, minutes, [taskId])
 }

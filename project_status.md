@@ -330,3 +330,9 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 
 ## Home: Today's tasks block opens the calendar (3 Oct 2026)
 - Tapping the empty parts of the "Today's tasks" block (title, spaces, "Nothing yet") opens the Calendar like the bottom menu; tapping a task, its tile, the add button or the "…" keeps its own action.
+
+## Uni tasks made in the task sheet join the Uni list (3 Oct 2026)
+- Before: only blocks Muna planned were linked to Uni assignments (uni_items.task_ids); a Uni task made by hand just counted as a "loose" task.
+- Now, for a NEW task with Counts for = Uni: while typing the name, your open assignments of the current week are suggested; tapping one attaches the task to it (title copied, task id added to its task_ids). If nothing is picked, the task becomes a new assignment of the current week (minutes = the task's length, 30 if it has no times) and is linked. Repeating tasks and tasks for the other person are not added. No replanning happens.
+- Code: `linkNewUniTask` in src/lib/uni.ts, `addTask(draft, after)` in useTasks.ts, handleSave in TasksContext.tsx, suggestions in TaskSheet.tsx.
+- Not covered: switching an EXISTING task to Uni later does not link it (it stays loose, still counted); old Uni tasks made by hand stay loose.

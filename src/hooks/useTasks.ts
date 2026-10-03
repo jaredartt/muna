@@ -80,10 +80,11 @@ export function useTasks() {
   )
 
   const addTask = useCallback(
-    async (draft: TaskDraft) => {
+    async (draft: TaskDraft, after?: (id: string) => Promise<void>) => {
       if (!householdId) return null
       const { data, error } = await supabase.from('tasks').insert({ ...draft, household_id: householdId }).select('id').single()
       if (error) return error.message
+      if (data?.id && after) await after(data.id as string)
       await reload()
       if (data?.id) mirror([data.id as string])
       return null
