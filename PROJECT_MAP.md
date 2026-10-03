@@ -167,7 +167,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/lib/dates.ts` (50 lines)
   - exports: pad, toDateStr, todayStr, parseDateStr, addDays, formatTime, formatDateNice, WEEKDAYS_MON_FIRST…
   - used by: components/EventSheet.tsx, components/HobbiesCard.tsx, components/HobbySync.tsx, components/HolidaySync.tsx, components/HomeRings.tsx, components/RecipeSheet.tsx, components/ShoppingSuggestion.tsx, components/TaskRow.tsx, components/WeatherCard.tsx, components/WeekView.tsx, hooks/useHobbyPlanner.ts, hooks/useShopping.ts, hooks/useTasks.ts, lib/google.ts, lib/meals.ts, lib/sleep.ts, pages/CalendarPage.tsx, pages/Hobbies.tsx, pages/Home.tsx, pages/Meals.tsx, pages/Pantry.tsx, pages/Uni.tsx
-- `src/lib/dayItems.ts` (62 lines) - What the day and week views draw: one small description per task or Google event, so the views know nothing about either.
+- `src/lib/dayItems.ts` (79 lines) - What the day and week views draw: one small description per task or Google event, so the views know nothing about either.
   - exports: DayItem, HOUR_H, TOP_PAD, SNAP, DAY_START, DAY_END, HOURS_SHOWN, yOf…
   - used by: components/DayView.tsx, components/WeekView.tsx, pages/CalendarPage.tsx
 - `src/lib/draft.ts` (20 lines) - Remembers the message you were typing to Muna (but have not sent), on THIS phone only.

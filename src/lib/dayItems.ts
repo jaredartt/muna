@@ -30,25 +30,42 @@ export const fmtMin = (m: number) => (m >= 1440 ? '24:00' : `${pad2(Math.floor(m
 export const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))
 export const hhmmss = (m: number) => `${pad2(Math.floor(m / 60))}:${pad2(m % 60)}:00`
 
-/** Side-by-side columns for items that overlap in time. Returns key -> { lane, lanes }. */
+// Which side a colour sits on when items overlap: the same colour is always in the same place (orange first, purple last).
+const COLOR_ORDER = ['peach', 'mint', 'sky', 'butter', 'coral', 'rose', 'lilac']
+const colorRank = (c: string) => {
+  const i = COLOR_ORDER.indexOf(c)
+  return i < 0 ? COLOR_ORDER.length : i
+}
+
+/**
+ * Side-by-side columns for items that overlap in time. Returns key -> { lane, lanes }.
+ * Items that overlap nothing are alone (full width). In a group of overlapping items every colour keeps its own column(s), in the same
+ * order each time, so e.g. orange tasks are always on the left and purple ones on the right.
+ */
 export function layoutLanes(items: DayItem[]): Map<string, { lane: number; lanes: number }> {
   const out = new Map<string, { lane: number; lanes: number }>()
   const sorted = [...items].sort((a, b) => a.start - b.start || b.end - a.end)
   let cluster: DayItem[] = []
   let clusterEnd = -1
   const flush = () => {
-    const laneEnds: number[] = []
+    const colors = [...new Set(cluster.map((i) => i.color))].sort((a, b) => colorRank(a) - colorRank(b) || a.localeCompare(b))
     const lane = new Map<string, number>()
-    for (const it of cluster) {
-      let i = laneEnds.findIndex((e) => e <= it.start)
-      if (i < 0) {
-        i = laneEnds.length
-        laneEnds.push(0)
+    let offset = 0
+    for (const c of colors) {
+      // inside one colour, items that overlap each other still need their own column
+      const laneEnds: number[] = []
+      for (const it of cluster.filter((i) => i.color === c)) {
+        let i = laneEnds.findIndex((e) => e <= it.start)
+        if (i < 0) {
+          i = laneEnds.length
+          laneEnds.push(0)
+        }
+        laneEnds[i] = it.end
+        lane.set(it.key, offset + i)
       }
-      laneEnds[i] = it.end
-      lane.set(it.key, i)
+      offset += laneEnds.length
     }
-    for (const it of cluster) out.set(it.key, { lane: lane.get(it.key)!, lanes: laneEnds.length })
+    for (const it of cluster) out.set(it.key, { lane: lane.get(it.key)!, lanes: offset })
     cluster = []
   }
   for (const it of sorted) {
