@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { liveTable } from './liveTable'
+import { savePositions } from './order'
 import type { TimeOfDay } from './hobbyPlan'
 import type { Task } from './types'
 
@@ -17,13 +18,14 @@ export type Hobby = {
   days: number[] // preferred weekdays, 0 = Monday ... 6 = Sunday
   time_of_day: TimeOfDay
   active: boolean
+  position: number // order in your list (drag to change)
   created_at: string
 }
 
 /** One planned time for a hobby (the calendar task it made is task_id). */
 export type HobbySession = { id: string; household_id: string; hobby_id: string; created_by: string; task_id: string | null; day: string; week_start: string; created_at: string }
 
-const hobbies = liveTable<Hobby>('hobbies', 'muna.hobbies.v1', (a, b) => a.created_at.localeCompare(b.created_at))
+const hobbies = liveTable<Hobby>('hobbies', 'muna.hobbies.v1', (a, b) => (a.position ?? 0) - (b.position ?? 0) || a.created_at.localeCompare(b.created_at))
 const sessions = liveTable<HobbySession>('hobby_sessions', 'muna.hobbySessions.v1', (a, b) => a.day.localeCompare(b.day))
 export const useHobbies = hobbies.use
 export const useHobbySessions = sessions.use
@@ -99,3 +101,10 @@ export function hoursLabel(min: number): string {
   const r = min % 60
   return h && r ? `${h}h ${r}m` : h ? `${h}h` : `${r}m`
 }
+
+/** Saves a new order of your hobbies. */
+export const reorderHobbies = (ids: string[]) =>
+  savePositions('hobbies', ids, (id, position) => {
+    const o = hobbies.all().find((h) => h.id === id)
+    if (o) hobbies.upsert({ ...o, position })
+  })

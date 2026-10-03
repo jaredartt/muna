@@ -15,6 +15,7 @@ export type Profile = {
   avatar_color: string // mint | peach | lilac | sky | butter | rose
   theme_pref: ThemePref
   targets?: Targets | null // daily food targets of this person
+  home_layout?: unknown // which Home blocks are where (two columns of block names)
 }
 
 export type Member = Pick<Profile, 'id' | 'display_name' | 'avatar' | 'avatar_color' | 'targets'>

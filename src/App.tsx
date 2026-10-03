@@ -19,6 +19,8 @@ import Meals from './pages/Meals'
 import Pantry from './pages/Pantry'
 import Uni from './pages/Uni'
 import Hobbies from './pages/Hobbies'
+import WeatherPage from './pages/WeatherPage'
+import Gym from './pages/Gym'
 import { useRoute } from './lib/router'
 
 function Screens() {
@@ -46,6 +48,10 @@ function Screens() {
       return <Uni />
     case '/hobbies':
       return <Hobbies />
+    case '/weather':
+      return <WeatherPage />
+    case '/gym':
+      return <Gym />
     default:
       return <Home />
   }

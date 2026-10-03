@@ -11,6 +11,7 @@ import { fmtMin, hhmmss, toMin, type DayItem } from '../lib/dayItems'
 import { notifyTasksChanged } from '../lib/events'
 import { WEEKDAYS_MON_FIRST, addDays, formatDateNice, monthGrid, parseDateStr, todayStr, toDateStr } from '../lib/dates'
 import { navigate } from '../lib/router'
+import { useConfirm } from '../components/Confirm'
 import type { Occurrence } from '../lib/types'
 
 type Mode = 'day' | 'week' | 'month'
@@ -26,8 +27,9 @@ const minutesOf = (d: Date) => d.getHours() * 60 + d.getMinutes()
 const monthName = (d: string) => parseDateStr(d).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
 
 export default function CalendarPage() {
-  const { toggleTask, updateTask, openEditor, openEvent, occurrencesOn, occurrenceMap } = useTasksCtx()
+  const { toggleTask, updateTask, addTask, openEditor, openEvent, occurrencesOn, occurrenceMap } = useTasksCtx()
   const { googleConnected, members } = useAuth()
+  const { choose } = useConfirm()
   const styles = useEventStyles()
   const doneSet = useEventDone()
   const today = todayStr()
@@ -115,7 +117,43 @@ export default function CalendarPage() {
       const t = dayTasks.find((x) => 't:' + x.id === item.key)
       const target = t?.series ?? t
       if (!target) return
-      const err = await updateTask(target.id, startMin === null ? { start_time: null, end_time: null } : { start_time: hhmmss(startMin), end_time: hhmmss(end) })
+      const times = startMin === null ? { start_time: null, end_time: null } : { start_time: hhmmss(startMin), end_time: hhmmss(end) }
+      if (t?.series?.repeat) {
+        // a repeating task: this day only, or the whole series?
+        const answer = await choose({
+          title: 'Repeated task',
+          message: 'Do you want to move this specific repeated task or all of them?',
+          buttons: [
+            { label: 'Only this one', value: 'one', tone: 'primary' },
+            { label: 'All of them', value: 'all', tone: 'primary' },
+          ],
+        })
+        if (!answer) return
+        if (answer === 'one') {
+          const s = t.series
+          // this day becomes its own one-off task at the new time, and the series skips the day
+          const e1 = await addTask({
+            title: s.title,
+            notes: s.notes,
+            due_date: selected,
+            ...times,
+            icon: s.icon,
+            color: s.color,
+            assigned_to: s.assigned_to,
+            category: s.category ?? null,
+            checklist: s.checklist,
+            repeat: null,
+            completed: t.completed,
+            completed_at: t.completed ? new Date().toISOString() : null,
+            sync_google: s.sync_google,
+          })
+          if (e1) return void setNote('Could not move that task. Try again.')
+          const e2 = await updateTask(s.id, { repeat: { ...s.repeat!, exceptDates: [...(s.repeat!.exceptDates ?? []), selected] } })
+          if (e2) setNote('Could not move that task. Try again.')
+          return
+        }
+      }
+      const err = await updateTask(target.id, times)
       if (err) setNote('Could not move that task. Try again.')
       return
     }

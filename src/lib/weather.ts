@@ -16,12 +16,20 @@ export type WeatherDay = {
   rainPct: number | null // chance of rain, 0-100
   rainMm: number
   wind: number // km/h, strongest
+  gust?: number // km/h, strongest gust
+  sunrise?: string // HH:MM
+  sunset?: string // HH:MM
+  uv?: number // strongest UV index of the day
 }
+/** One hour of the next two days. */
+export type WeatherHour = { time: string; temp: number; code: number; rainPct: number | null; isDay: boolean } // time = local "YYYY-MM-DDTHH:MM"
+
 export type Forecast = {
   place: Place
   fetched: number
-  now: { temp: number; feels: number; code: number; wind: number; isDay: boolean } | null
+  now: { temp: number; feels: number; code: number; wind: number; isDay: boolean; humidity?: number; windDir?: number; pressure?: number } | null
   days: WeatherDay[]
+  hours?: WeatherHour[]
 }
 
 export type Kind = 'clear' | 'partly' | 'cloud' | 'fog' | 'drizzle' | 'rain' | 'snow' | 'storm'
@@ -87,7 +95,7 @@ export const isOutdoor = (text: string) => OUTDOOR_RE.test(text)
 
 // ---------- fetching (cached on the phone for 30 minutes) ----------
 const TTL = 30 * 60 * 1000
-const keyOf = (p: Place) => `muna.weather.v1.${p.lat.toFixed(2)},${p.lon.toFixed(2)}`
+const keyOf = (p: Place) => `muna.weather.v2.${p.lat.toFixed(2)},${p.lon.toFixed(2)}`
 
 function readCache(p: Place): Forecast | null {
   try {
@@ -102,8 +110,9 @@ export async function fetchForecast(p: Place): Promise<Forecast | null> {
   const url =
     'https://api.open-meteo.com/v1/forecast' +
     `?latitude=${p.lat}&longitude=${p.lon}` +
-    '&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day' +
-    '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max' +
+    '&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day,relative_humidity_2m,wind_direction_10m,surface_pressure' +
+    '&hourly=temperature_2m,weather_code,precipitation_probability,is_day&forecast_hours=48' +
+    '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max,sunrise,sunset,uv_index_max' +
     '&timezone=auto&forecast_days=14'
   try {
     const res = await fetch(url)
@@ -119,13 +128,39 @@ export async function fetchForecast(p: Place): Promise<Forecast | null> {
       rainPct: d.precipitation_probability_max?.[i] == null ? null : Number(d.precipitation_probability_max[i]),
       rainMm: Number(d.precipitation_sum?.[i] ?? 0),
       wind: Number(d.wind_speed_10m_max?.[i] ?? 0),
+      gust: d.wind_gusts_10m_max?.[i] == null ? undefined : Number(d.wind_gusts_10m_max[i]),
+      sunrise: typeof d.sunrise?.[i] === 'string' ? (d.sunrise[i] as string).slice(11, 16) : undefined,
+      sunset: typeof d.sunset?.[i] === 'string' ? (d.sunset[i] as string).slice(11, 16) : undefined,
+      uv: d.uv_index_max?.[i] == null ? undefined : Number(d.uv_index_max[i]),
     }))
+    const h = j.hourly
+    const hours: WeatherHour[] | undefined = h?.time
+      ? (h.time as string[]).map((time, i) => ({
+          time,
+          temp: Number(h.temperature_2m?.[i] ?? 0),
+          code: Number(h.weather_code?.[i] ?? 3),
+          rainPct: h.precipitation_probability?.[i] == null ? null : Number(h.precipitation_probability[i]),
+          isDay: h.is_day?.[i] !== 0,
+        }))
+      : undefined
     const c = j.current
     const f: Forecast = {
       place: p,
       fetched: Date.now(),
-      now: c ? { temp: Number(c.temperature_2m), feels: Number(c.apparent_temperature), code: Number(c.weather_code), wind: Number(c.wind_speed_10m), isDay: c.is_day !== 0 } : null,
+      now: c
+        ? {
+            temp: Number(c.temperature_2m),
+            feels: Number(c.apparent_temperature),
+            code: Number(c.weather_code),
+            wind: Number(c.wind_speed_10m),
+            isDay: c.is_day !== 0,
+            humidity: c.relative_humidity_2m == null ? undefined : Number(c.relative_humidity_2m),
+            windDir: c.wind_direction_10m == null ? undefined : Number(c.wind_direction_10m),
+            pressure: c.surface_pressure == null ? undefined : Number(c.surface_pressure),
+          }
+        : null,
       days,
+      hours,
     }
     try {
       localStorage.setItem(keyOf(p), JSON.stringify(f))

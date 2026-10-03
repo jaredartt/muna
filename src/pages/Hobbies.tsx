@@ -7,10 +7,12 @@ import IconPicker from '../components/IconPicker'
 import { dayWord } from '../components/HobbiesCard'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
 import { useHobbyPlanner, weeksToPlan } from '../hooks/useHobbyPlanner'
+import { useReorder } from '../hooks/useReorder'
+import SkipDays from '../components/SkipDays'
 import { TASK_ICONS, TASK_COLORS, TaskIcon } from '../lib/icons'
-import { todayStr } from '../lib/dates'
+import { addDays, todayStr } from '../lib/dates'
 import { navigate } from '../lib/router'
-import { addHobby, DAY_NAMES, deleteHobby, emptyHobby, hoursLabel, TIMES, updateHobby, useHobbies, useHobbySessions, type Hobby, type HobbyDraft } from '../lib/hobbies'
+import { addHobby, DAY_NAMES, deleteHobby, emptyHobby, hoursLabel, reorderHobbies, TIMES, updateHobby, useHobbies, useHobbySessions, type Hobby, type HobbyDraft } from '../lib/hobbies'
 
 export default function Hobbies() {
   const { session, profile } = useAuth()
@@ -23,6 +25,7 @@ export default function Hobbies() {
   const [editing, setEditing] = useState<Hobby | 'new' | null>(null)
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
+  const rd = useReorder({ columns: [hobbies.map((h) => h.id)], onChange: (c) => void reorderHobbies(c[0]), enabled: editing === null })
 
   const byId = new Map(tasks.map((t) => [t.id, t]))
   const upcoming = sessions
@@ -82,14 +85,18 @@ export default function Hobbies() {
             <IconSparkles size={18} /> {busy ? 'Planning…' : 'Plan again'}
           </button>
         )}
+        <SkipDays area="hobbies" days={Array.from({ length: 14 }, (_, i) => addDays(today, i))} title="Days off: Muna plans no hobby on these" />
         {msg && <p className="muted small">{msg}</p>}
       </section>
 
       <section className="card">
         <h3>My hobbies</h3>
+        {hobbies.length > 1 && <p className="muted small">Press and hold a hobby to move it.</p>}
         {hobbies.length === 0 && <p className="muted small">Nothing yet.</p>}
+        <div className="hobby-list" ref={rd.column(0)}>
         {hobbies.map((h) => (
-          <button key={h.id} className="ml-row hobby-row" onClick={() => setEditing(h)}>
+          <div key={h.id} {...rd.item(h.id)}>
+          <button className="ml-row hobby-row" onClick={() => setEditing(h)}>
             <span className={`tile c-${h.color}`}>
               <TaskIcon name={h.icon} size={18} />
             </span>
@@ -103,7 +110,9 @@ export default function Hobbies() {
               </span>
             </span>
           </button>
+          </div>
         ))}
+        </div>
         <button className="btn primary" onClick={() => setEditing('new')}>
           <IconPlus size={18} /> New hobby
         </button>

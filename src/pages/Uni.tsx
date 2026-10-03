@@ -7,9 +7,12 @@ import { useGoogleEvents } from '../hooks/useGoogleEvents'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
 import { addDays, parseDateStr, todayStr } from '../lib/dates'
 import { navigate } from '../lib/router'
-import { addUniItem, commitPlan, currentWeekOf, deleteUniItem, duration, fmtMin, itemState, looseUniTasks, setCurrentWeek, unplanItem, updateUniItem, useUniItems, useUniSettings, weekProgress, type UniItem } from '../lib/uni'
+import { addUniItem, commitPlan, currentWeekOf, deleteUniItem, duration, fmtMin, itemState, looseUniTasks, reorderUniItems, setCurrentWeek, unplanItem, updateUniItem, useUniItems, useUniSettings, weekProgress, type UniItem } from '../lib/uni'
 import { daysBetween, planStudy, type Span } from '../lib/uniPlan'
 import { assigneeColor } from '../lib/people'
+import SkipDays from '../components/SkipDays'
+import { useSkips } from '../lib/skips'
+import { useReorder } from '../hooks/useReorder'
 
 const niceDay = (d: string) => parseDateStr(d).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 const clock = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))
@@ -31,6 +34,7 @@ export default function Uni() {
   const loose = looseUniTasks(items, tasks, uid, today).sort((a, b) => Number(a.completed) - Number(b.completed) || (a.due_date ?? '').localeCompare(b.due_date ?? '') || (a.start_time ?? '').localeCompare(b.start_time ?? ''))
   const prog = weekProgress(items, tasks, shown, today, shown === current ? loose : [])
   const [planning, setPlanning] = useState(false)
+  const rd = useReorder({ columns: [list.map((i) => i.id)], onChange: (c) => void reorderUniItems(c[0]), enabled: !planning })
   const [weekText, setWeekText] = useState(String(shown))
   useEffect(() => setWeekText(String(shown)), [shown])
   function typeWeek(v: string) {
@@ -121,9 +125,14 @@ export default function Uni() {
       <section className="card">
         <h3>Week {shown}</h3>
         {list.length === 0 && <p className="muted small">Add what you have to do this week, then let Muna find the time for it.</p>}
-        {list.map((i) => (
-          <Row key={i.id} item={i} today={today} />
-        ))}
+        {list.length > 1 && <p className="muted small">Press and hold an item to move it.</p>}
+        <div className="uni-list" ref={rd.column(0)}>
+          {list.map((i) => (
+            <div key={i.id} {...rd.item(i.id)}>
+              <Row item={i} today={today} />
+            </div>
+          ))}
+        </div>
         {list.length > 0 && (
           <button className="btn primary" onClick={() => setPlanning(true)}>
             <IconSparkles size={20} /> {needPlan.length ? `Plan ${needPlan.length} item${needPlan.length === 1 ? '' : 's'} with Muna` : 'Plan with Muna'}
@@ -293,6 +302,7 @@ function PlanSheet({ weeks, startWeek, items, onClose }: { weeks: number[]; star
   const [replan, setReplan] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  const skip = useSkips('uni', uid) // days Muna must not plan on
 
   const mine = items.filter((i) => picked.includes(i.week))
   const states = mine.map((i) => ({ item: i, st: itemState(i, tasks, today) }))
@@ -341,9 +351,10 @@ function PlanSheet({ weeks, startWeek, items, onClose }: { weeks: number[]; star
         today,
         nowMin: now.getHours() * 60 + now.getMinutes(),
         busy: (d) => busy_.get(d) ?? [],
+        skip,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [toPlan.map((x) => x.item.id + x.st.remaining).join(','), from, to, winStart, winEnd, busy_, today],
+    [toPlan.map((x) => x.item.id + x.st.remaining).join(','), from, to, winStart, winEnd, busy_, today, skip.join(',')],
   )
   const total = toPlan.reduce((a, x) => a + x.st.remaining, 0)
   const planned = plan.blocks.reduce((a, b) => a + (b.end - b.start), 0)
@@ -409,6 +420,8 @@ function PlanSheet({ weeks, startWeek, items, onClose }: { weeks: number[]; star
             <input type="time" value={winEnd} onChange={(e) => setWinEnd(e.target.value)} />
           </label>
         </div>
+
+        <SkipDays area="uni" days={dayList.filter((d) => d >= today)} title="Skip these days" />
 
         {alreadyPlanned.length > 0 && (
           <label className="check-row">

@@ -162,6 +162,10 @@ function recurrenceLines(t: Task, tz: string): string[] {
       }
     }
   }
+  // single days moved by hand ("only this one") leave the series; the moved copy is its own event
+  for (const d of r.exceptDates ?? []) {
+    if (d >= start && matchesPattern(r, start, d) && !isExcluded(r, d)) lines.push(timed ? `EXDATE;TZID=${tz}:${compact(d)}T${hhmm(t.start_time!).replace(':', '')}00` : `EXDATE;VALUE=DATE:${compact(d)}`)
+  }
   return lines
 }
 

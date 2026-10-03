@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { notifyTasksChanged } from '../lib/events'
 import { fetchGoogleEvents, syncTasksToGoogle } from '../lib/google'
 import { addDays, parseDateStr, todayStr } from '../lib/dates'
+import { skippedDays } from '../lib/skips'
 import { addSessionRows, allHobbies, removeSessionRows, type HobbySession } from '../lib/hobbies'
 import { addDay, mondayOf, planHobbies, type Span } from '../lib/hobbyPlan'
 
@@ -62,7 +63,8 @@ export function useHobbyPlanner() {
         const todo = mine.filter((h) => opts?.replan || !existing.some((s) => s.hobby_id === h.id))
         if (!todo.length) return { planned: 0, short: [] }
         const days: string[] = []
-        for (let d = weekStart; d <= weekEnd; d = addDay(d, 1)) if (d >= today) days.push(d)
+        const off = skippedDays('hobbies', uid) // days you asked Muna to leave free
+        for (let d = weekStart; d <= weekEnd; d = addDay(d, 1)) if (d >= today && !off.includes(d)) days.push(d)
         if (!days.length) return { planned: 0, short: [] }
 
         // what is already in my days

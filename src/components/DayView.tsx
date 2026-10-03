@@ -56,6 +56,8 @@ export default function DayView({ label, isToday, items, onMove, onAdd, onCreate
   onMoveRef.current = onMove
   const onCreateRef = useRef(onCreate)
   onCreateRef.current = onCreate
+  // computer only: dragging the top or bottom edge of a task with the mouse changes its start or end
+  const [resize, setResize] = useState<{ key: string; start: number; end: number } | null>(null)
   const [now, setNow] = useState(() => new Date())
 
   const allItems = useMemo(() => items.filter((i) => i.allDay), [items])
@@ -212,6 +214,36 @@ export default function DayView({ label, isToday, items, onMove, onAdd, onCreate
     window.addEventListener('pointerdown', handleSecond)
   }
 
+  function onResizeDown(e: ReactPointerEvent, item: DayItem, edge: 'top' | 'bottom') {
+    if (e.pointerType !== 'mouse' || e.button !== 0 || pending.current) return
+    e.preventDefault()
+    e.stopPropagation()
+    const s0 = item.start
+    const e0 = item.end
+    const y0 = e.clientY
+    let cur = { key: item.key, start: s0, end: e0 }
+    const move = (ev: PointerEvent) => {
+      const raw = ((ev.clientY - y0) / HOUR_H) * 60
+      cur =
+        edge === 'top'
+          ? { key: item.key, start: Math.min(e0 - SNAP, Math.max(DAY_START, snap(s0 + raw))), end: e0 }
+          : { key: item.key, start: s0, end: Math.max(s0 + SNAP, Math.min(1440, snap(e0 + raw))) }
+      setResize(cur)
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
+      setResize(null)
+      suppressClick.current = true // the click that follows letting go must not open the task
+      window.setTimeout(() => (suppressClick.current = false), 350)
+      if (cur.start !== s0 || cur.end !== e0) onMoveRef.current(item, cur.start, cur.end - cur.start)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
+  }
+
   // Press and hold an empty spot of the hours: a new task appears there and can be dragged right away.
   function onGridDown(e: ReactPointerEvent) {
     if (e.pointerType === 'mouse' && e.button !== 0) return
@@ -287,6 +319,12 @@ export default function DayView({ label, isToday, items, onMove, onAdd, onCreate
                 <button className={'tick' + (it.done ? ' on' : '')} data-nodrag onClick={(e) => { e.stopPropagation(); it.toggle() }} aria-label={it.done ? 'Mark as not done' : 'Mark as done'}>
                   {it.done && <IconCheck size={12} stroke={3.2} />}
                 </button>
+                {it.movable && (
+                  <>
+                    <span className="blk-resize top" data-nodrag onPointerDown={(e) => onResizeDown(e, it, 'top')} onClick={(e) => e.stopPropagation()} />
+                    <span className="blk-resize bottom" data-nodrag onPointerDown={(e) => onResizeDown(e, it, 'bottom')} onClick={(e) => e.stopPropagation()} />
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -303,13 +341,16 @@ export default function DayView({ label, isToday, items, onMove, onAdd, onCreate
         <div className="slots" style={{ top: TOP_PAD }}>
           {timed.map((it) => {
             const l = lanes.get(it.key) ?? { lane: 0, lanes: 1 }
-            const vs = Math.max(it.start, DAY_START)
-            const h = Math.max(22, ((Math.max(it.end, vs + 15) - vs) / 60) * HOUR_H - 3)
+            const rs = resize?.key === it.key ? resize : null
+            const st = rs ? rs.start : it.start
+            const en = rs ? rs.end : it.end
+            const vs = Math.max(st, DAY_START)
+            const h = Math.max(22, ((Math.max(en, vs + 15) - vs) / 60) * HOUR_H - 3)
             return (
               <div
                 key={it.key}
                 className={`blk c-${it.color}` + (it.done ? ' done' : '') + (dragging === it.key ? ' lifted' : '') + (h < 44 ? ' short' : '')}
-                style={{ top: yOf(it.start, HOUR_H) + 1, height: h, left: `${(l.lane / l.lanes) * 100}%`, width: `calc(${100 / l.lanes}% - 4px)` }}
+                style={{ top: yOf(st, HOUR_H) + 1, height: h, left: `${(l.lane / l.lanes) * 100}%`, width: `calc(${100 / l.lanes}% - 4px)` }}
                 role="button"
                 tabIndex={0}
                 onPointerDown={(e) => onDown(e, it)}
@@ -318,7 +359,7 @@ export default function DayView({ label, isToday, items, onMove, onAdd, onCreate
                 <AppIcon name={it.icon} size={14} />
                 <span className="blk-text">
                   <span className="blk-title">{it.title}</span>
-                  {h >= 44 && <span className="blk-time">{fmtMin(it.start)}–{fmtMin(it.end)}</span>}
+                  {h >= 44 && <span className="blk-time">{fmtMin(st)}–{fmtMin(en)}</span>}
                 </span>
                 <button className={'tick' + (it.done ? ' on' : '')} data-nodrag onClick={(e) => { e.stopPropagation(); it.toggle() }} aria-label={it.done ? 'Mark as not done' : 'Mark as done'}>
                   {it.done && <IconCheck size={12} stroke={3.2} />}

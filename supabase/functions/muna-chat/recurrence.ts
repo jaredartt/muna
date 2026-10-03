@@ -10,6 +10,7 @@ export type Repeat = {
   nth?: { n: 1 | 2 | 3 | 4 | -1; weekday: number } // month: "the first Monday", "the last Friday"
   exceptWeekdays?: number[] // never on these weekdays
   exceptWeeks?: number[] // never in these weeks of the month: 1..4, or -1 = the last week
+  exceptDates?: string[] // single days taken out of the series (moved by hand to another time)
   until?: string | null // YYYY-MM-DD, last possible day
   count?: number | null // or: stop after this many times
 }
@@ -81,6 +82,7 @@ function matches(r: Repeat, start: string, ymd: string): boolean {
 export function occursOn(start: string | null, r: Repeat | null | undefined, ymd: string): boolean {
   if (!start || !r || ymd < start) return false
   if (r.until && ymd > r.until) return false
+  if (r.exceptDates?.includes(ymd)) return false
   if (!matches(r, start, ymd)) return false
   if (r.count && r.count > 0) {
     const total = dayNum(ymd) - dayNum(start)
@@ -132,6 +134,7 @@ export function cleanRepeat(r: Repeat): Repeat {
     if (uniq(r.exceptWeekdays)) out.exceptWeekdays = uniq(r.exceptWeekdays)
     if (uniq(r.exceptWeeks)) out.exceptWeeks = uniq(r.exceptWeeks)
   }
+  if (r.exceptDates?.length) out.exceptDates = [...new Set(r.exceptDates)].sort()
   if (r.until) out.until = r.until
   else if (r.count && r.count > 0) out.count = Math.min(999, Math.floor(r.count))
   return out

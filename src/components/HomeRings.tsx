@@ -159,11 +159,11 @@ export function CaloriesCard({ anim }: { anim: Anim }) {
       <button className="card-tap" onClick={() => navigate('/meals')} aria-label="Open meals">
         <div className="card-head">
           <h3>Calories</h3>
-          <span className="plain-icon green">
+          <span className="plain-icon pink">
             <IconChefHatFilled size={24} />
           </span>
         </div>
-        <Ring pct={(kcal / target) * 100} color="var(--green)" value={meals ? String(round(kcal)) : '–'} label={meals ? 'Kcal' : 'no meals planned'} labelBelow />
+        <Ring pct={(kcal / target) * 100} color="var(--pink)" value={meals ? String(round(kcal)) : '–'} label={meals ? 'Kcal' : 'no meals planned'} labelBelow />
       </button>
     </section>
   )

@@ -7,6 +7,8 @@ import { startMealSync } from '../lib/meals'
 import { startSleepSync } from '../lib/sleep'
 import { startUniSync } from '../lib/uni'
 import { startHobbySync } from '../lib/hobbies'
+import { startGymSync } from '../lib/gym'
+import { startSkipSync } from '../lib/skips'
 
 // Keeps the home's uploaded icons and the look of Google events loaded and live (renders nothing).
 export default function IconSync() {
@@ -21,6 +23,8 @@ export default function IconSync() {
     const stopSleep = startSleepSync(householdId)
     const stopUni = startUniSync(householdId)
     const stopHobbies = startHobbySync(householdId)
+    const stopGym = startGymSync(householdId)
+    const stopSkips = startSkipSync(householdId)
     return () => {
       stopIcons()
       stopStyles()
@@ -29,6 +33,8 @@ export default function IconSync() {
       stopSleep()
       stopUni()
       stopHobbies()
+      stopGym()
+      stopSkips()
     }
   }, [householdId])
   return null

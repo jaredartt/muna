@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 import { liveTable } from './liveTable'
 import { syncTasksToGoogle } from './google'
 import { notifyTasksChanged } from './events'
+import { savePositions } from './order'
 import type { Block } from './uniPlan'
 import type { Task } from './types'
 
@@ -15,6 +16,7 @@ export type UniItem = {
   minutes: number
   done: boolean
   task_ids: string[] // the calendar tasks Muna made when she planned it
+  position: number // order inside its week (drag to change)
   created_at: string
 }
 
@@ -23,7 +25,7 @@ export type UniSetting = { id: string; household_id: string; user_id: string; cu
 const settings = liveTable<UniSetting>('uni_settings', 'muna.uniSettings.v1', (a, b) => a.user_id.localeCompare(b.user_id))
 export const useUniSettings = settings.use
 
-const store = liveTable<UniItem>('uni_items', 'muna.uni.v1', (a, b) => a.week - b.week || a.created_at.localeCompare(b.created_at))
+const store = liveTable<UniItem>('uni_items', 'muna.uni.v1', (a, b) => a.week - b.week || (a.position ?? 0) - (b.position ?? 0) || a.created_at.localeCompare(b.created_at))
 export const useUniItems = store.use
 export function startUniSync(householdId: string): () => void {
   const a = store.start(householdId)
@@ -231,3 +233,10 @@ export async function linkNewUniTask(
   const minutes = draft.start_time && draft.end_time ? Math.max(5, mins(draft.end_time) - mins(draft.start_time)) : 30
   await addUniItem(opts.householdId, opts.userId, opts.week, draft.title, minutes, [taskId])
 }
+
+/** Saves a new order of the items of one week. */
+export const reorderUniItems = (ids: string[]) =>
+  savePositions('uni_items', ids, (id, position) => {
+    const o = store.all().find((i) => i.id === id)
+    if (o) store.upsert({ ...o, position })
+  })

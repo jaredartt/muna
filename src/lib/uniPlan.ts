@@ -13,6 +13,7 @@ export type PlanInput = {
   today: string
   nowMin: number // minutes since midnight now (today is only planned after this)
   busy: (date: string) => Span[] // what is already in your day
+  skip?: string[] // days you do not want anything planned on
 }
 export type PlanResult = { blocks: Block[]; left: { itemId: string; title: string; minutes: number }[]; usedDays: number }
 
@@ -58,7 +59,7 @@ function freeSpans(date: string, i: PlanInput): Span[] {
 }
 
 export function planStudy(i: PlanInput): PlanResult {
-  const days = daysBetween(i.from, i.to)
+  const days = daysBetween(i.from, i.to).filter((d) => !i.skip?.includes(d))
   const free = new Map<string, Span[]>(days.map((d) => [d, freeSpans(d, i)]))
   const cap = (d: string) => (free.get(d) ?? []).reduce((a, f) => a + (f.end - f.start), 0)
   const remaining = i.items.filter((x) => x.minutes > 0).map((x) => ({ ...x, minutes: up(x.minutes), parts: [] as { date: string; start: number; end: number }[] }))

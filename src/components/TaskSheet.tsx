@@ -3,6 +3,7 @@ import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
 import { IconArrowBackUp, IconCheck, IconPlus, IconTrashFilled, IconX } from '@tabler/icons-react'
 import IconPicker from './IconPicker'
 import { useConfirm } from './Confirm'
+import { useReorder } from '../hooks/useReorder'
 import RepeatEditor from './RepeatEditor'
 import { cleanRepeat, firstOccurrence, type Repeat } from '../lib/recurrence'
 import { TASK_COLORS, TASK_ICONS } from '../lib/icons'
@@ -108,6 +109,14 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
     setItems(next)
     if (task) onChecklist?.(task.id, next)
   }
+  // press and hold a line to move it (ticked lines too)
+  const lines = useReorder({
+    columns: [items.map((i) => i.id)],
+    onChange: (cols) => {
+      const byId = new Map(items.map((i) => [i.id, i]))
+      changeItems(cols[0].map((id) => byId.get(id)!).filter(Boolean))
+    },
+  })
   function tick(i: number) {
     const it = items[i]
     const done = !it.done
@@ -317,9 +326,9 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
 
         <div className="field">
           <span>To-do list{items.length ? ` (${items.filter((i) => i.done).length}/${items.length})` : ''}</span>
-          <div className="cl">
+          <div className="cl" ref={lines.column(0)}>
             {items.map((it, i) => (
-              <div key={it.id} className={'cl-row' + (it.done ? ' done' : '')}>
+              <div key={it.id} className={'cl-row' + (it.done ? ' done' : '')} {...lines.item(it.id)}>
                 <button type="button" className={'check' + (it.done ? ' checked' : '')} onClick={() => tick(i)} aria-label={it.done ? 'Mark as not done' : 'Mark as done'} aria-pressed={it.done}>
                   {it.done && <IconCheck size={16} stroke={3} />}
                 </button>

@@ -48,7 +48,7 @@ export default function RepeatEditor({ value, onChange, date }: Props) {
   function chooseFreq(f: string) {
     if (!f) return onChange(null)
     const freq = f as Repeat['freq']
-    const next: Repeat = { freq, every: value?.every ?? 1, until: value?.until, count: value?.count }
+    const next: Repeat = { freq, every: value?.every ?? 1, until: value?.until, count: value?.count, exceptDates: value?.exceptDates }
     if (freq === 'week') next.weekdays = [startWeekday]
     if (freq === 'month') {
       if (monthMode === 'weekday') next.nth = { n: (Math.min(4, Math.ceil(startMonthDay / 7)) as 1 | 2 | 3 | 4), weekday: startWeekday }

@@ -1,9 +1,13 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { IconCalendarFilled } from '@tabler/icons-react'
 import { IconCheck, IconPlus } from '@tabler/icons-react'
 import Muna from '../components/Muna'
 import { CaloriesCard, SleepCard, UniCard } from '../components/HomeRings'
 import HobbiesCard from '../components/HobbiesCard'
+import GymCard from '../components/GymCard'
+import { useReorder } from '../hooks/useReorder'
+import { normalizeLayout, readLocalLayout, writeLocalLayout, type BlockId } from '../lib/homeLayout'
+import { supabase } from '../lib/supabase'
 import WeatherCard, { type Plan } from '../components/WeatherCard'
 import { TaskIcon } from '../lib/icons'
 import { eventStyleKey, isEventDone, toggleEventDone, useEventDone, useEventStyles } from '../lib/eventStyles'
@@ -55,7 +59,7 @@ export default function Home() {
     className: !playing ? '' : ready ? ' reveal in' : ' reveal pre',
     style: { '--d': `${n * 110}ms` } as CSSProperties,
   })
-  const r0 = reveal(0), r1 = reveal(1), r2 = reveal(2), r3 = reveal(3), r4 = reveal(4), r5 = reveal(5), r6 = reveal(6)
+  const r0 = reveal(0), r1 = reveal(1), r2 = reveal(2), r3 = reveal(3), r4 = reveal(4), r5 = reveal(5), r6 = reveal(6), r7 = reveal(7)
 
   const todays = occurrencesOn(today).sort((a, b) => Number(a.completed) - Number(b.completed) || (a.start_time ?? '99').localeCompare(b.start_time ?? '99'))
   const doneToday = todays.filter((t) => t.completed).length
@@ -82,6 +86,85 @@ export default function Home() {
   const shownEvents = todaysEvents.slice(0, Math.max(0, 4 - shown.length))
   const hiddenCount = todays.length - shown.length + (todaysEvents.length - shownEvents.length)
 
+  const blocks: Record<BlockId, ReactNode> = {
+    tasks: (
+            <section
+              className={"card tasks-card" + r1.className}
+              style={r1.style}
+              onClick={(ev) => {
+                // the empty parts of the block open the calendar; a task, the add button etc. keep doing their own thing
+                if (!(ev.target as HTMLElement).closest('button')) navigate('/calendar')
+              }}
+            >
+              <div className="card-head">
+                <h3>Today&rsquo;s tasks</h3>
+                <button className="plain-icon purple" onClick={() => navigate('/calendar')} aria-label="Open calendar">
+                  <IconCalendarFilled size={24} />
+                </button>
+              </div>
+              <div className="mini-list">
+                {loading && <p className="muted small">Loading…</p>}
+                {!loading && todays.length === 0 && todaysEvents.length === 0 && <p className="muted small">Nothing yet.</p>}
+                {shown.map((t) => (
+                  <div key={t.id} className={'mini-task' + (t.completed ? ' done' : '')}>
+                    <button className={`tile c-${t.color}`} onClick={() => toggleTask(t)} aria-label={t.completed ? 'Mark as not done' : 'Mark as done'}>
+                      {t.completed ? <IconCheck size={18} stroke={2.6} /> : <TaskIcon name={t.icon} size={18} />}
+                    </button>
+                    <button className="mini-title" onClick={() => openEditor(t)}>
+                      {t.title}
+                    </button>
+                  </div>
+                ))}
+                {shownEvents.map((e) => {
+                  const st = eventStyles[eventStyleKey(e)]
+                  const isDone = isEventDone(eventDone, e)
+                  return (
+                    <div key={e.id} className={'mini-task' + (isDone ? ' done' : '')}>
+                      <button className={`tile c-${st?.color ?? 'sky'}`} onClick={() => void toggleEventDone(e)} aria-label={isDone ? 'Mark as not done' : 'Mark as done'}>
+                        {isDone ? <IconCheck size={18} stroke={2.6} /> : <TaskIcon name={st?.icon || 'IconCalendarEventFilled'} size={18} />}
+                      </button>
+                      <button className="mini-title" onClick={() => openEvent(e)}>
+                        {e.title}
+                        <small className="muted"> {eventTimeLabel(e)}</small>
+                      </button>
+                    </div>
+                  )
+                })}
+                {hiddenCount > 0 && (
+                  <button className="more" onClick={() => navigate('/calendar')} aria-label="See all tasks">
+                    &hellip;
+                  </button>
+                )}
+              </div>
+              <button className="add-pill" onClick={() => openEditor({ date: today })}>
+                <IconPlus size={16} stroke={2.4} /> Add task
+              </button>
+            </section>
+    ),
+    sleep: <SleepCard anim={r3} />,
+    hobbies: <HobbiesCard anim={r4} />,
+    uni: <UniCard anim={r2} />,
+    gym: <GymCard anim={r5} />,
+    calories: <CaloriesCard anim={r6} />,
+  }
+
+  // blocks can be dragged (press and hold) to another place; the layout is saved on your profile
+  const [layout, setLayout] = useState<BlockId[][]>(() => normalizeLayout(profile?.home_layout ?? readLocalLayout()))
+  const savedKey = JSON.stringify(profile?.home_layout ?? null)
+  useEffect(() => {
+    if (profile?.home_layout) setLayout(normalizeLayout(profile.home_layout))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedKey])
+  const rd = useReorder({
+    columns: layout,
+    onChange: (next) => {
+      const l = normalizeLayout(next)
+      setLayout(l)
+      writeLocalLayout(l)
+      if (profile) void supabase.from('profiles').update({ home_layout: l }).eq('id', profile.id)
+    },
+  })
+
   return (
     <div className="page home">
       <button className={"hero" + r0.className} style={r0.style} onClick={() => navigate('/chat')} aria-label="Chat with Muna">
@@ -92,70 +175,30 @@ export default function Home() {
       </button>
 
       <div className="masonry">
-        <div className="col">
-          <section
-            className={"card tasks-card" + r1.className}
-            style={r1.style}
-            onClick={(ev) => {
-              // the empty parts of the block open the calendar; a task, the add button etc. keep doing their own thing
-              if (!(ev.target as HTMLElement).closest('button')) navigate('/calendar')
-            }}
-          >
-            <div className="card-head">
-              <h3>Today&rsquo;s tasks</h3>
-              <button className="plain-icon purple" onClick={() => navigate('/calendar')} aria-label="Open calendar">
-                <IconCalendarFilled size={24} />
-              </button>
-            </div>
-            <div className="mini-list">
-              {loading && <p className="muted small">Loading…</p>}
-              {!loading && todays.length === 0 && todaysEvents.length === 0 && <p className="muted small">Nothing yet.</p>}
-              {shown.map((t) => (
-                <div key={t.id} className={'mini-task' + (t.completed ? ' done' : '')}>
-                  <button className={`tile c-${t.color}`} onClick={() => toggleTask(t)} aria-label={t.completed ? 'Mark as not done' : 'Mark as done'}>
-                    {t.completed ? <IconCheck size={18} stroke={2.6} /> : <TaskIcon name={t.icon} size={18} />}
-                  </button>
-                  <button className="mini-title" onClick={() => openEditor(t)}>
-                    {t.title}
-                  </button>
-                </div>
-              ))}
-              {shownEvents.map((e) => {
-                const st = eventStyles[eventStyleKey(e)]
-                const isDone = isEventDone(eventDone, e)
-                return (
-                  <div key={e.id} className={'mini-task' + (isDone ? ' done' : '')}>
-                    <button className={`tile c-${st?.color ?? 'sky'}`} onClick={() => void toggleEventDone(e)} aria-label={isDone ? 'Mark as not done' : 'Mark as done'}>
-                      {isDone ? <IconCheck size={18} stroke={2.6} /> : <TaskIcon name={st?.icon || 'IconCalendarEventFilled'} size={18} />}
-                    </button>
-                    <button className="mini-title" onClick={() => openEvent(e)}>
-                      {e.title}
-                      <small className="muted"> {eventTimeLabel(e)}</small>
-                    </button>
-                  </div>
-                )
-              })}
-              {hiddenCount > 0 && (
-                <button className="more" onClick={() => navigate('/calendar')} aria-label="See all tasks">
-                  &hellip;
-                </button>
-              )}
-            </div>
-            <button className="add-pill" onClick={() => openEditor({ date: today })}>
-              <IconPlus size={16} stroke={2.4} /> Add task
-            </button>
-          </section>
-          <SleepCard anim={r3} />
-          <HobbiesCard anim={r4} />
-        </div>
-        <div className="col">
-          <UniCard anim={r2} />
-          <section className={'card wx-card wx-half' + r5.className} style={r5.style}>
-            <WeatherCard plans={plans} />
-          </section>
-          <CaloriesCard anim={r6} />
-        </div>
+        {layout.map((col, ci) => (
+          <div key={ci} className="col" ref={rd.column(ci)}>
+            {col.map((id) => (
+              <div key={id} {...rd.item(id)}>
+                {blocks[id]}
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
+
+      <section
+        className={'card wx-card wx-wide wx-link' + r7.className}
+        style={r7.style}
+        onClick={() => navigate('/weather')}
+        role="link"
+        tabIndex={0}
+        aria-label="Open the weather"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') navigate('/weather')
+        }}
+      >
+        <WeatherCard plans={plans} />
+      </section>
     </div>
   )
 }
