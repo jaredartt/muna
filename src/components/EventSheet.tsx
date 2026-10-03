@@ -7,6 +7,7 @@ import IconPicker from './IconPicker'
 import { TASK_COLORS, TASK_ICONS } from '../lib/icons'
 import { eventStyleKey, saveEventStyle, useEventStyles } from '../lib/eventStyles'
 import { deleteGoogleEvent, updateGoogleEvent, type EventScope, type GoogleEvent } from '../lib/google'
+import { useConfirm } from './Confirm'
 
 const hm = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`
 
@@ -35,7 +36,7 @@ export default function EventSheet({ event, onDone, onClose }: Props) {
   const [end, setEnd] = useState(event.all_day ? '10:00' : hm(new Date(event.end)))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [confirmDelete, setConfirmDelete] = useState(false)
+  const { confirm, choose } = useConfirm()
   const [scope, setScope] = useState<EventScope>('all')
   const series = Boolean(event.recurring) && scope === 'all' // changing every repeat: the days stay as they are
 
@@ -180,26 +181,24 @@ export default function EventSheet({ event, onDone, onClose }: Props) {
         {error && <p className="notice">{error}</p>}
 
         <div className="sheet-actions">
-          {confirmDelete ? (
-            event.recurring ? (
-              <div className="delete-choice">
-                <button className="btn danger" onClick={() => remove('one')} disabled={busy}>
-                  <IconTrashFilled size={18} /> Only this day
-                </button>
-                <button className="btn danger" onClick={() => remove('all')} disabled={busy}>
-                  <IconTrashFilled size={18} /> All repeats
-                </button>
-              </div>
-            ) : (
-              <button className="btn danger" onClick={() => remove('one')} disabled={busy}>
-                <IconTrashFilled size={18} /> Really delete?
-              </button>
-            )
-          ) : (
-            <button className="btn danger" onClick={() => setConfirmDelete(true)} disabled={busy}>
-              <IconTrashFilled size={18} /> Delete
-            </button>
-          )}
+          <button
+            className="btn danger"
+            onClick={async () => {
+              if (event.recurring) {
+                const v = await choose({
+                  message: <>Delete <strong>{event.title}</strong>? It repeats.</>,
+                  buttons: [
+                    { label: 'Only this day', value: 'one', tone: 'danger' },
+                    { label: 'All repeats', value: 'all', tone: 'danger' },
+                  ],
+                })
+                if (v === 'one' || v === 'all') void remove(v)
+              } else if (await confirm({ message: <>Delete <strong>{event.title}</strong>?</> })) void remove('one')
+            }}
+            disabled={busy}
+          >
+            <IconTrashFilled size={18} /> Delete
+          </button>
           <button className="btn primary grow" onClick={save} disabled={!title.trim() || busy}>
             {busy ? 'Saving…' : 'Save'}
           </button>

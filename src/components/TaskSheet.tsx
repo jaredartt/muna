@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
 import { IconArrowBackUp, IconCheck, IconPlus, IconTrashFilled, IconX } from '@tabler/icons-react'
 import IconPicker from './IconPicker'
+import { useConfirm } from './Confirm'
 import RepeatEditor from './RepeatEditor'
 import { cleanRepeat, firstOccurrence, type Repeat } from '../lib/recurrence'
 import { TASK_COLORS, TASK_ICONS } from '../lib/icons'
@@ -37,6 +38,7 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
   const { members, session, profile } = useAuth()
+  const { confirm } = useConfirm()
   const [title, setTitle] = useState(task?.title ?? '')
   const [notes, setNotes] = useState(task?.notes ?? '')
   const [date, setDate] = useState(task ? task.due_date ?? '' : defaultDate ?? '')
@@ -309,7 +311,16 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
 
         <div className="sheet-actions">
           {task && onDelete && (
-            <button className="btn danger" onClick={() => onDelete(task.id)}>
+            <button
+              className="btn danger"
+              onClick={async () => {
+                const ok = await confirm({
+                  message: task.repeat ? <>Delete <strong>{task.title}</strong> and all its repeats?</> : <>Delete <strong>{task.title}</strong>?</>,
+                  confirmLabel: task.repeat ? 'Delete all' : 'Delete',
+                })
+                if (ok) void onDelete(task.id)
+              }}
+            >
               <IconTrashFilled size={18} /> {task.repeat ? 'Delete all' : 'Delete'}
             </button>
           )}

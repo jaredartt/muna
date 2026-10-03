@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { IconBarcode, IconChevronDown, IconMinus, IconPlus, IconSearch, IconTrashFilled } from '@tabler/icons-react'
 import { useAuth } from '../context/AuthContext'
+import { useConfirm } from '../components/Confirm'
 import { navigate } from '../lib/router'
 import ShoppingSuggestion from '../components/ShoppingSuggestion'
 import { formatDateNice, todayStr } from '../lib/dates'
@@ -20,7 +21,7 @@ const isFood = (p: Product) => p.kcal_100 != null
 function Item({ householdId, row, product, log }: { householdId: string; row: PantryRow; product: Product; log: PantryLog[] }) {
   const [pct, setPct] = useState(row.pct_left)
   const [open, setOpen] = useState(false) // the details under the name (when it was bought)
-  const [confirmDel, setConfirmDel] = useState(false)
+  const { confirm } = useConfirm()
   const timer = useRef<number | undefined>(undefined)
   useEffect(() => setPct(row.pct_left), [row.pct_left, row.packs])
   useEffect(() => () => window.clearTimeout(timer.current), [])
@@ -46,26 +47,12 @@ function Item({ householdId, row, product, log }: { householdId: string; row: Pa
           </strong>
           <span className="muted small">{[product.nickname ? `“${product.nickname}”` : '', product.brand, product.pack_size, again ? '' : 'One-time purchase'].filter(Boolean).join(' · ') || 'No brand'}</span>
         </button>
-        <button className="icon-btn" onClick={() => setConfirmDel(true)} aria-label={`Remove ${product.name} from the house`}>
+        <button className="icon-btn" onClick={async () => {
+            if (await confirm({ message: <>Remove <strong>{product.name}</strong> from the house?</>, confirmLabel: 'Remove' })) void removeFromPantry(row.product_id)
+          }} aria-label={`Remove ${product.name} from the house`}>
           <IconTrashFilled size={18} />
         </button>
       </div>
-
-      {confirmDel && (
-        <div className="pt-confirm" role="alertdialog" aria-label={`Remove ${product.name}?`}>
-          <span>
-            Remove <strong>{product.name}</strong> from the house?
-          </span>
-          <span className="pt-confirm-btns">
-            <button type="button" className="ml-toggle" onClick={() => setConfirmDel(false)}>
-              Keep it
-            </button>
-            <button type="button" className="ml-toggle danger" onClick={() => void removeFromPantry(row.product_id)}>
-              Yes, remove
-            </button>
-          </span>
-        </div>
-      )}
 
       {open && (
         <div className="pt-details">

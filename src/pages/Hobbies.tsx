@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { IconChevronLeft, IconPlus, IconSparkles, IconTrashFilled, IconX } from '@tabler/icons-react'
 import { useAuth } from '../context/AuthContext'
+import { useConfirm } from '../components/Confirm'
 import { useTasksCtx } from '../context/TasksContext'
 import IconPicker from '../components/IconPicker'
 import { dayWord } from '../components/HobbiesCard'
@@ -125,7 +126,7 @@ function HobbySheet({ hobby, onClose }: { hobby: Hobby | null; onClose: () => vo
   const isNew = !hobby
   const [d, setD] = useState<HobbyDraft>(() => (hobby ? { name: hobby.name, description: hobby.description, icon: hobby.icon, color: hobby.color, minutes: hobby.minutes, per_week: hobby.per_week, days: hobby.days, time_of_day: hobby.time_of_day, active: hobby.active } : emptyHobby()))
   const [hours, setHours] = useState(hoursText(d.minutes))
-  const [confirm, setConfirm] = useState(false)
+  const { confirm: confirmAsk } = useConfirm()
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [status, setStatus] = useState('')
@@ -259,33 +260,19 @@ function HobbySheet({ hobby, onClose }: { hobby: Hobby | null; onClose: () => vo
             </button>
           </div>
         )}
-        {hobby && !confirm && (
-          <button className="btn danger" onClick={() => setConfirm(true)}>
+        {hobby && (
+          <button
+            className="btn danger"
+            onClick={async () => {
+              const ok = await confirmAsk({ message: <>Delete <strong>{hobby.name}</strong> and its coming times in your calendar?</> })
+              if (!ok) return
+              dirty.current = false
+              await deleteHobby(hobby, tasks, deleteTask, todayStr())
+              onClose()
+            }}
+          >
             <IconTrashFilled size={18} /> Delete hobby
           </button>
-        )}
-        {hobby && confirm && (
-          <div className="pt-confirm" role="alertdialog">
-            <span>
-              Delete <strong>{hobby.name}</strong> and its coming times in your calendar?
-            </span>
-            <span className="pt-confirm-btns">
-              <button type="button" className="ml-toggle" onClick={() => setConfirm(false)}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="ml-toggle danger"
-                onClick={async () => {
-                  dirty.current = false
-                  await deleteHobby(hobby, tasks, deleteTask, todayStr())
-                  onClose()
-                }}
-              >
-                Delete
-              </button>
-            </span>
-          </div>
         )}
       </div>
     </div>

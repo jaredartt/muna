@@ -5,6 +5,7 @@ import { deleteRecipe, first, inStock, missingIngredients, recipeMacros, round, 
 import { todayStr } from '../lib/dates'
 import { matchesProduct, type Product } from '../lib/products'
 import type { Member } from '../lib/types'
+import { useConfirm } from './Confirm'
 
 type Props = {
   householdId: string
@@ -42,7 +43,7 @@ export default function RecipeSheet({ householdId, recipe, members, productList,
   const [q, setQ] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [confirmDel, setConfirmDel] = useState(false)
+  const { confirm } = useConfirm()
   const [planDate, setPlanDate] = useState(defaultDate || todayStr())
   const [planSlot, setPlanSlot] = useState<Slot>(recipe?.slots[0] ?? 'dinner')
 
@@ -101,7 +102,7 @@ export default function RecipeSheet({ householdId, recipe, members, productList,
   }
   async function remove() {
     if (!recipe) return
-    if (!confirmDel) return setConfirmDel(true)
+    if (!(await confirm({ message: <>Delete <strong>{recipe.name}</strong>?</> }))) return
     setBusy(true)
     const ok = await deleteRecipe(recipe.id)
     setBusy(false)
@@ -290,7 +291,7 @@ export default function RecipeSheet({ householdId, recipe, members, productList,
             <div className="sheet-actions">
               {recipe && (
                 <button className="btn danger" onClick={remove} disabled={busy}>
-                  <IconTrashFilled size={18} /> {confirmDel ? 'Tap again to delete' : 'Delete'}
+                  <IconTrashFilled size={18} /> Delete
                 </button>
               )}
               <button className="btn primary grow" onClick={save} disabled={busy}>

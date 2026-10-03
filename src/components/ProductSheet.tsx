@@ -4,6 +4,7 @@ import BarcodeScanner from './BarcodeScanner'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
 import { removeProductImage, uploadProductImage } from '../lib/productImage'
 import { deleteProduct, saveProduct, type Edc, type Product, type ProductDraft, type Tri } from '../lib/products'
+import { useConfirm } from './Confirm'
 
 type Props = {
   householdId: string
@@ -47,6 +48,7 @@ const toNum = (s: string): number | null | 'bad' => {
 
 /** Check and fix the details of one product, then save it to the home's list. */
 export default function ProductSheet({ householdId, initial, id, note, onSaved, onClose }: Props) {
+  const { confirm } = useConfirm()
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
   const [name, setName] = useState(initial.name)
@@ -137,6 +139,7 @@ export default function ProductSheet({ householdId, initial, id, note, onSaved, 
 
   async function remove() {
     if (!id) return
+    if (!(await confirm({ message: <>Delete this product? It is removed from your list and from the house.</> }))) return
     setBusy(true)
     const ok = await deleteProduct(id)
     setBusy(false)

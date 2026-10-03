@@ -4,11 +4,13 @@ import { AppIcon } from '../lib/icons'
 import { addCustomIcon, deleteCustomIcon, useCustomIcons } from '../lib/customIcons'
 import { parseSvgIcon } from '../lib/svgIcons'
 import { useAuth } from '../context/AuthContext'
+import { useConfirm } from './Confirm'
 
 const MAX_ICONS = 300
 
 // Profile card: upload your own SVG icons. They are shared with everyone in the home, live.
 export default function MyIcons({ colorClass }: { colorClass: string }) {
+  const { confirm } = useConfirm()
   const { profile } = useAuth()
   const icons = useCustomIcons()
   const input = useRef<HTMLInputElement>(null)
@@ -44,6 +46,7 @@ export default function MyIcons({ colorClass }: { colorClass: string }) {
 
   async function remove() {
     if (!chosen) return
+    if (!(await confirm({ message: <>Remove the icon <strong>{chosen.name}</strong>?</>, confirmLabel: 'Remove' }))) return
     const ok = await deleteCustomIcon(chosen.id)
     setMsg(ok ? `Removed “${chosen.name}”.` : 'Could not remove it.')
     setSel(null)

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { IconChefHatFilled, IconCheck, IconMoonFilled, IconSchool, IconStarFilled, IconTrashFilled, IconX } from '@tabler/icons-react'
 import Ring from './Ring'
+import { useConfirm } from './Confirm'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
 import { useAuth } from '../context/AuthContext'
 import { useTasksCtx } from '../context/TasksContext'
@@ -40,6 +41,7 @@ export function SleepCard({ anim }: { anim: Anim }) {
 }
 
 function SleepSheet({ onClose }: { onClose: () => void }) {
+  const { confirm } = useConfirm()
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
   const { session, profile } = useAuth()
@@ -75,6 +77,7 @@ function SleepSheet({ onClose }: { onClose: () => void }) {
   }
   async function remove() {
     if (!existing) return
+    if (!(await confirm({ message: <>Remove your sleep for {formatDateNice(day)}?</>, confirmLabel: 'Remove' }))) return
     setBusy(true)
     const e = await deleteSleep(existing.id)
     setBusy(false)

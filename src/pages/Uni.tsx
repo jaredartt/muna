@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { IconCheck, IconChevronDown, IconChevronLeft, IconPlus, IconSparkles, IconTrashFilled, IconX } from '@tabler/icons-react'
 import { useAuth } from '../context/AuthContext'
+import { useConfirm } from '../components/Confirm'
 import { useTasksCtx } from '../context/TasksContext'
 import { useGoogleEvents } from '../hooks/useGoogleEvents'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
@@ -154,8 +155,8 @@ export default function Uni() {
 
 function Row({ item, today }: { item: UniItem; today: string }) {
   const { tasks, toggleTask, deleteTask } = useTasksCtx()
+  const { confirm } = useConfirm()
   const [open, setOpen] = useState(false)
-  const [confirm, setConfirm] = useState(false)
   const [title, setTitle] = useState(item.title)
   const [hours, setHours] = useState(hoursText(item.minutes))
   const [wk, setWk] = useState(String(item.week))
@@ -234,39 +235,25 @@ function Row({ item, today }: { item: UniItem; today: string }) {
               type="button"
               className="ml-toggle"
               onClick={async () => {
-                await unplanItem(item, { tasks, deleteTask }, today)
+                const ok = await confirm({ message: <>Take <strong>{item.title}</strong> off your calendar? The item stays in your list.</>, confirmLabel: 'Take off' })
+                if (ok) await unplanItem(item, { tasks, deleteTask }, today)
               }}
             >
               Take it off my calendar
             </button>
           )}
-          {!confirm ? (
-            <button type="button" className="ml-toggle" onClick={() => setConfirm(true)}>
-              <IconTrashFilled size={14} /> Delete
-            </button>
-          ) : (
-            <div className="pt-confirm" role="alertdialog">
-              <span>
-                Delete <strong>{item.title}</strong>
-                {st.linked.some((t) => !t.completed) ? ' and its blocks in your calendar' : ''}?
-              </span>
-              <span className="pt-confirm-btns">
-                <button type="button" className="ml-toggle" onClick={() => setConfirm(false)}>
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="ml-toggle danger"
-                  onClick={async () => {
-                    await unplanItem(item, { tasks, deleteTask }, today)
-                    await deleteUniItem(item.id)
-                  }}
-                >
-                  Delete
-                </button>
-              </span>
-            </div>
-          )}
+          <button
+            type="button"
+            className="ml-toggle"
+            onClick={async () => {
+              const ok = await confirm({ message: <>Delete <strong>{item.title}</strong>{st.linked.some((t) => !t.completed) ? ' and its blocks in your calendar' : ''}?</> })
+              if (!ok) return
+              await unplanItem(item, { tasks, deleteTask }, today)
+              await deleteUniItem(item.id)
+            }}
+          >
+            <IconTrashFilled size={14} /> Delete
+          </button>
         </div>
       )}
     </div>

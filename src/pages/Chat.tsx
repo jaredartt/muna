@@ -9,6 +9,7 @@ import { notifyTasksChanged } from '../lib/events'
 import { WavRecorder } from '../lib/recorder'
 import { timeAgo, useLastChange } from '../lib/munaUndo'
 import type { ChatMessage } from '../lib/types'
+import { useConfirm } from '../components/Confirm'
 
 const SUGGESTIONS = ['What do we have planned this week?', 'Add "buy groceries" for tomorrow', 'Plan a cozy Sunday for us']
 const MAX_RECORD_SECONDS = 60
@@ -88,6 +89,7 @@ export default function Chat() {
   const [voiceReplies, setVoiceReplies] = useState(loadVoicePref)
   const { change: lastChange, refresh: refreshLastChange } = useLastChange(session?.user.id)
   const [undoing, setUndoing] = useState(false)
+  const { confirm } = useConfirm()
   const justLoaded = useRef(Boolean(cached)) // true right after the history is fetched: jump to the end instantly, like WhatsApp
   const recRef = useRef<WavRecorder | null>(null)
   const timerRef = useRef<number | null>(null)
@@ -290,6 +292,8 @@ export default function Chat() {
   /** Puts back what Muna changed last (a new change replaces it, so only ever the last one). Does not use Gemini, and is not read aloud. */
   async function undoLast() {
     if (undoing || busyRef.current) return
+    const ok = await confirm({ title: 'Undo Muna\'s last change?', message: lastChange ? <>{lastChange.summary}</> : 'Her last change will be put back.', confirmLabel: 'Undo', tone: 'primary' })
+    if (!ok) return
     setUndoing(true)
     setError('')
     const { data, error: err } = await supabase.functions.invoke('muna-chat', { body: { undo: true, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone } })

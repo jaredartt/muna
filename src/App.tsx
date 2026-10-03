@@ -1,5 +1,6 @@
 import { useLayoutEffect } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { ConfirmProvider } from './components/Confirm'
 import { TasksProvider } from './context/TasksContext'
 import BottomNav from './components/BottomNav'
 import Muna from './components/Muna'
@@ -82,7 +83,9 @@ function Shell() {
 export default function App() {
   return (
     <AuthProvider>
-      <Shell />
+      <ConfirmProvider>
+        <Shell />
+      </ConfirmProvider>
     </AuthProvider>
   )
 }
