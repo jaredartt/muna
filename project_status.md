@@ -400,3 +400,4 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 - Uni: changing the start/end time of a linked calendar block updates uni_items.minutes (syncUniMinutes in uni.ts, called from useTasks.updateTask) = sum of all its blocks. Event-driven only (not on realtime changes from another device).
 - Uni done: with linked calendar blocks, done = all blocks ticked (item.done only used when no blocks). Fixes stale item.done after unticking in the calendar.
 - Uni remembers last course + week per person in localStorage (muna.uniView.v1.<uid>), on that device only.
+- Calendar undo/redo (3 steps, in memory): history lives in useTasks (record/batch/undo/redo; ops upd/add/del/occ, edits to the same task within 8s merge). Buttons in CalendarPage (.undo-redo, above the nav pill). Google events and anything written directly with supabase (Muna chat, planners) are not recorded. Not tested on a device.

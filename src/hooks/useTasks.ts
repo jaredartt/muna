@@ -8,6 +8,16 @@ import { addDays } from '../lib/dates'
 import { syncUniMinutes } from '../lib/uni'
 import type { Occurrence, Task, TaskDraft } from '../lib/types'
 
+// Undo / redo of the last few changes to tasks (kept in memory, up to 3). One entry = one thing you did (it can hold several steps).
+type Op =
+  | { k: 'upd'; id: string; before: Partial<Task>; after: Partial<Task> }
+  | { k: 'add'; task: Task }
+  | { k: 'del'; task: Task }
+  | { k: 'occ'; series: Task; date: string; now: boolean }
+type Entry = { ops: Op[]; at: number }
+const HISTORY_MAX = 3
+const MERGE_MS = 8000 // edits to the same task in quick succession (typing in the sheet) count as one; moving a task never merges
+
 const CACHE = 'muna.tasksCache.v1'
 type TaskCache = { hid: string; tasks: Task[]; done: string[] }
 function readCache(hid: string | undefined): TaskCache | null {
@@ -30,6 +40,32 @@ export function useTasks() {
   const [completions, setCompletions] = useState<Set<string>>(new Set(first?.done ?? [])) // "taskId|YYYY-MM-DD": ticked days of repeating tasks
   const tasksRef = useRef<Task[]>([])
   tasksRef.current = tasks
+
+  // ---- undo / redo ----
+  const past = useRef<Entry[]>([])
+  const future = useRef<Entry[]>([])
+  const group = useRef<Op[] | null>(null) // while set, steps are collected into one entry
+  const replaying = useRef(false) // true while undoing / redoing (those steps are not recorded again)
+  const [, setHv] = useState(0)
+  const record = useCallback((op: Op) => {
+    if (replaying.current) return
+    if (group.current) {
+      group.current.push(op)
+      return
+    }
+    const last = past.current[past.current.length - 1]
+    const now = Date.now()
+    if (op.k === 'upd' && !('start_time' in op.after || 'due_date' in op.after) && last && last.ops.length === 1 && last.ops[0].k === 'upd' && (last.ops[0] as Extract<Op, { k: "upd" }>).id === op.id && now - last.at < MERGE_MS) {
+      const o = last.ops[0] as Extract<Op, { k: 'upd' }>
+      o.before = { ...op.before, ...o.before }
+      o.after = { ...o.after, ...op.after }
+      last.at = now
+    } else {
+      past.current = [...past.current, { ops: [op], at: now }].slice(-HISTORY_MAX)
+    }
+    future.current = []
+    setHv((n) => n + 1)
+  }, [])
 
   const reload = useCallback(async () => {
     if (!householdId) return
@@ -83,29 +119,36 @@ export function useTasks() {
   const addTask = useCallback(
     async (draft: TaskDraft, after?: (id: string) => Promise<void>) => {
       if (!householdId) return null
-      const { data, error } = await supabase.from('tasks').insert({ ...draft, household_id: householdId }).select('id').single()
+      const { data, error } = await supabase.from('tasks').insert({ ...draft, household_id: householdId }).select('*').single()
       if (error) return error.message
+      if (data) record({ k: 'add', task: data as Task })
       if (data?.id && after) await after(data.id as string)
       await reload()
       if (data?.id) mirror([data.id as string])
       return null
     },
-    [householdId, reload, mirror],
+    [householdId, reload, mirror, record],
   )
 
   const updateTask = useCallback(
     async (id: string, patch: Partial<Task>) => {
+      const old = tasksRef.current.find((t) => t.id === id)
       setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)))
       const { error } = await supabase.from('tasks').update(patch).eq('id', id)
       if (error) await reload()
       else {
+        if (old) {
+          const before: Record<string, unknown> = {}
+          for (const k of Object.keys(patch)) before[k] = (old as Record<string, unknown>)[k] ?? null
+          record({ k: 'upd', id, before: before as Partial<Task>, after: patch })
+        }
         mirror([id])
         // a Uni block got a new time: its assignment in Uni takes the new duration
         if ('start_time' in patch || 'end_time' in patch) void syncUniMinutes(id, tasksRef.current.map((t) => (t.id === id ? { ...t, ...patch } : t)))
       }
       return error?.message ?? null
     },
-    [reload, mirror],
+    [reload, mirror, record],
   )
 
   // Repeating tasks: every day has its own tick.
@@ -122,8 +165,9 @@ export function useTasks() {
         ? await supabase.from('task_completions').upsert({ task_id: series.id, occ_date: date, household_id: series.household_id })
         : await supabase.from('task_completions').delete().eq('task_id', series.id).eq('occ_date', date)
       if (error) await reload()
+      else record({ k: 'occ', series, date, now: nowDone })
     },
-    [reload],
+    [reload, record],
   )
 
   const toggleTask = useCallback(
@@ -173,11 +217,79 @@ export function useTasks() {
       setTasks((prev) => prev.filter((t) => t.id !== id))
       const { error } = await supabase.from('tasks').delete().eq('id', id)
       if (error) await reload()
-      else if (old?.google_event_id && old.google_owner) mirror([], [{ event_id: old.google_event_id, owner: old.google_owner }])
+      else {
+        if (old) record({ k: 'del', task: old })
+        if (old?.google_event_id && old.google_owner) mirror([], [{ event_id: old.google_event_id, owner: old.google_owner }])
+      }
       return error?.message ?? null
+    },
+    [reload, mirror, record],
+  )
+
+  // Puts a deleted task back (same id; its Google event is made again).
+  const reinsert = useCallback(
+    async (task: Task) => {
+      const { error } = await supabase.from('tasks').insert({ ...task, google_event_id: null, google_owner: null })
+      if (error) return error.message
+      await reload()
+      mirror([task.id])
+      return null
     },
     [reload, mirror],
   )
 
-  return { tasks, loading, reload, addTask, updateTask, toggleTask, deleteTask, occurrencesOn, occurrenceMap }
+  /** Everything done inside `fn` becomes ONE undo step (for example moving a single repeat day: a new task plus a change of the series). */
+  const batch = useCallback(async (fn: () => Promise<void>) => {
+    group.current = []
+    try {
+      await fn()
+    } finally {
+      const ops = group.current ?? []
+      group.current = null
+      if (ops.length) {
+        past.current = [...past.current, { ops, at: Date.now() }].slice(-HISTORY_MAX)
+        future.current = []
+        setHv((n) => n + 1)
+      }
+    }
+  }, [])
+
+  const run = useCallback(
+    async (ops: Op[], forward: boolean): Promise<string | null> => {
+      replaying.current = true
+      let err: string | null = null
+      try {
+        for (const op of forward ? ops : [...ops].reverse()) {
+          if (op.k === 'upd') err = (await updateTask(op.id, forward ? op.after : op.before)) ?? err
+          else if (op.k === 'occ') await toggleOccurrence(op.series, op.date, forward ? op.now : !op.now)
+          else if ((op.k === 'add') === forward) err = (await reinsert(op.task)) ?? err
+          else err = (await deleteTask(op.task.id)) ?? err
+        }
+      } finally {
+        replaying.current = false
+      }
+      return err
+    },
+    [updateTask, toggleOccurrence, reinsert, deleteTask],
+  )
+
+  /** Takes back the last change. Returns an error text, or null. */
+  const undo = useCallback(async () => {
+    const e = past.current[past.current.length - 1]
+    if (!e) return null
+    past.current = past.current.slice(0, -1)
+    future.current = [...future.current, e]
+    setHv((n) => n + 1)
+    return run(e.ops, false)
+  }, [run])
+  const redo = useCallback(async () => {
+    const e = future.current[future.current.length - 1]
+    if (!e) return null
+    future.current = future.current.slice(0, -1)
+    past.current = [...past.current, e].slice(-HISTORY_MAX)
+    setHv((n) => n + 1)
+    return run(e.ops, true)
+  }, [run])
+
+  return { tasks, loading, reload, addTask, updateTask, toggleTask, deleteTask, occurrencesOn, occurrenceMap, undo, redo, batch, canUndo: past.current.length > 0, canRedo: future.current.length > 0 }
 }

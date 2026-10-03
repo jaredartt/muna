@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
+import { IconArrowBackUp, IconArrowForwardUp, IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
 import DayView from '../components/DayView'
 import WeekView from '../components/WeekView'
 import { useTasksCtx } from '../context/TasksContext'
@@ -27,7 +27,7 @@ const minutesOf = (d: Date) => d.getHours() * 60 + d.getMinutes()
 const monthName = (d: string) => parseDateStr(d).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
 
 export default function CalendarPage() {
-  const { toggleTask, updateTask, addTask, openEditor, openEvent, occurrencesOn, occurrenceMap } = useTasksCtx()
+  const { toggleTask, updateTask, addTask, undo, redo, batch, canUndo, canRedo, openEditor, openEvent, occurrencesOn, occurrenceMap } = useTasksCtx()
   const { googleConnected, members } = useAuth()
   const { choose } = useConfirm()
   const styles = useEventStyles()
@@ -132,6 +132,7 @@ export default function CalendarPage() {
         if (answer === 'one') {
           const s = t.series
           // this day becomes its own one-off task at the new time, and the series skips the day
+          await batch(async () => {
           const e1 = await addTask({
             title: s.title,
             notes: s.notes,
@@ -150,6 +151,7 @@ export default function CalendarPage() {
           if (e1) return void setNote('Could not move that task. Try again.')
           const e2 = await updateTask(s.id, { repeat: { ...s.repeat!, exceptDates: [...(s.repeat!.exceptDates ?? []), selected] } })
           if (e2) setNote('Could not move that task. Try again.')
+          })
           return
         }
       }
@@ -246,6 +248,14 @@ export default function CalendarPage() {
         </button>
       )}
       {note && <p className="notice">{note}</p>}
+      <div className="undo-redo" role="group" aria-label="Undo and redo">
+        <button type="button" disabled={!canUndo} onClick={async () => setNote((await undo()) ? 'Could not undo that. Try again.' : '')} aria-label="Undo">
+          <IconArrowBackUp size={22} stroke={2.4} />
+        </button>
+        <button type="button" disabled={!canRedo} onClick={async () => setNote((await redo()) ? 'Could not redo that. Try again.' : '')} aria-label="Redo">
+          <IconArrowForwardUp size={22} stroke={2.4} />
+        </button>
+      </div>
 
       {mode === 'day' && <DayView key="day" label={dayLabel} isToday={selected === today} items={dayItems} onMove={onMove} onAdd={() => openEditor({ date: selected })} onCreate={(startMin, endMin) => openEditor(startMin == null ? { date: selected } : { date: selected, start: fmtMin(startMin), end: fmtMin(Math.min(1439, endMin)) })} />}
       {mode === 'week' && <WeekView key="week" days={weekDays} today={today} selected={selected} itemsByDay={itemsByDay} onPickDay={pickDay} />}
