@@ -676,6 +676,8 @@ input.sl-suggest { color: var(--muted); }
 .hobby-card h3 { color: var(--coral-fg); }
 .hobby-card .add-pill { background: var(--coral-bg); color: var(--coral-fg); }
 .hobby-head { text-align: left; width: 100%; }
+.hobby-row { justify-content: flex-start; gap: 12px; }
+.hobby-row .tile { flex: none; }
 
 /* The task sheet slides up from the bottom and back down when it closes */
 @keyframes scrimIn { from { background-color: rgba(40, 30, 20, 0); } to { background-color: rgba(40, 30, 20, 0.4); } }

@@ -89,7 +89,7 @@ export default function Hobbies() {
         <h3>My hobbies</h3>
         {hobbies.length === 0 && <p className="muted small">Nothing yet.</p>}
         {hobbies.map((h) => (
-          <button key={h.id} className="ml-row" onClick={() => setEditing(h)}>
+          <button key={h.id} className="ml-row hobby-row" onClick={() => setEditing(h)}>
             <span className={`tile c-${h.color}`}>
               <TaskIcon name={h.icon} size={18} />
             </span>
