@@ -310,3 +310,7 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 
 ## Calendar day view: air above the date block, round-topped calendar (Oct 3)
 - The date block (`.day-sticky`) now sticks 10 px below the top (was flush). While it is stuck (`stuck` class, set by a scroll listener in DayView) a strip of page colour covers what is above it, and a white round-topped cap (`::after`, 28 px, same radius as `.hours`) sits under it, so the calendar keeps its rounded top corners while hours scroll beneath. Not shown at the top of the page (the real card is there). Checked in a phone-size browser mock, not on a real iPhone.
+
+## Colour follows who a task is for (Oct 3)
+- Task sheet "Who" is now: Jared, Lidia (profile names), Both. Choosing one sets the colour right then: Jared orange (`peach`), Lidia purple (`lilac`), Both green (`mint`); the colour can be changed afterwards (it only changes when you change "Who"). New tasks start as Both/green. Existing tasks are not recoloured. Code: src/lib/people.ts (`assigneeColor`, `memberColor`, `sortMembers`; people are told apart by a profile name starting with jared/lidia, otherwise you = orange and your partner = purple), `chooseAssignee` in TaskSheet.tsx.
+- Study blocks Muna plans for Uni (commitPlan) now get the colour of the person (orange for Jared, purple for Lidia) instead of blue. Hobby sessions keep the hobby's own colour. The Uni/Goal kinds only change the icon now.

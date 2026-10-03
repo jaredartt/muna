@@ -8,6 +8,7 @@ import { cleanRepeat, firstOccurrence, type Repeat } from '../lib/recurrence'
 import { TASK_COLORS, TASK_ICONS } from '../lib/icons'
 import { useAuth } from '../context/AuthContext'
 import { buyProduct } from '../lib/meals'
+import { assigneeColor, sortMembers } from '../lib/people'
 import { findProductByText, matchesProduct, useProducts, type Product } from '../lib/products'
 import type { Category, ChecklistItem, Task, TaskDraft } from '../lib/types'
 
@@ -50,12 +51,17 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
   const [repeat, setRepeat] = useState<Repeat | null>(task?.repeat ?? null)
   const [category, setCategory] = useState<Category | null>(task?.category ?? null)
   const [items, setItems] = useState<ChecklistItem[]>(task?.checklist ?? [])
+  // choosing who it is for also sets the colour (Jared orange, Lidia purple, both green); you can still pick another colour afterwards
+  function chooseAssignee(v: string) {
+    setAssignee(v)
+    setColor(assigneeColor(v, members, session?.user.id ?? ''))
+  }
   // choosing what it is also sets its look (icon and colour) unless you already picked your own
   function chooseCategory(v: Category | null) {
     const was = kindOf(category)
     const now = kindOf(v)
     if (icon === was.icon) setIcon(now.icon)
-    if (color === was.color) setColor(now.color)
+    if (color === was.color) setColor(assigneeColor(assignee, members, session?.user.id ?? ''))
     setCategory(v)
   }
   const [newItem, setNewItem] = useState('')
@@ -207,13 +213,13 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
           </label>
           <label className="field">
             <span>Who</span>
-            <select value={assignee} onChange={(e) => setAssignee(e.target.value)}>
-              <option value="">Anyone</option>
-              {members.map((m) => (
+            <select value={assignee} onChange={(e) => chooseAssignee(e.target.value)}>
+              {sortMembers(members).map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.id === session?.user.id ? 'Me' : m.display_name || 'Partner'}
+                  {m.display_name || (m.id === session?.user.id ? 'Me' : 'Partner')}
                 </option>
               ))}
+              <option value="">Both</option>
             </select>
           </label>
         </div>

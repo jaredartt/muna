@@ -9,6 +9,7 @@ import { addDays, parseDateStr, todayStr } from '../lib/dates'
 import { navigate } from '../lib/router'
 import { addUniItem, commitPlan, currentWeekOf, deleteUniItem, duration, fmtMin, itemState, looseUniTasks, setCurrentWeek, unplanItem, updateUniItem, useUniItems, useUniSettings, weekProgress, type UniItem } from '../lib/uni'
 import { daysBetween, planStudy, type Span } from '../lib/uniPlan'
+import { assigneeColor } from '../lib/people'
 
 const niceDay = (d: string) => parseDateStr(d).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 const clock = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))
@@ -276,7 +277,7 @@ function loadSaved(): Saved {
 function PlanSheet({ weeks, startWeek, items, onClose }: { weeks: number[]; startWeek: number; items: UniItem[]; onClose: () => void }) {
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
-  const { session, profile, googleConnected } = useAuth()
+  const { session, profile, googleConnected, members } = useAuth()
   const { tasks, occurrenceMap, deleteTask } = useTasksCtx()
   const uid = session?.user.id ?? ''
   const today = todayStr()
@@ -361,7 +362,7 @@ function PlanSheet({ weeks, startWeek, items, onClose }: { weeks: number[]; star
     } catch {
       /* fine */
     }
-    const e = await commitPlan(plan.blocks, replan ? alreadyPlanned.map((x) => x.item) : [], { householdId: profile.household_id, userId: uid, items, tasks, googleConnected, deleteTask }, today)
+    const e = await commitPlan(plan.blocks, replan ? alreadyPlanned.map((x) => x.item) : [], { householdId: profile.household_id, userId: uid, items, tasks, googleConnected, deleteTask, color: assigneeColor(uid, members, uid) }, today)
     setBusy(false)
     if (e) setErr(e)
     else onClose()

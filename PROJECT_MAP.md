@@ -109,9 +109,9 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/components/TaskRow.tsx` (43 lines)
   - exports: TaskRow
   - imports: lib/dates.ts, lib/icons.tsx, lib/types.ts
-- `src/components/TaskSheet.tsx` (337 lines)
+- `src/components/TaskSheet.tsx` (343 lines)
   - exports: TaskSheet
-  - imports: components/Confirm.tsx, components/IconPicker.tsx, components/RepeatEditor.tsx, context/AuthContext.tsx, hooks/useSheetScrollGuard.ts, lib/icons.tsx, lib/meals.ts, lib/products.ts, lib/recurrence.ts, lib/types.ts
+  - imports: components/Confirm.tsx, components/IconPicker.tsx, components/RepeatEditor.tsx, context/AuthContext.tsx, hooks/useSheetScrollGuard.ts, lib/icons.tsx, lib/meals.ts, lib/people.ts, lib/products.ts, lib/recurrence.ts, lib/types.ts
   - used by: context/TasksContext.tsx
 - `src/components/WeatherCard.tsx` (114 lines)
   - exports: Plan, WeatherCard
@@ -210,6 +210,9 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: LastChange, timeAgo, useLastChange
   - imports: lib/supabase.ts
   - used by: pages/Chat.tsx
+- `src/lib/people.ts` (30 lines) - Who a task belongs to decides its colour: Jared orange, Lidia purple, both of you green.
+  - exports: BOTH_COLOR, memberColor, assigneeColor, sortMembers
+  - used by: components/TaskSheet.tsx, pages/Uni.tsx
 - `src/lib/phosphor.ts` (44 lines) - Phosphor "Fill" icons (MIT licence, https://phosphoricons.com). They live in the repo as one JSON file
   - exports: PhosphorData, loadPhosphor, phosphorAvailable, usePhosphor
   - imports: lib/svgIcons.tsx
@@ -249,7 +252,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: ThemePref, Place, Targets, Profile, Member, ChecklistItem, Category, Task…
   - imports: lib/recurrence.ts
   - used by: components/HomeRings.tsx, components/RecipePicker.tsx, components/RecipeSheet.tsx, components/TaskRow.tsx, components/TaskSheet.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useTasks.ts, lib/hobbies.ts, lib/meals.ts, lib/theme.ts, lib/uni.ts, lib/weather.ts, pages/CalendarPage.tsx, pages/Chat.tsx, pages/Profile.tsx
-- `src/lib/uni.ts` (211 lines)
+- `src/lib/uni.ts` (212 lines)
   - exports: UniItem, UniSetting, useUniSettings, useUniItems, startUniSync, setCurrentWeek, currentWeekOf, looseUniTasks…
   - imports: lib/events.ts, lib/google.ts, lib/liveTable.ts, lib/supabase.ts, lib/types.ts, lib/uniPlan.ts
   - used by: components/HomeRings.tsx, components/IconSync.tsx, pages/Uni.tsx
@@ -301,9 +304,9 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: Profile
   - imports: components/Avatar.tsx, components/IconPicker.tsx, components/MyIcons.tsx, components/WeatherPlaceCard.tsx, context/AuthContext.tsx, lib/icons.tsx, lib/router.ts, lib/supabase.ts, lib/types.ts
   - used by: App.tsx
-- `src/pages/Uni.tsx` (461 lines)
+- `src/pages/Uni.tsx` (462 lines)
   - exports: Uni
-  - imports: components/Confirm.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useGoogleEvents.ts, hooks/useSheetScrollGuard.ts, lib/dates.ts, lib/router.ts, lib/uni.ts, lib/uniPlan.ts
+  - imports: components/Confirm.tsx, context/AuthContext.tsx, context/TasksContext.tsx, hooks/useGoogleEvents.ts, hooks/useSheetScrollGuard.ts, lib/dates.ts, lib/people.ts, lib/router.ts, lib/uni.ts, lib/uniPlan.ts
   - used by: App.tsx
 - `src/pages/Updates.tsx` (43 lines)
   - exports: Updates

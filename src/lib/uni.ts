@@ -157,6 +157,7 @@ type Ctx = {
   tasks: Task[]
   googleConnected: boolean
   deleteTask: (id: string) => Promise<string | null>
+  color: string // the colour of the person (Jared orange, Lidia purple)
 }
 
 /** Remove the blocks of an item that are still to do (ticked ones stay as a record). */
@@ -185,7 +186,7 @@ export async function commitPlan(blocks: Block[], replan: UniItem[], ctx: Ctx, t
       start_time: fmtMin(b.start) + ':00',
       end_time: fmtMin(b.end) + ':00',
       icon: 'school',
-      color: 'sky',
+      color: ctx.color,
       category: 'uni',
     }
   })
