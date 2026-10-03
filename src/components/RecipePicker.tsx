@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { IconSearch, IconX } from '@tabler/icons-react'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
+import { useAnimatedClose } from '../hooks/useAnimatedClose'
 import { first, missingIngredients, recipeMacros, round, SLOTS, type PantryRow, type Recipe, type Slot } from '../lib/meals'
 import type { Product } from '../lib/products'
 import type { Member } from '../lib/types'
@@ -20,6 +21,7 @@ type Props = {
 export default function RecipePicker({ slot, recipes, pantry, products, members, current, onPick, onClose }: Props) {
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
+  const { leaving, close } = useAnimatedClose(onClose)
   const [q, setQ] = useState('')
   const [all, setAll] = useState(false)
   const label = SLOTS.find((s) => s.key === slot)?.label ?? slot
@@ -29,11 +31,11 @@ export default function RecipePicker({ slot, recipes, pantry, products, members,
   }, [recipes, q, all, slot])
 
   return (
-    <div className="sheet-backdrop" ref={backdropRef} onClick={onClose}>
+    <div className={'sheet-backdrop sheet-anim' + (leaving ? ' leaving' : '')} ref={backdropRef} onClick={close}>
       <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`Choose ${label.toLowerCase()}`}>
         <div className="sheet-head">
           <h2>Choose {label.toLowerCase()}</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
+          <button className="icon-btn" onClick={close} aria-label="Close">
             <IconX size={22} />
           </button>
         </div>

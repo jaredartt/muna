@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { IconCheck, IconSearch, IconX } from '@tabler/icons-react'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
+import { useAnimatedClose } from '../hooks/useAnimatedClose'
 import { learnBarcode, matchesProduct, unbarcoded, useProducts, type LookupResult, type Product } from '../lib/products'
 
 type Props = {
@@ -23,6 +24,7 @@ const FIRST = 8
 export default function ProductPicker({ code, lookup, onLearned, onNew, onClose }: Props) {
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
+  const { leaving, close } = useAnimatedClose(onClose)
   const products = useProducts() // re-renders when the list changes (the barcode just taught disappears from it)
   const [q, setQ] = useState('')
   const [all, setAll] = useState(false)
@@ -50,11 +52,11 @@ export default function ProductPicker({ code, lookup, onLearned, onNew, onClose 
   }
 
   return (
-    <div className="sheet-backdrop" ref={backdropRef} onClick={onClose}>
+    <div className={'sheet-backdrop sheet-anim' + (leaving ? ' leaving' : '')} ref={backdropRef} onClick={close}>
       <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Is this one of your products?">
         <div className="sheet-head">
           <h2>Is this one of your products?</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
+          <button className="icon-btn" onClick={close} aria-label="Close">
             <IconX size={22} />
           </button>
         </div>

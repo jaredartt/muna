@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { IconBarcode, IconCamera, IconRepeat, IconShoppingBag, IconTrashFilled, IconX } from '@tabler/icons-react'
 import BarcodeScanner from './BarcodeScanner'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
+import { useAnimatedClose } from '../hooks/useAnimatedClose'
 import { removeProductImage, uploadProductImage } from '../lib/productImage'
 import { deleteProduct, saveProduct, type Edc, type Product, type ProductDraft, type Tri } from '../lib/products'
 import { useConfirm } from './Confirm'
@@ -51,6 +52,7 @@ export default function ProductSheet({ householdId, initial, id, note, onSaved, 
   const { confirm } = useConfirm()
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
+  const { leaving, close } = useAnimatedClose(cancel)
   const [name, setName] = useState(initial.name)
   const [nickname, setNickname] = useState(initial.nickname ?? '')
   const [brand, setBrand] = useState(initial.brand ?? '')
@@ -149,11 +151,11 @@ export default function ProductSheet({ householdId, initial, id, note, onSaved, 
   }
 
   return (
-    <div className="sheet-backdrop" ref={backdropRef} onClick={cancel}>
+    <div className={'sheet-backdrop sheet-anim' + (leaving ? ' leaving' : '')} ref={backdropRef} onClick={close}>
       <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={id ? 'Edit product' : 'New product'}>
         <div className="sheet-head">
           <h2>{id ? 'Edit product' : 'New product'}</h2>
-          <button className="icon-btn" onClick={cancel} aria-label="Close">
+          <button className="icon-btn" onClick={close} aria-label="Close">
             <IconX size={22} />
           </button>
         </div>

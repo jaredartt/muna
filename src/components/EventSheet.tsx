@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
+import { useAnimatedClose } from '../hooks/useAnimatedClose'
 import { IconExternalLink, IconTrashFilled, IconX } from '@tabler/icons-react'
 import { useAuth } from '../context/AuthContext'
 import { addDays, pad, toDateStr } from '../lib/dates'
@@ -17,6 +18,7 @@ type Props = { event: GoogleEvent; onDone: () => void; onClose: () => void }
 export default function EventSheet({ event, onDone, onClose }: Props) {
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
+  const { leaving, close } = useAnimatedClose(onClose)
   const { session, members } = useAuth()
   const owner = members.find((m) => m.id === event.owner_id)
   const who = event.owner_id === session?.user.id ? 'your' : `${owner?.display_name || event.owner_name || 'your partner'}'s`
@@ -86,11 +88,11 @@ export default function EventSheet({ event, onDone, onClose }: Props) {
   }
 
   return (
-    <div className="sheet-backdrop" ref={backdropRef} onClick={onClose}>
+    <div className={'sheet-backdrop sheet-anim' + (leaving ? ' leaving' : '')} ref={backdropRef} onClick={close}>
       <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Edit calendar event">
         <div className="sheet-head">
           <h2>Edit event</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
+          <button className="icon-btn" onClick={close} aria-label="Close">
             <IconX size={22} />
           </button>
         </div>

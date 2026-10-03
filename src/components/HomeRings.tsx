@@ -3,6 +3,7 @@ import { IconChefHatFilled, IconCheck, IconMoonFilled, IconSchool, IconStarFille
 import Ring from './Ring'
 import { useConfirm } from './Confirm'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
+import { useAnimatedClose } from '../hooks/useAnimatedClose'
 import { useAuth } from '../context/AuthContext'
 import { useTasksCtx } from '../context/TasksContext'
 import { useProducts } from '../lib/products'
@@ -44,6 +45,7 @@ function SleepSheet({ onClose }: { onClose: () => void }) {
   const { confirm } = useConfirm()
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
+  const { leaving, close } = useAnimatedClose(onClose)
   const { session, profile } = useAuth()
   const rows = useSleep()
   const uid = session?.user.id ?? ''
@@ -73,7 +75,7 @@ function SleepSheet({ onClose }: { onClose: () => void }) {
     const e = await saveSleep(profile.household_id, uid, day, bed, wake)
     setBusy(false)
     if (e) setErr(e)
-    else onClose()
+    else close()
   }
   async function remove() {
     if (!existing) return
@@ -82,16 +84,16 @@ function SleepSheet({ onClose }: { onClose: () => void }) {
     const e = await deleteSleep(existing.id)
     setBusy(false)
     if (e) setErr(e)
-    else onClose()
+    else close()
   }
 
   const preview = bed && wake ? hm(sleepMinutes(bed, wake)) : ''
   return (
-    <div className="sheet-backdrop" ref={backdropRef} onClick={onClose}>
+    <div className={'sheet-backdrop sheet-anim' + (leaving ? ' leaving' : '')} ref={backdropRef} onClick={close}>
       <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Log your sleep">
         <div className="sheet-head">
           <h2>Your sleep</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
+          <button className="icon-btn" onClick={close} aria-label="Close">
             <IconX size={22} />
           </button>
         </div>
@@ -209,14 +211,15 @@ export function CategoryCard({ cat, anim }: { cat: 'uni' | 'goal'; anim: Anim })
 function CategorySheet({ cat, onClose }: { cat: 'uni' | 'goal'; onClose: () => void }) {
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
+  const { leaving, close } = useAnimatedClose(onClose)
   const { tasks, toggleTask, openEditor } = useTasksCtx()
   const list = relevant(tasks, cat).sort((a, b) => Number(a.completed) - Number(b.completed) || (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999'))
   return (
-    <div className="sheet-backdrop" ref={backdropRef} onClick={onClose}>
+    <div className={'sheet-backdrop sheet-anim' + (leaving ? ' leaving' : '')} ref={backdropRef} onClick={close}>
       <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`${CAT[cat].title} tasks`}>
         <div className="sheet-head">
           <h2>{CAT[cat].title} tasks</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
+          <button className="icon-btn" onClick={close} aria-label="Close">
             <IconX size={22} />
           </button>
         </div>
@@ -232,7 +235,7 @@ function CategorySheet({ cat, onClose }: { cat: 'uni' | 'goal'; onClose: () => v
                 className="cl-text"
                 style={{ textAlign: 'left' }}
                 onClick={() => {
-                  onClose()
+                  close()
                   openEditor(t)
                 }}
               >

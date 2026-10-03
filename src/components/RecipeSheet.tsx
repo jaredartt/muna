@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { IconPlus, IconSearch, IconTrashFilled, IconX } from '@tabler/icons-react'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
+import { useAnimatedClose } from '../hooks/useAnimatedClose'
 import { deleteRecipe, first, inStock, missingIngredients, recipeMacros, round, saveRecipe, SLOTS, type Ingredient, type PantryRow, type Recipe, type Slot } from '../lib/meals'
 import { todayStr } from '../lib/dates'
 import { matchesProduct, type Product } from '../lib/products'
@@ -34,6 +35,7 @@ const toIngredients = (rows: Row[]): Ingredient[] =>
 export default function RecipeSheet({ householdId, recipe, members, productList, products, pantry, defaultDate, onPlan, onClose }: Props) {
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
+  const { leaving, close } = useAnimatedClose(onClose)
   const [editing, setEditing] = useState(!recipe)
   const [name, setName] = useState(recipe?.name ?? '')
   const [slots, setSlots] = useState<Slot[]>(recipe?.slots ?? [])
@@ -98,7 +100,7 @@ export default function RecipeSheet({ householdId, recipe, members, productList,
     const err = await saveRecipe(householdId, { code: recipe?.code ?? null, name, slots, ingredients: toIngredients(rows), method: method.trim(), storage: storage.trim() }, recipe?.id)
     setBusy(false)
     if (err) return setError(err)
-    onClose()
+    close()
   }
   async function remove() {
     if (!recipe) return
@@ -106,7 +108,7 @@ export default function RecipeSheet({ householdId, recipe, members, productList,
     setBusy(true)
     const ok = await deleteRecipe(recipe.id)
     setBusy(false)
-    if (ok) onClose()
+    if (ok) close()
     else setError('Could not delete. Check your internet and try again.')
   }
 
@@ -127,11 +129,11 @@ export default function RecipeSheet({ householdId, recipe, members, productList,
   )
 
   return (
-    <div className="sheet-backdrop" ref={backdropRef} onClick={onClose}>
+    <div className={'sheet-backdrop sheet-anim' + (leaving ? ' leaving' : '')} ref={backdropRef} onClick={close}>
       <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={recipe ? 'Recipe' : 'New recipe'}>
         <div className="sheet-head">
           <h2>{!recipe ? 'New recipe' : editing ? 'Edit recipe' : recipe.name}</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
+          <button className="icon-btn" onClick={close} aria-label="Close">
             <IconX size={22} />
           </button>
         </div>
@@ -204,7 +206,7 @@ export default function RecipeSheet({ householdId, recipe, members, productList,
                 disabled={!planDate}
                 onClick={() => {
                   onPlan(recipe.id, planDate, planSlot)
-                  onClose()
+                  close()
                 }}
               >
                 Add to plan

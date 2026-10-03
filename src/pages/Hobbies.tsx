@@ -6,6 +6,7 @@ import { useTasksCtx } from '../context/TasksContext'
 import IconPicker from '../components/IconPicker'
 import { dayWord } from '../components/HobbiesCard'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
+import { useAnimatedClose } from '../hooks/useAnimatedClose'
 import { useHobbyPlanner, weeksToPlan } from '../hooks/useHobbyPlanner'
 import { useReorder } from '../hooks/useReorder'
 import SkipDays from '../components/SkipDays'
@@ -129,6 +130,7 @@ const hoursText = (m: number) => String(Math.round((m / 60) * 100) / 100)
 function HobbySheet({ hobby, onClose }: { hobby: Hobby | null; onClose: () => void }) {
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
+  const { leaving, close } = useAnimatedClose(onClose)
   const { session, profile } = useAuth()
   const { tasks, deleteTask } = useTasksCtx()
   const uid = session?.user.id ?? ''
@@ -167,16 +169,16 @@ function HobbySheet({ hobby, onClose }: { hobby: Hobby | null; onClose: () => vo
     const e = await addHobby(profile.household_id, uid, d)
     setBusy(false)
     if (e) setErr(e)
-    else onClose()
+    else close()
   }
 
   return (
-    <div className="sheet-backdrop" ref={backdropRef} onClick={onClose}>
+    <div className={'sheet-backdrop sheet-anim' + (leaving ? ' leaving' : '')} ref={backdropRef} onClick={close}>
       <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={isNew ? 'New hobby' : 'Edit hobby'}>
         <div className="sheet-head">
           <h2>{isNew ? 'New hobby' : 'Your hobby'}</h2>
           <span className="autosave-state">{status}</span>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
+          <button className="icon-btn" onClick={close} aria-label="Close">
             <IconX size={22} />
           </button>
         </div>
@@ -277,7 +279,7 @@ function HobbySheet({ hobby, onClose }: { hobby: Hobby | null; onClose: () => vo
               if (!ok) return
               dirty.current = false
               await deleteHobby(hobby, tasks, deleteTask, todayStr())
-              onClose()
+              close()
             }}
           >
             <IconTrashFilled size={18} /> Delete hobby

@@ -5,6 +5,7 @@ import { useTasksCtx } from '../context/TasksContext'
 import { useConfirm } from './Confirm'
 import SkipDays from './SkipDays'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
+import { useAnimatedClose } from '../hooks/useAnimatedClose'
 import { useReorder } from '../hooks/useReorder'
 import { useBusy } from '../hooks/useBusy'
 import { addDays, parseDateStr, todayStr } from '../lib/dates'
@@ -34,13 +35,14 @@ const niceDay = (d: string) => parseDateStr(d).toLocaleDateString('en-GB', { wee
 function Sheet({ title, onClose, children, status }: { title: string; onClose: () => void; children: React.ReactNode; status?: string }) {
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
+  const { leaving, close } = useAnimatedClose(onClose)
   return (
-    <div className="sheet-backdrop" ref={backdropRef} onClick={onClose}>
+    <div className={'sheet-backdrop sheet-anim' + (leaving ? ' leaving' : '')} ref={backdropRef} onClick={close}>
       <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={title}>
         <div className="sheet-head">
           <h2>{title}</h2>
           <span className="autosave-state">{status}</span>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
+          <button className="icon-btn" onClick={close} aria-label="Close">
             <IconX size={22} />
           </button>
         </div>

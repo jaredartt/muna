@@ -5,6 +5,7 @@ import { useConfirm } from '../components/Confirm'
 import { useTasksCtx } from '../context/TasksContext'
 import { useGoogleEvents } from '../hooks/useGoogleEvents'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
+import { useAnimatedClose } from '../hooks/useAnimatedClose'
 import { addDays, parseDateStr, todayStr } from '../lib/dates'
 import { navigate } from '../lib/router'
 import { addUniItem, commitPlan, currentWeekOf, deleteUniItem, duration, fmtMin, itemState, looseUniTasks, reorderUniItems, setCurrentWeek, unplanItem, updateUniItem, useUniItems, useUniSettings, weekProgress, type UniItem } from '../lib/uni'
@@ -286,6 +287,7 @@ function loadSaved(): Saved {
 function PlanSheet({ weeks, startWeek, items, onClose }: { weeks: number[]; startWeek: number; items: UniItem[]; onClose: () => void }) {
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
+  const { leaving, close } = useAnimatedClose(onClose)
   const { session, profile, googleConnected, members } = useAuth()
   const { tasks, occurrenceMap, deleteTask } = useTasksCtx()
   const uid = session?.user.id ?? ''
@@ -376,15 +378,15 @@ function PlanSheet({ weeks, startWeek, items, onClose }: { weeks: number[]; star
     const e = await commitPlan(plan.blocks, replan ? alreadyPlanned.map((x) => x.item) : [], { householdId: profile.household_id, userId: uid, items, tasks, googleConnected, deleteTask, color: assigneeColor(uid, members, uid) }, today)
     setBusy(false)
     if (e) setErr(e)
-    else onClose()
+    else close()
   }
 
   return (
-    <div className="sheet-backdrop" ref={backdropRef} onClick={onClose}>
+    <div className={'sheet-backdrop sheet-anim' + (leaving ? ' leaving' : '')} ref={backdropRef} onClick={close}>
       <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Plan your study time">
         <div className="sheet-head">
           <h2>Plan with Muna</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
+          <button className="icon-btn" onClick={close} aria-label="Close">
             <IconX size={22} />
           </button>
         </div>
