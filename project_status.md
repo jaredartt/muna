@@ -378,3 +378,8 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 
 ## Repeat editor number boxes (3 Oct 2026)
 - "Every N weeks" and "after N times" snapped back to 1 as soon as you cleared them (the number was forced on every keystroke). New `NumberBox` in RepeatEditor.tsx: keeps what you type, applies valid numbers at once, selects the number on tap, and only fixes an empty/invalid box (to 1..max) when you leave it. Other number boxes (Gym, Uni, Hobbies) already worked this way. Checked in a browser mock.
+
+## Repeat check, start-date warning, Gym exercise form look (3 Oct 2026)
+- Repeat engine verified: 400 random rules (day/week/month/year, every N, weekdays, nth weekday, month dates incl. last day, except weekdays/weeks, count, until) compared with Python dateutil: 0 mismatches.
+- "Missing first task" was not a bug: the first occurrence is always a day the rule really hits (`firstOccurrence`), so "every 3 weeks on Monday" made on a Saturday starts on the next matching Monday (19 Oct). RepeatEditor now shows a yellow note when the picked date is not a repeat day, with the first date, and (weekly / monthly dates) a button "Also do it on <date>" that adds that weekday/date to the rule. Not done: the Muna chat does not warn about this.
+- Gym exercise form: the exercise box was cream like its fields; it is now white with an outline (`.gym-ex`) so each field looks separate, like in the task sheet.

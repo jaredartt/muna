@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { IconRepeat } from '@tabler/icons-react'
-import { describeRepeat, type Repeat } from '../lib/recurrence'
+import { describeRepeat, firstOccurrence, type Repeat } from '../lib/recurrence'
 
 type Props = { value: Repeat | null; onChange: (r: Repeat | null) => void; date: string }
 
@@ -119,6 +119,29 @@ export default function RepeatEditor({ value, onChange, date }: Props) {
 
       {value && (
         <>
+          {(() => {
+            // the first one is always a day the rule really hits: tell the person when that is NOT the date they picked
+            const first = firstOccurrence(date, value)
+            if (first === date) return null
+            const nice = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+            const canAdd = value.freq === 'week' || (value.freq === 'month' && !value.nth)
+            return (
+              <div className="repeat-warn" role="note">
+                <p>
+                  {nice(date)} is not one of the repeat days, so the first one is on <strong>{nice(first)}</strong>.
+                </p>
+                {canAdd && (
+                  <button
+                    type="button"
+                    className="btn soft"
+                    onClick={() => (value.freq === 'week' ? set({ weekdays: [...(value.weekdays?.length ? value.weekdays : []), startWeekday] }) : set({ monthDays: [...(value.monthDays ?? []), startMonthDay] }))}
+                  >
+                    Also do it on {nice(date)}
+                  </button>
+                )}
+              </div>
+            )
+          })()}
           <div className="repeat-line">
             <span>Every</span>
             <NumberBox value={value.every} max={99} onCommit={(n) => set({ every: n })} />

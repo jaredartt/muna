@@ -768,7 +768,7 @@ input.sl-suggest { color: var(--muted); }
 .gym-num { width: 30px; height: 30px; border-radius: 50%; background: var(--mint-bg); color: var(--mint-fg); display: grid; place-items: center; font-weight: 700; flex: none; }
 .gym-split-list { display: flex; flex-direction: column; gap: 0; }
 .gym-ex-list { display: flex; flex-direction: column; gap: 8px; }
-.gym-ex { background: var(--bg); border-radius: 16px; padding: 4px 12px; }
+.gym-ex { background: var(--card); border: 1.5px solid var(--line); border-radius: 16px; padding: 4px 12px; } /* white box with an outline, so the cream fields inside stand out as separate fields (like in the task sheet) */
 .gym-ex-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 52px; text-align: left; }
 .gym-form { display: flex; flex-direction: column; gap: 12px; padding: 4px 0 12px; }
 .gym-log { background: var(--bg); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
@@ -819,3 +819,8 @@ input.sl-suggest { color: var(--muted); }
 .wx-mini .wx-now { gap: 10px; flex-wrap: nowrap; }
 .wx-mini .wx-temp strong { font-size: 30px; }
 .wx-mini .wx-facts { margin-left: auto; text-align: right; white-space: nowrap; }
+
+/* Repeat: the picked date is not one of the repeat days */
+.repeat-warn { background: var(--butter-bg); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.repeat-warn p { margin: 0; }
+.repeat-warn .btn { align-self: flex-start; min-height: 40px; }
