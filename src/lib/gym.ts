@@ -24,7 +24,7 @@ export type GymExercise = {
 }
 export type GymLog = { id: string; household_id: string; created_by: string; exercise_id: string; day: string; set_no: number; weight: number; reps: number; created_at: string }
 export type GymSession = { id: string; household_id: string; created_by: string; split_id: string; task_id: string | null; day: string; done: boolean; created_at: string }
-export type GymSettings = { id: string; household_id: string; user_id: string; per_week: number; days: number[]; time_of_day: TimeOfDay; minutes: number; next_index: number }
+export type GymSettings = { id: string; household_id: string; user_id: string; per_week: number; days: number[]; time_of_day: TimeOfDay; start_at: string | null; minutes: number; next_index: number }
 
 // Postgres hands numeric columns back as numbers or strings depending on the path: always turn them into numbers.
 const num = <T extends object>(row: T, keys: string[]): T => {
@@ -127,11 +127,11 @@ export async function deleteExercise(e: GymExercise): Promise<string | null> {
 export const reorderExercises = (ids: string[]) => savePositions('gym_exercises', ids, (id, position) => { const o = exercises.all().find((e) => e.id === id); if (o) exercises.upsert({ ...o, position }) })
 
 // ---------- settings ----------
-export const defaultSettings = (): Pick<GymSettings, 'per_week' | 'days' | 'time_of_day' | 'minutes' | 'next_index'> => ({ per_week: 3, days: [], time_of_day: 'any', minutes: 60, next_index: 0 })
+export const defaultSettings = (): Pick<GymSettings, 'per_week' | 'days' | 'time_of_day' | 'start_at' | 'minutes' | 'next_index'> => ({ per_week: 3, days: [], time_of_day: 'any', start_at: null, minutes: 60, next_index: 0 })
 export async function saveSettings(householdId: string, userId: string, patch: Partial<Omit<GymSettings, 'id' | 'household_id' | 'user_id'>>): Promise<string | null> {
   const old = settings.all().find((s) => s.user_id === userId)
   const next = { ...defaultSettings(), ...(old ?? {}), ...patch }
-  const { data, error } = await supabase.from('gym_settings').upsert({ household_id: householdId, user_id: userId, per_week: next.per_week, days: next.days, time_of_day: next.time_of_day, minutes: next.minutes, next_index: next.next_index }, { onConflict: 'user_id' }).select().single()
+  const { data, error } = await supabase.from('gym_settings').upsert({ household_id: householdId, user_id: userId, per_week: next.per_week, days: next.days, time_of_day: next.time_of_day, start_at: next.start_at, minutes: next.minutes, next_index: next.next_index }, { onConflict: 'user_id' }).select().single()
   if (error) return error.message
   settings.upsert(data as GymSettings)
   return null

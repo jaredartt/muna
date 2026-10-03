@@ -13,6 +13,7 @@ export type HobbyIn = {
   days: number[] // preferred weekdays, 0 = Monday ... 6 = Sunday
   timeOfDay: TimeOfDay
   have: string[] // days of this week that already have a session (they count towards perWeek)
+  startAt?: number | null // a fixed start time (minutes since midnight): sessions go exactly there when it is free, otherwise as near as possible
 }
 export type Session = { hobbyId: string; date: string; start: number; end: number }
 export type PlanInput = {
@@ -71,10 +72,11 @@ function freeSpans(date: string, lo: number, hi: number, busy: Span[], i: Pick<P
 
 /** The start time nearest to the usual time for this hobby, or null when nothing long enough is free. */
 function bestSlot(h: HobbyIn, date: string, busy: Span[], i: Pick<PlanInput, 'today' | 'nowMin'>): { start: number; free: number } | null {
-  const w = WINDOWS[h.timeOfDay]
+  const exact = h.startAt != null
+  const w = exact ? { lo: 5 * 60, hi: 23 * 60 + 45, target: 0 } : WINDOWS[h.timeOfDay]
   const spans = freeSpans(date, w.lo, w.hi, busy, i)
   const free = spans.reduce((a, s) => a + (s.end - s.start), 0)
-  const want = w.target - h.minutes / 2
+  const want = exact ? (h.startAt as number) : w.target - h.minutes / 2
   let best: number | null = null
   for (const s of spans) {
     if (s.end - s.start < h.minutes) continue
@@ -115,6 +117,7 @@ export function planHobbies(i: PlanInput): PlanResult {
         const near = [...mine].some((m) => Math.abs((Date.parse(m) - Date.parse(c.d)) / 86400000) === 1)
         if (near && h.perWeek > 1) s += 3 // spread several sessions over the week
         s += (dayHas.get(c.d) ?? 0) * 2 // do not stack hobbies on one day when another day works
+        if (h.startAt != null && c.slot.start !== h.startAt) s += 2 // days where the wanted time is free win
         return s
       }
       cands.sort((a, b) => score(a) - score(b) || b.slot.free - a.slot.free || a.d.localeCompare(b.d))

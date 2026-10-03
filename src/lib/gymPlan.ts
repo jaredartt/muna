@@ -13,6 +13,7 @@ export type GymPlanInput = {
   minutes: number
   days: number[] // preferred weekdays, 0 = Monday ... 6 = Sunday
   timeOfDay: TimeOfDay
+  startAt?: number | null // a fixed start time in minutes since midnight (then timeOfDay is ignored)
   skip: string[] // days you do not want anything planned on
   have: string[] // days that already have a gym session (they count towards perWeek, and are not used again)
   today: string
@@ -35,7 +36,7 @@ export function planGym(i: GymPlanInput): GymPlanResult {
     const have = i.have.filter((d) => d >= mon && d <= addDay(mon, 6))
     if (!days.length) continue
     const res = planHobbies({
-      hobbies: [{ id: 'gym', name: 'Gym', minutes: i.minutes, perWeek: i.perWeek, days: i.days, timeOfDay: i.timeOfDay, have }],
+      hobbies: [{ id: 'gym', name: 'Gym', minutes: i.minutes, perWeek: i.perWeek, days: i.days, timeOfDay: i.timeOfDay, startAt: i.startAt ?? null, have }],
       days: days.filter((d) => !have.includes(d)),
       today: i.today,
       nowMin: i.nowMin,

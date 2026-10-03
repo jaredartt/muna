@@ -17,6 +17,7 @@ import { skippedDays } from '../lib/skips'
 import { goalText } from '../lib/gymLogic'
 import { planGym } from '../lib/gymPlan'
 import { DAY_NAMES, TIMES } from '../lib/hobbies'
+import type { TimeOfDay } from '../lib/hobbyPlan'
 import {
   addExercise, addSessions, addSplit, deleteExercise, deleteSplit, emptyExercise, reorderExercises, removeSessions, saveSettings, saveWorkout, updateExercise, updateSplit,
   useGymExercises, useGymLogs, useGymSessions, useGymSettings, type ExerciseDraft, type GymExercise, type GymSession, type GymSplit, type WorkoutResult,
@@ -372,7 +373,9 @@ export function PlanSheet({ splits, onClose }: { splits: GymSplit[]; onClose: ()
   const exercises = useGymExercises()
   const [perWeek, setPerWeek] = useState(settings?.per_week ?? Math.min(7, Math.max(1, splits.length)))
   const [days, setDays] = useState<number[]>(settings?.days ?? [])
-  const [tod, setTod] = useState(settings?.time_of_day ?? 'any')
+  const [tod, setTod] = useState<TimeOfDay | 'exact'>(settings?.start_at ? 'exact' : settings?.time_of_day ?? 'any')
+  const [startAt, setStartAt] = useState(settings?.start_at ?? '18:00') // used when "At a set time" is chosen
+  const startMin = /^\d\d:\d\d$/.test(startAt) ? Number(startAt.slice(0, 2)) * 60 + Number(startAt.slice(3, 5)) : null
   const [hours, setHours] = useState(show((settings?.minutes ?? 60) / 60))
   const wd = (parseDateStr(today).getDay() + 6) % 7 // 0 = Monday
   const [from, setFrom] = useState(today)
@@ -411,7 +414,8 @@ export function PlanSheet({ splits, onClose }: { splits: GymSplit[]; onClose: ()
       perWeek,
       minutes: okMinutes ? minutes : 60,
       days,
-      timeOfDay: tod,
+      timeOfDay: tod === 'exact' ? 'any' : tod,
+      startAt: tod === 'exact' ? startMin : null,
       skip,
       have: kept.map((s) => s.day),
       today,
@@ -419,13 +423,13 @@ export function PlanSheet({ splits, onClose }: { splits: GymSplit[]; onClose: ()
       busy: busyAt,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [splits, mySessions, replan, replaceable, from, to, perWeek, minutes, okMinutes, days, tod, skip.join(','), busyAt, today])
+  }, [splits, mySessions, replan, replaceable, from, to, perWeek, minutes, okMinutes, days, tod, startMin, skip.join(','), busyAt, today])
 
   async function confirm() {
     if (!profile || !plan.length) return
     setBusy(true)
     setErr('')
-    await saveSettings(profile.household_id, uid, { per_week: perWeek, days, time_of_day: tod, minutes: okMinutes ? minutes : 60 })
+    await saveSettings(profile.household_id, uid, { per_week: perWeek, days, time_of_day: tod === 'exact' ? 'any' : tod, start_at: tod === 'exact' ? startAt : null, minutes: okMinutes ? minutes : 60 })
     if (replan) {
       for (const s of replaceable) {
         const t = s.task_id ? byTask.get(s.task_id) : undefined
@@ -527,6 +531,7 @@ export function PlanSheet({ splits, onClose }: { splits: GymSplit[]; onClose: ()
                 {t.label}
               </option>
             ))}
+            <option value="exact">At a set time</option>
           </select>
         </div>
         <label className="field">
@@ -534,6 +539,13 @@ export function PlanSheet({ splits, onClose }: { splits: GymSplit[]; onClose: ()
           <input type="text" inputMode="decimal" autoComplete="off" value={hours} onChange={(e) => setHours(e.target.value.replace(/[^0-9.,]/g, '').slice(0, 5))} />
         </label>
       </div>
+      {tod === 'exact' && (
+        <label className="field">
+          <span>Start time</span>
+          <input type="time" value={startAt} onChange={(e) => setStartAt(e.target.value)} />
+          <small className="muted">Every session starts then. If something is already in your calendar at that time, Muna moves it as little as possible.</small>
+        </label>
+      )}
       <SkipDays area="gym" days={dayList.filter((d) => d >= today)} title="Skip these days" />
       {replaceable.length > 0 && (
         <label className="check-row">

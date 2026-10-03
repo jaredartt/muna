@@ -386,3 +386,7 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 
 ## All pop-up sheets slide in and out (3 Oct 2026)
 - Only the task sheet had the slide-up/slide-down animation. Now every sheet does (Gym sheets, Uni plan, Hobby, Event, Recipe, Recipe/Product pickers, Product, Sleep, Uni/Goals ring sheets): backdrop gets `sheet-anim` (CSS already existed) and the new hook `useAnimatedClose(onClose)` (src/hooks/useAnimatedClose.ts) gives `leaving` + `close()` (slides away for 0.22 s, then calls the real onClose; reduced motion = instant). In GymSheets only the close button / tapping outside animate (the buttons inside SplitSheet/WorkoutSheet/PlanSheet still close instantly). Checked: type-check + build only.
+
+## Gym plan: fixed start time (3 Oct 2026)
+- "Plan my week" → Time of day has a new option "At a set time" with a time box (default 18:00). Muna puts every session exactly there; days where that time is free win; if the time is taken she uses the nearest free time. Saved in `gym_settings.start_at` (migration 20261003000029, applied live; null = use time_of_day as before).
+- Code: `startAt` (minutes) in HobbyIn (hobbyPlan.ts, window 05:00–23:45 when set) and GymPlanInput (gymPlan.ts); PlanSheet in GymSheets.tsx. Tested the planner with a busy evening (18:30 chosen: free days get 18:30). Not added to the Uni/Hobbies planners.
