@@ -815,17 +815,15 @@ input.sl-suggest { color: var(--muted); }
 .gym-split-row > svg { margin-left: auto; flex: none; }
 
 /* while dragging a block, empty columns still have room to drop into */
-.masonry.dragging .col, .wide-zone.dragging { min-height: 72px; }
-.wide-zone { margin-top: 20px; }
-.wide-zone:empty { margin-top: 0; }
+.masonry.dragging .col { min-height: 72px; }
 
 /* The small Weather block on Home (works in a column or in the wide strip): now + today's high/low only */
 .wx-mini { gap: 6px; }
 .wx-mini .card-head { flex-wrap: wrap; row-gap: 0; }
 .wx-mini .wx-place { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.wx-mini .wx-now { gap: 10px; flex-wrap: nowrap; }
+.wx-mini .wx-now { gap: 6px 10px; flex-wrap: wrap; }
 .wx-mini .wx-temp strong { font-size: 30px; }
-.wx-mini .wx-facts { margin-left: auto; text-align: right; white-space: nowrap; }
+.wx-mini .wx-facts { margin-left: 0; text-align: left; flex: 1 1 100%; white-space: nowrap; }
 
 /* Repeat: the picked date is not one of the repeat days */
 .repeat-warn { background: var(--butter-bg); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }

@@ -182,21 +182,13 @@ export default function Home() {
       </button>
 
       <div className={'masonry' + (rd.dragging ? ' dragging' : '')}>
-        {layout.slice(0, 2).map((col, ci) => (
+        {layout.map((col, ci) => (
           <div key={ci} className="col" ref={rd.column(ci)}>
             {col.map((id) => (
               <div key={id} {...rd.item(id)}>
                 {blocks[id]}
               </div>
             ))}
-          </div>
-        ))}
-      </div>
-
-      <div className={'col wide-zone' + (rd.dragging ? ' dragging' : '')} ref={rd.column(2)}>
-        {layout[2].map((id) => (
-          <div key={id} {...rd.item(id)}>
-            {blocks[id]}
           </div>
         ))}
       </div>

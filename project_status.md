@@ -392,3 +392,4 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 - Code: `startAt` (minutes) in HobbyIn (hobbyPlan.ts, window 05:00–23:45 when set) and GymPlanInput (gymPlan.ts); PlanSheet in GymSheets.tsx. Tested the planner with a busy evening (18:30 chosen: free days get 18:30). Not added to the Uni/Hobbies planners.
 - Update log page groups entries by day (day header + count, one card per day, only the time on each entry, newest first).
 - Gym: gym_splits.icon (migration 30, applied live). Home Gym block = icon + name + when + 'Goal to beat'. Planned gym tasks use the split icon. Muna chat does not know the icon yet.
+- Home layout is now 2 columns only (the wide strip is gone). Weather is a normal 1-column block; old 3-zone saves fold into the shorter column (normalizeLayout).
