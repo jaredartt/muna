@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { IconCheck, IconChevronDown, IconChevronLeft, IconPlus, IconSparkles, IconTrashFilled, IconX } from '@tabler/icons-react'
+import { IconCheck, IconChevronDown, IconChevronLeft, IconPencil, IconPlus, IconSparkles, IconTrashFilled, IconX } from '@tabler/icons-react'
 import { useAuth } from '../context/AuthContext'
 import { useConfirm } from '../components/Confirm'
 import { useTasksCtx } from '../context/TasksContext'
@@ -122,6 +122,11 @@ export default function Uni() {
             ))}
             <option value="__new">+ New course…</option>
           </select>
+          {selCourse && (
+            <button type="button" className={'icon-btn' + (editCourse ? ' active' : '')} onClick={() => setEditCourse((o) => !o)} aria-label={editCourse ? 'Close course editing' : 'Edit course'} aria-expanded={editCourse}>
+              <IconPencil size={20} />
+            </button>
+          )}
         </label>
         {newCourse && (
           <div className="uni-edit course-edit">
@@ -132,11 +137,6 @@ export default function Uni() {
               </button>
             </div>
           </div>
-        )}
-        {selCourse && !editCourse && (
-          <button className="ml-toggle" style={{ alignSelf: 'flex-start' }} onClick={() => setEditCourse(true)}>
-            Edit {selCourse.name}
-          </button>
         )}
         {selCourse && editCourse && (
           <div className="uni-edit course-edit">
@@ -202,7 +202,7 @@ export default function Uni() {
 
       <section className="card">
         <h3>Add an assignment or reading</h3>
-        {courses.length > 0 && (
+        {courses.length > 0 && !selCourse && (
           <select value={addCourseId} onChange={(e) => setAddCourseId(e.target.value)} aria-label="Course">
             {!addCourseId && <option value="">Choose a course</option>}
             {courses.map((c) => (
