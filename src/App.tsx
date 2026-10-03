@@ -15,6 +15,7 @@ import Updates from './pages/Updates'
 import Products from './pages/Products'
 import Meals from './pages/Meals'
 import Pantry from './pages/Pantry'
+import Uni from './pages/Uni'
 import { useRoute } from './lib/router'
 
 function Screens() {
@@ -38,6 +39,8 @@ function Screens() {
       return <Meals />
     case '/pantry':
       return <Pantry />
+    case '/uni':
+      return <Uni />
     default:
       return <Home />
   }

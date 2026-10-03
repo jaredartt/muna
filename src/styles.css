@@ -152,6 +152,10 @@ input[type='date']::-webkit-date-and-time-value, input[type='time']::-webkit-dat
 .hero { display: flex; flex-direction: column; align-items: center; gap: 22px; text-align: center; width: 100%; }
 .hero-text { font-size: 20px; line-height: 27px; max-width: 320px; }
 .masonry { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+.home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch; }
+.home-grid > * { min-width: 0; }
+.home-grid .card-tap { flex: 1; justify-content: flex-start; }
+.home-grid .card-tap > .ring-wrap, .home-grid .card-tap > .ring-stack { margin-top: auto; margin-bottom: auto; }
 .col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .mini-list { display: flex; flex-direction: column; gap: 10px; }
 .mini-task { display: flex; align-items: center; gap: 10px; min-height: 40px; }
@@ -166,6 +170,8 @@ input[type='date']::-webkit-date-and-time-value, input[type='time']::-webkit-dat
 .ring-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
 .ring-text strong { font-size: 24px; }
 .ring-text span { font-size: 13px; color: var(--muted); }
+.ring-stack { display: flex; flex-direction: column; align-items: center; }
+.ring-below { white-space: pre-line; margin-top: 12px; font-size: 13px; color: var(--muted); text-align: center; }
 .week-chart { display: block; margin-top: 6px; }
 .week-days { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); padding: 0 2px; }
 .week-days .now { color: var(--orange); font-weight: 700; }
@@ -616,3 +622,31 @@ input.sl-suggest { color: var(--muted); }
 .sheet-head h2 { flex: 1; }
 .autosave-state { white-space: nowrap; }
 .autosave-state.warn { color: var(--rose-fg, #c9503f); font-weight: 700; }
+
+/* Weather in one column: three days show, swipe sideways for the days after */
+.wx-half .card-head { flex-wrap: wrap; row-gap: 0; }
+.wx-half .wx-now { flex-wrap: wrap; gap: 8px 10px; }
+.wx-half .wx-temp strong { font-size: 30px; }
+.wx-half .wx-facts { margin-left: 0; text-align: left; flex: 1 1 100%; flex-direction: row; flex-wrap: wrap; gap: 2px 10px; }
+.wx-half .wx-strip { display: flex; gap: 4px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -6px; padding: 0 6px; scrollbar-width: none; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+.wx-half .wx-strip::-webkit-scrollbar { display: none; }
+.wx-half .wx-day { flex: 0 0 calc((100% - 8px) / 3); scroll-snap-align: start; }
+
+/* ---------- Uni page ---------- */
+.uni-sum { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.uni-add { display: flex; gap: 8px; align-items: stretch; }
+.uni-add > input { flex: 1; min-width: 0; }
+.uni-add .btn { padding: 0 14px; flex: none; }
+.uni-hours { display: flex; align-items: center; gap: 4px; flex: none; }
+.uni-hours input { width: 68px; text-align: center; }
+.uni-item { display: flex; flex-direction: column; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+.uni-item.done .uni-name strong { text-decoration: line-through; opacity: 0.55; }
+.uni-top { display: flex; align-items: center; gap: 12px; }
+.uni-name { display: flex; flex-direction: column; gap: 2px; text-align: left; min-width: 0; flex: 1; min-height: 44px; justify-content: center; }
+.uni-name strong { overflow-wrap: anywhere; }
+.uni-edit { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding-left: 40px; }
+.uni-edit .uni-add { align-self: stretch; }
+.uni-plan { display: flex; flex-direction: column; gap: 10px; }
+.uni-day { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 14px; background: var(--bg); }
+.uni-block { display: flex; gap: 10px; align-items: baseline; }
+.uni-block .muted { flex: none; min-width: 84px; }

@@ -2,8 +2,7 @@ import { useEffect, useState, type CSSProperties } from 'react'
 import { IconCalendarFilled } from '@tabler/icons-react'
 import { IconCheck, IconPlus } from '@tabler/icons-react'
 import Muna from '../components/Muna'
-import Ring from '../components/Ring'
-import { CaloriesCard, CategoryCard, SleepCard } from '../components/HomeRings'
+import { CaloriesCard, SleepCard, UniCard } from '../components/HomeRings'
 import WeatherCard, { type Plan } from '../components/WeatherCard'
 import { TaskIcon } from '../lib/icons'
 import { eventStyleKey, isEventDone, toggleEventDone, useEventDone, useEventStyles } from '../lib/eventStyles'
@@ -55,11 +54,10 @@ export default function Home() {
     className: !playing ? '' : ready ? ' reveal in' : ' reveal pre',
     style: { '--d': `${n * 110}ms` } as CSSProperties,
   })
-  const r0 = reveal(0), r1 = reveal(1), r2 = reveal(2), r3 = reveal(3), r4 = reveal(4), r5 = reveal(5), r6 = reveal(6), r7 = reveal(7)
+  const r0 = reveal(0), r1 = reveal(1), r2 = reveal(2), r3 = reveal(3), r4 = reveal(4), r5 = reveal(5)
 
   const todays = occurrencesOn(today).sort((a, b) => Number(a.completed) - Number(b.completed) || (a.start_time ?? '99').localeCompare(b.start_time ?? '99'))
   const doneToday = todays.filter((t) => t.completed).length
-  const todayPct = todays.length ? Math.round((doneToday / todays.length) * 100) : 0
 
 
   const name = profile?.display_name?.split(' ')[0] || 'friend'
@@ -92,72 +90,58 @@ export default function Home() {
         </p>
       </button>
 
-      <section className={'card wx-card' + r1.className} style={r1.style}>
-        <WeatherCard plans={plans} />
-      </section>
-
-      <div className="masonry">
-        <div className="col">
-          <section className={"card tasks-card" + r2.className} style={r2.style}>
-            <div className="card-head">
-              <h3>Today&rsquo;s tasks</h3>
-              <button className="plain-icon purple" onClick={() => navigate('/calendar')} aria-label="Open calendar">
-                <IconCalendarFilled size={24} />
-              </button>
-            </div>
-            <div className="mini-list">
-              {loading && <p className="muted small">Loading…</p>}
-              {!loading && todays.length === 0 && todaysEvents.length === 0 && <p className="muted small">Nothing yet.</p>}
-              {shown.map((t) => (
-                <div key={t.id} className={'mini-task' + (t.completed ? ' done' : '')}>
-                  <button className={`tile c-${t.color}`} onClick={() => toggleTask(t)} aria-label={t.completed ? 'Mark as not done' : 'Mark as done'}>
-                    {t.completed ? <IconCheck size={18} stroke={2.6} /> : <TaskIcon name={t.icon} size={18} />}
+      <div className="home-grid">
+        <section className={"card tasks-card" + r1.className} style={r1.style}>
+          <div className="card-head">
+            <h3>Today&rsquo;s tasks</h3>
+            <button className="plain-icon purple" onClick={() => navigate('/calendar')} aria-label="Open calendar">
+              <IconCalendarFilled size={24} />
+            </button>
+          </div>
+          <div className="mini-list">
+            {loading && <p className="muted small">Loading…</p>}
+            {!loading && todays.length === 0 && todaysEvents.length === 0 && <p className="muted small">Nothing yet.</p>}
+            {shown.map((t) => (
+              <div key={t.id} className={'mini-task' + (t.completed ? ' done' : '')}>
+                <button className={`tile c-${t.color}`} onClick={() => toggleTask(t)} aria-label={t.completed ? 'Mark as not done' : 'Mark as done'}>
+                  {t.completed ? <IconCheck size={18} stroke={2.6} /> : <TaskIcon name={t.icon} size={18} />}
+                </button>
+                <button className="mini-title" onClick={() => openEditor(t)}>
+                  {t.title}
+                </button>
+              </div>
+            ))}
+            {shownEvents.map((e) => {
+              const st = eventStyles[eventStyleKey(e)]
+              const isDone = isEventDone(eventDone, e)
+              return (
+                <div key={e.id} className={'mini-task' + (isDone ? ' done' : '')}>
+                  <button className={`tile c-${st?.color ?? 'sky'}`} onClick={() => void toggleEventDone(e)} aria-label={isDone ? 'Mark as not done' : 'Mark as done'}>
+                    {isDone ? <IconCheck size={18} stroke={2.6} /> : <TaskIcon name={st?.icon || 'IconCalendarEventFilled'} size={18} />}
                   </button>
-                  <button className="mini-title" onClick={() => openEditor(t)}>
-                    {t.title}
+                  <button className="mini-title" onClick={() => openEvent(e)}>
+                    {e.title}
+                    <small className="muted"> {eventTimeLabel(e)}</small>
                   </button>
                 </div>
-              ))}
-              {shownEvents.map((e) => {
-                const st = eventStyles[eventStyleKey(e)]
-                const isDone = isEventDone(eventDone, e)
-                return (
-                  <div key={e.id} className={'mini-task' + (isDone ? ' done' : '')}>
-                    <button className={`tile c-${st?.color ?? 'sky'}`} onClick={() => void toggleEventDone(e)} aria-label={isDone ? 'Mark as not done' : 'Mark as done'}>
-                      {isDone ? <IconCheck size={18} stroke={2.6} /> : <TaskIcon name={st?.icon || 'IconCalendarEventFilled'} size={18} />}
-                    </button>
-                    <button className="mini-title" onClick={() => openEvent(e)}>
-                      {e.title}
-                      <small className="muted"> {eventTimeLabel(e)}</small>
-                    </button>
-                  </div>
-                )
-              })}
-              {hiddenCount > 0 && (
-                <button className="more" onClick={() => navigate('/calendar')} aria-label="See all tasks">
-                  &hellip;
-                </button>
-              )}
-            </div>
-            <button className="add-pill" onClick={() => openEditor({ date: today })}>
-              <IconPlus size={16} stroke={2.4} /> Add task
-            </button>
-          </section>
-
-          <SleepCard anim={r4} />
-          <CategoryCard cat="goal" anim={r5} />
-        </div>
-
-        <div className="col">
-          <section className={"card ring-card" + r3.className} style={r3.style}>
-            <div className="card-head">
-              <h3>Today</h3>
-            </div>
-            <Ring pct={todayPct} color="var(--yellow)" value={`${todayPct}%`} label="done" />
-          </section>
-          <CaloriesCard anim={r6} />
-          <CategoryCard cat="uni" anim={r7} />
-        </div>
+              )
+            })}
+            {hiddenCount > 0 && (
+              <button className="more" onClick={() => navigate('/calendar')} aria-label="See all tasks">
+                &hellip;
+              </button>
+            )}
+          </div>
+          <button className="add-pill" onClick={() => openEditor({ date: today })}>
+            <IconPlus size={16} stroke={2.4} /> Add task
+          </button>
+        </section>
+        <UniCard anim={r2} />
+        <SleepCard anim={r3} />
+        <CaloriesCard anim={r4} />
+        <section className={'card wx-card wx-half' + r5.className} style={r5.style}>
+          <WeatherCard plans={plans} />
+        </section>
       </div>
     </div>
   )

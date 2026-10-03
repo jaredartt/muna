@@ -9,6 +9,7 @@ import { productMap, recipeMacros, round, SLOTS, usePlan, useRecipes } from '../
 import { deleteSleep, hm, saveSleep, SLEEP_GOAL_MIN, sleepAverage, sleepDefaults, sleepMinutes, useSleep } from '../lib/sleep'
 import { addDays, formatDateNice, parseDateStr, todayStr } from '../lib/dates'
 import { navigate } from '../lib/router'
+import { currentWeekOf, duration, useUniItems, useUniSettings, weekProgress } from '../lib/uni'
 import type { Category, Task } from '../lib/types'
 
 type Anim = { className: string; style: CSSProperties }
@@ -30,7 +31,7 @@ export function SleepCard({ anim }: { anim: Anim }) {
               <IconMoonFilled size={24} />
             </span>
           </div>
-          <Ring pct={avg === null ? 0 : (avg / SLEEP_GOAL_MIN) * 100} color="var(--purple)" value={avg === null ? '–' : hm(avg)} label={avg === null ? 'tap to log' : `avg · ${nights}/7 nights`} />
+          <Ring pct={avg === null ? 0 : (avg / SLEEP_GOAL_MIN) * 100} color="var(--purple)" value={avg === null ? '–' : `${(avg / 60).toFixed(1)}h`} label={avg === null ? 'tap to log' : `avg · ${nights}/7 nights`} labelBelow />
         </button>
       </section>
       {open && <SleepSheet onClose={() => setOpen(false)} />}
@@ -240,5 +241,31 @@ function CategorySheet({ cat, onClose }: { cat: Category; onClose: () => void })
         </div>
       </div>
     </div>
+  )
+}
+
+// ---------- Uni (this week: minutes done out of the minutes you planned for the week's assignments) ----------
+export function UniCard({ anim }: { anim: Anim }) {
+  const { session } = useAuth()
+  const { tasks } = useTasksCtx()
+  const uid = session?.user.id ?? ''
+  const items = useUniItems().filter((i) => i.created_by === uid)
+  const setting = useUniSettings().find((s) => s.user_id === uid)
+  const today = todayStr()
+  const week = currentWeekOf(items, tasks, setting, today)
+  const { done, total } = week === null ? { done: 0, total: 0 } : weekProgress(items, tasks, week, today)
+  const pct = total ? Math.round((done / total) * 100) : 0
+  return (
+    <section className={'card ring-card tap' + anim.className} style={anim.style}>
+      <button className="card-tap" onClick={() => navigate('/uni')} aria-label="Open Uni">
+        <div className="card-head">
+          <h3>Uni</h3>
+          <span className="plain-icon blue">
+            <IconSchool size={24} />
+          </span>
+        </div>
+        <Ring pct={pct} color="var(--blue)" value={total ? `${pct}%` : '–'} label={total ? `Week ${week}\n${duration(done)} of ${duration(total)}` : 'add your assignments'} labelBelow />
+      </button>
+    </section>
   )
 }

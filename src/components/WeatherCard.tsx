@@ -70,7 +70,7 @@ export default function WeatherCard({ plans }: { plans: Plan[] }) {
   const todayDay = forecast.days.find((d) => d.date === today) ?? forecast.days[0]
   const nowCode = forecast.now?.code ?? todayDay.code
   const info = describeCode(nowCode)
-  const strip = forecast.days.filter((d) => d.date >= today).slice(0, 7)
+  const strip = forecast.days.filter((d) => d.date >= today).slice(0, 14) // three show at a time, swipe sideways for the rest
 
   return (
     <>
