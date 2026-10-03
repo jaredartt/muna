@@ -344,7 +344,7 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 ## Repeated task move pop-up, screen animations, weather page (3 Oct 2026)
 - Dragging (or resizing) a REPEATING task in the day view asks "Do you want to move this specific repeated task or all of them?" (Only this one / All of them / Cancel). "All" changes the series' times as before. "Only this one": the series gets `exceptDates: [that day]` (new optional field in the repeat rule, in all three recurrence.ts copies; `occursOn` skips it, `cleanRepeat` keeps it, the repeat editor keeps it when you change frequency) and a new one-off copy of the task is created at the new time (keeps the tick). Code: `onMove` in CalendarPage.tsx.
 - Google Calendar: the series gets an EXDATE for each exceptDates day (google-calendar function v11, deployed). The muna-chat function was NOT redeployed: its copy of recurrence.ts has the change in the repo but the live chat would still think a moved day happens, and would drop exceptDates if Muna edits that task's repeat rule.
-- Screen animations: `navigate()` in src/lib/router.ts uses the browser's View Transitions (slide + fade; forward = from the right, back = from the left, order given by `RANK`). Browsers without it, or with "reduce motion", just switch screens. The bottom menu has its own `view-transition-name` so it stays still. Only works for navigate() calls (bottom menu, buttons), not the browser back button.
+- Screen animations (REWRITTEN 3 Oct, the View Transitions version was slow and glitchy): `<Screens>` in App.tsx wraps the screen in `<div key={route} class="screen-in fwd|back">` (display: contents) and CSS fades + slides the screen's root 14 px in 0.16 s. Direction from `slideDir` (RANK in router.ts), so it also works with the browser back button. No snapshots, no waiting for React. `navigate()` is now just a hash change.
 - Weather page: route '/weather' (src/pages/WeatherPage.tsx), opened by tapping the Weather block on Home. Shows now, next 24 hours, today in detail (feels like, humidity, wind + gusts, rain, UV, pressure, sunrise/sunset), heads-up for the next 7 days and 14-day list. `weather.ts` now also fetches hourly data and more fields (cache key v2).
 - Not tested on a real phone: view transitions, weather page layout, move pop-up.
 
@@ -358,3 +358,13 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 - Colours: green softened (#5fb48c / mint tones), Calories ring is pink (#ec8fb1).
 - Tested only with a stubbed-database browser mock (mouse and simulated touch), not on a real phone or against the live DB through the UI.
 - Not done: muna-chat edge function doesn't know Gym; it also isn't redeployed for exceptDates.
+
+## Weather is a draggable block too (3 Oct 2026)
+- Home layout now has THREE zones: left column, right column and a wide strip at the bottom (index 2 in `home_layout`). Weather ('weather' BlockId) starts in the wide strip, shows 7 days there and 3 days (swipe) when dragged into a column; any block can be dragged into the wide strip. Old saved layouts get Weather added to the strip.
+
+## Muna chat updated (3 Oct 2026, muna-chat redeploy)
+- Single repeat days: `update_task` keeps `exceptDates` when the repeat rule is edited; new tool `change_one_repeat_day` (move or skip one day, same as the calendar's "Only this one"; Google gets the EXDATE through the normal sync); the task list shown to Muna lists the moved/skipped days.
+- Categories: Muna can set hobby / pantry too.
+- Gym: tools `get_gym` (training days, goals, coming sessions, progress and week/month comparison of one exercise), `log_workout` (saves sets, moves goals with the same rules, ticks the planned day; ambiguous names -> asks), `set_skip_days` (uni/gym/hobbies). Undo covers all of them. She cannot create/edit training days or plan the gym week (Gym page "Plan the week").
+- New rule in her prompt: when not sure, ask a short question instead of acting; tools also return "ask the person" errors for unclear exercise names or days.
+- gymLogic.ts is a copy of src/lib/gymLogic.ts (keep in sync).

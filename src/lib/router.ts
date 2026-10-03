@@ -21,31 +21,10 @@ export function useRoute(): Route {
 // Where each screen sits in the app, so moving between them can slide the right way (later = from the right, earlier = from the left).
 const RANK: Record<Route, number> = { '/': 0, '/uni': 0.5, '/hobbies': 0.6, '/weather': 0.7, '/gym': 0.8, '/calendar': 1, '/meals': 2, '/pantry': 3, '/products': 3.5, '/chat': 4, '/profile': 5, '/updates': 5.5 }
 
-/** `to` may carry a flag, e.g. '/products?house' (add what you scan to the pantry too). */
+/** Which way a screen change slides: 'fwd' (new screen comes from the right) or 'back' (from the left). */
+export const slideDir = (from: Route, to: Route): 'fwd' | 'back' => (RANK[to] >= RANK[from] ? 'fwd' : 'back')
+
+/** `to` may carry a flag, e.g. '/products?house' (add what you scan to the pantry too). The slide itself is drawn by <Screens> in App.tsx. */
 export function navigate(to: Route | `${Route}?${string}`) {
-  const target = to.split('?')[0] as Route
-  const from = current()
-  const doc = document as Document & { startViewTransition?: (cb: () => Promise<void>) => unknown }
-  // Browsers that can do it slide/fade between screens (no effect on the others, and none when you asked your phone for less motion)
-  if (!doc.startViewTransition || target === from || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    window.location.hash = to
-    return
-  }
-  document.documentElement.dataset.nav = RANK[target] >= RANK[from] ? 'fwd' : 'back'
-  doc.startViewTransition(
-    () =>
-      new Promise<void>((resolve) => {
-        let done = false
-        const finish = () => {
-          if (done) return
-          done = true
-          window.removeEventListener('hashchange', onHash)
-          resolve()
-        }
-        const onHash = () => requestAnimationFrame(finish) // React has drawn the new screen by now
-        window.addEventListener('hashchange', onHash)
-        window.setTimeout(finish, 400)
-        window.location.hash = to
-      }),
-  )
+  window.location.hash = to
 }

@@ -1,4 +1,4 @@
-import { useLayoutEffect } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ConfirmProvider } from './components/Confirm'
 import { TasksProvider } from './context/TasksContext'
@@ -21,14 +21,29 @@ import Uni from './pages/Uni'
 import Hobbies from './pages/Hobbies'
 import WeatherPage from './pages/WeatherPage'
 import Gym from './pages/Gym'
-import { useRoute } from './lib/router'
+import { useRoute, slideDir, type Route } from './lib/router'
 
 function Screens() {
   const route = useRoute()
+  // the slide direction of this change (works for the bottom menu, buttons and the browser's back button alike)
+  const prev = useRef<Route>(route)
+  const dir = useRef<'fwd' | 'back'>('fwd')
+  if (prev.current !== route) {
+    dir.current = slideDir(prev.current, route)
+    prev.current = route
+  }
   // Every screen opens at the top (the chat is the exception: it scrolls itself to the newest message).
   useLayoutEffect(() => {
     if (route !== '/chat') window.scrollTo(0, 0)
   }, [route])
+  return (
+    <div key={route} className={'screen-in ' + dir.current}>
+      <Screen route={route} />
+    </div>
+  )
+}
+
+function Screen({ route }: { route: Route }) {
   switch (route) {
     case '/calendar':
       return <CalendarPage />

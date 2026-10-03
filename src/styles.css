@@ -742,18 +742,13 @@ input.sl-suggest { color: var(--muted); }
 .wx-bar { position: relative; height: 6px; border-radius: 3px; background: var(--bg); }
 .wx-bar i { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: linear-gradient(90deg, var(--blue, #5b9bf5), var(--coral)); }
 
-/* ---------- Moving between screens (browsers that support view transitions) ---------- */
-.bottom-nav { view-transition-name: bottom-nav; }
-::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.28s; animation-timing-function: cubic-bezier(0.22, 0.8, 0.3, 1); mix-blend-mode: normal; }
-html[data-nav='fwd']::view-transition-old(root) { animation-name: navOutLeft; }
-html[data-nav='fwd']::view-transition-new(root) { animation-name: navInRight; }
-html[data-nav='back']::view-transition-old(root) { animation-name: navOutRight; }
-html[data-nav='back']::view-transition-new(root) { animation-name: navInLeft; }
-@keyframes navOutLeft { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(-28px); } }
-@keyframes navInRight { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
-@keyframes navOutRight { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(28px); } }
-@keyframes navInLeft { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
+/* ---------- Moving between screens: a quick fade with a small slide (no page snapshots, so it never waits or flickers) ---------- */
+.screen-in { display: contents; }
+.screen-in > * { animation: screenInFwd 0.16s ease-out backwards; }
+.screen-in.back > * { animation-name: screenInBack; }
+@keyframes screenInFwd { from { opacity: 0; transform: translateX(14px); } }
+@keyframes screenInBack { from { opacity: 0; transform: translateX(-14px); } }
+@media (prefers-reduced-motion: reduce) { .screen-in > * { animation: none; } }
 
 /* ---------- Drag to reorder (press and hold) ---------- */
 [data-rid] { position: relative; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
@@ -811,3 +806,8 @@ html[data-nav='back']::view-transition-new(root) { animation-name: navInLeft; }
 .gym-split-row { justify-content: flex-start; }
 .gym-split-row .ml-row-main { flex: 1; }
 .gym-split-row > svg { margin-left: auto; flex: none; }
+
+/* while dragging a block, empty columns still have room to drop into */
+.masonry.dragging .col, .wide-zone.dragging { min-height: 72px; }
+.wide-zone { margin-top: 20px; }
+.wide-zone:empty { margin-top: 0; }

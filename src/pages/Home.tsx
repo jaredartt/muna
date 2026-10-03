@@ -86,6 +86,23 @@ export default function Home() {
   const shownEvents = todaysEvents.slice(0, Math.max(0, 4 - shown.length))
   const hiddenCount = todays.length - shown.length + (todaysEvents.length - shownEvents.length)
 
+  // blocks can be dragged (press and hold) to another place; the layout is saved on your profile
+  const [layout, setLayout] = useState<BlockId[][]>(() => normalizeLayout(profile?.home_layout ?? readLocalLayout()))
+  const savedKey = JSON.stringify(profile?.home_layout ?? null)
+  useEffect(() => {
+    if (profile?.home_layout) setLayout(normalizeLayout(profile.home_layout))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedKey])
+  const rd = useReorder({
+    columns: layout,
+    onChange: (next) => {
+      const l = normalizeLayout(next)
+      setLayout(l)
+      writeLocalLayout(l)
+      if (profile) void supabase.from('profiles').update({ home_layout: l }).eq('id', profile.id)
+    },
+  })
+
   const blocks: Record<BlockId, ReactNode> = {
     tasks: (
             <section
@@ -146,48 +163,9 @@ export default function Home() {
     uni: <UniCard anim={r2} />,
     gym: <GymCard anim={r5} />,
     calories: <CaloriesCard anim={r6} />,
-  }
-
-  // blocks can be dragged (press and hold) to another place; the layout is saved on your profile
-  const [layout, setLayout] = useState<BlockId[][]>(() => normalizeLayout(profile?.home_layout ?? readLocalLayout()))
-  const savedKey = JSON.stringify(profile?.home_layout ?? null)
-  useEffect(() => {
-    if (profile?.home_layout) setLayout(normalizeLayout(profile.home_layout))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [savedKey])
-  const rd = useReorder({
-    columns: layout,
-    onChange: (next) => {
-      const l = normalizeLayout(next)
-      setLayout(l)
-      writeLocalLayout(l)
-      if (profile) void supabase.from('profiles').update({ home_layout: l }).eq('id', profile.id)
-    },
-  })
-
-  return (
-    <div className="page home">
-      <button className={"hero" + r0.className} style={r0.style} onClick={() => navigate('/chat')} aria-label="Chat with Muna">
-        <Muna size={94} />
-        <p className="hero-text">
-          {greeting()}, {name}! {message}
-        </p>
-      </button>
-
-      <div className="masonry">
-        {layout.map((col, ci) => (
-          <div key={ci} className="col" ref={rd.column(ci)}>
-            {col.map((id) => (
-              <div key={id} {...rd.item(id)}>
-                {blocks[id]}
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-
+    weather: (
       <section
-        className={'card wx-card wx-wide wx-link' + r7.className}
+        className={'card wx-card wx-link ' + (layout[2].includes('weather') ? 'wx-wide' : 'wx-half') + r7.className}
         style={r7.style}
         onClick={() => navigate('/weather')}
         role="link"
@@ -199,6 +177,37 @@ export default function Home() {
       >
         <WeatherCard plans={plans} />
       </section>
+    ),
+  }
+
+  return (
+    <div className="page home">
+      <button className={"hero" + r0.className} style={r0.style} onClick={() => navigate('/chat')} aria-label="Chat with Muna">
+        <Muna size={94} />
+        <p className="hero-text">
+          {greeting()}, {name}! {message}
+        </p>
+      </button>
+
+      <div className={'masonry' + (rd.dragging ? ' dragging' : '')}>
+        {layout.map((col, ci) => (
+          <div key={ci} className="col" ref={rd.column(ci)}>
+            {col.map((id) => (
+              <div key={id} {...rd.item(id)}>
+                {blocks[id]}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      <div className={'col wide-zone' + (rd.dragging ? ' dragging' : '')} ref={rd.column(2)}>
+        {layout[2].map((id) => (
+          <div key={id} {...rd.item(id)}>
+            {blocks[id]}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
