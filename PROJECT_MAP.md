@@ -30,7 +30,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: BottomNav
   - imports: lib/router.ts
   - used by: App.tsx
-- `src/components/DayView.tsx` (285 lines)
+- `src/components/DayView.tsx` (337 lines)
   - exports: DayView
   - imports: lib/dayItems.ts, lib/icons.tsx
   - used by: pages/CalendarPage.tsx

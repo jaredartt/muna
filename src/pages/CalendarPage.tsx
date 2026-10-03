@@ -107,9 +107,9 @@ export default function CalendarPage() {
   }, [weekDays, weekMap, eventsByDate, moved, styles, doneSet]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Moving things by dragging in the day view
-  async function onMove(item: DayItem, startMin: number | null) {
+  async function onMove(item: DayItem, startMin: number | null, durMin?: number) {
     setNote('')
-    const dur = item.allDay ? 60 : Math.max(15, item.end - item.start)
+    const dur = durMin ?? (item.allDay ? 60 : Math.max(15, item.end - item.start))
     const end = startMin === null ? 0 : Math.min(startMin + dur, 1439)
     if (item.kind === 'task') {
       const t = dayTasks.find((x) => 't:' + x.id === item.key)
