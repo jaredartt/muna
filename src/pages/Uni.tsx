@@ -11,7 +11,6 @@ import { navigate } from '../lib/router'
 import { addCourse, addUniItem, commitPlan, currentWeekOf, deleteCourse, deleteUniItem, duration, fmtMin, itemState, looseUniTasks, reorderUniItems, setCurrentWeek, unplanItem, updateCourse, updateUniItem, useUniCourses, useUniItems, useUniSettings, weekProgress, type UniCourse, type UniItem } from '../lib/uni'
 import { daysBetween, planStudy, type Span } from '../lib/uniPlan'
 import { assigneeColor } from '../lib/people'
-import { TASK_COLORS } from '../lib/icons'
 import SkipDays from '../components/SkipDays'
 import { useSkips } from '../lib/skips'
 import { useReorder } from '../hooks/useReorder'
@@ -58,7 +57,7 @@ export default function Uni() {
   const [addCourseId, setAddCourseId] = useState('')
   useEffect(() => setAddCourseId(selCourse ? selCourse.id : ''), [selCourse?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   // course editing
-  const [newCourse, setNewCourse] = useState<{ name: string; color: string } | null>(null)
+  const [newCourse, setNewCourse] = useState<{ name: string } | null>(null)
   const [editCourse, setEditCourse] = useState(false)
   const [courseName, setCourseName] = useState('')
   useEffect(() => {
@@ -68,7 +67,7 @@ export default function Uni() {
   const { confirm } = useConfirm()
   async function createCourse() {
     if (!profile || !newCourse?.name.trim()) return
-    const r = await addCourse(profile.household_id, uid, newCourse.name, newCourse.color)
+    const r = await addCourse(profile.household_id, uid, newCourse.name)
     if (r.error) return setErr(r.error)
     setNewCourse(null)
     if (r.id) setCourseSel(r.id)
@@ -107,7 +106,7 @@ export default function Uni() {
           <select
             value={scope}
             onChange={(e) => {
-              if (e.target.value === '__new') setNewCourse({ name: '', color: TASK_COLORS[courses.length % TASK_COLORS.length] })
+              if (e.target.value === '__new') setNewCourse({ name: '' })
               else {
                 setNewCourse(null)
                 setCourseSel(e.target.value)
@@ -123,7 +122,6 @@ export default function Uni() {
             ))}
             <option value="__new">+ New course…</option>
           </select>
-          {selCourse && <i className={'course-dot c-' + selCourse.color} />}
         </label>
         {newCourse && (
           <div className="uni-edit course-edit">
@@ -133,51 +131,44 @@ export default function Uni() {
                 <IconPlus size={20} />
               </button>
             </div>
-            <div className="swatches">
-              {TASK_COLORS.map((c) => (
-                <button type="button" key={c} className={`swatch c-${c}` + (newCourse.color === c ? ' selected' : '')} onClick={() => setNewCourse({ ...newCourse, color: c })} aria-label={c} />
-              ))}
-            </div>
           </div>
         )}
-        {selCourse && (
-          <>
-            <button className="ml-toggle" style={{ alignSelf: 'flex-start' }} onClick={() => setEditCourse((o) => !o)} aria-expanded={editCourse}>
-              {editCourse ? 'Close' : `Edit ${selCourse.name}`}
-            </button>
-            {editCourse && (
-              <div className="uni-edit course-edit">
-                <input
-                  value={courseName}
-                  onChange={(e) => setCourseName(e.target.value)}
-                  onBlur={() => {
-                    const n = courseName.trim()
-                    if (n && n !== selCourse.name) void updateCourse(selCourse.id, { name: n })
-                    else setCourseName(selCourse.name)
-                  }}
-                  maxLength={40}
-                  aria-label="Course name"
-                />
-                <div className="swatches">
-                  {TASK_COLORS.map((c) => (
-                    <button type="button" key={c} className={`swatch c-${c}` + (selCourse.color === c ? ' selected' : '')} onClick={() => void updateCourse(selCourse.id, { color: c })} aria-label={c} />
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  className="ml-toggle"
-                  onClick={async () => {
-                    if (await confirm({ message: <>Delete the course <strong>{selCourse.name}</strong>? Its assignments stay, they just have no course.</> })) {
-                      await deleteCourse(selCourse.id)
-                      setCourseSel('all')
-                    }
-                  }}
-                >
-                  <IconTrashFilled size={14} /> Delete course
-                </button>
-              </div>
-            )}
-          </>
+        {selCourse && !editCourse && (
+          <button className="ml-toggle" style={{ alignSelf: 'flex-start' }} onClick={() => setEditCourse(true)}>
+            Edit {selCourse.name}
+          </button>
+        )}
+        {selCourse && editCourse && (
+          <div className="uni-edit course-edit">
+            <input
+              value={courseName}
+              onChange={(e) => setCourseName(e.target.value)}
+              onBlur={() => {
+                const n = courseName.trim()
+                if (n && n !== selCourse.name) void updateCourse(selCourse.id, { name: n })
+                else setCourseName(selCourse.name)
+              }}
+              maxLength={40}
+              aria-label="Course name"
+            />
+            <div className="course-actions">
+              <button type="button" className="ml-toggle" onClick={() => setEditCourse(false)}>
+                Close
+              </button>
+              <button
+                type="button"
+                className="ml-toggle danger"
+                onClick={async () => {
+                  if (await confirm({ message: <>Delete the course <strong>{selCourse.name}</strong>? Its assignments stay, they just have no course.</> })) {
+                    await deleteCourse(selCourse.id)
+                    setCourseSel('all')
+                  }
+                }}
+              >
+                <IconTrashFilled size={14} /> Delete course
+              </button>
+            </div>
+          </div>
         )}
         <div className="ml-slotline" role="tablist" aria-label="Uni weeks">
           {weeks.map((w) => (

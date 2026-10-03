@@ -671,8 +671,8 @@ input.sl-suggest { color: var(--muted); }
 .uni-block { display: flex; gap: 10px; align-items: baseline; }
 .uni-block .muted { flex: none; min-width: 84px; }
 
-.course-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 2px; vertical-align: baseline; }
 .course-edit { padding-left: 0; }
+.course-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .uni-weekno { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .uni-weekno span { color: var(--muted); font-size: 14px; }
 .uni-weekno input { width: 76px; text-align: center; }

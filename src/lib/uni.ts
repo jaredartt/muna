@@ -26,7 +26,7 @@ export type UniSetting = { id: string; household_id: string; user_id: string; cu
 const settings = liveTable<UniSetting>('uni_settings', 'muna.uniSettings.v1', (a, b) => a.user_id.localeCompare(b.user_id))
 export const useUniSettings = settings.use
 
-/** A course (Math, Art history...) with its own colour. Assignments belong to one course (or none). */
+/** A course (Math, Art history...). Assignments belong to one course (or none). */
 export type UniCourse = { id: string; household_id: string; created_by: string; name: string; color: string; position: number; created_at: string }
 const courses = liveTable<UniCourse>('uni_courses', 'muna.uniCourses.v1', (a, b) => (a.position ?? 0) - (b.position ?? 0) || a.created_at.localeCompare(b.created_at))
 export const useUniCourses = courses.use
@@ -44,14 +44,14 @@ export function startUniSync(householdId: string): () => void {
   }
 }
 
-export async function addCourse(householdId: string, userId: string, name: string, color: string): Promise<{ id?: string; error?: string }> {
+export async function addCourse(householdId: string, userId: string, name: string): Promise<{ id?: string; error?: string }> {
   const position = Math.max(-1, ...courses.all().filter((c) => c.created_by === userId).map((c) => c.position ?? 0)) + 1
-  const { data, error } = await supabase.from('uni_courses').insert({ household_id: householdId, created_by: userId, name: name.trim(), color, position }).select().single()
+  const { data, error } = await supabase.from('uni_courses').insert({ household_id: householdId, created_by: userId, name: name.trim(), position }).select().single()
   if (error) return { error: error.message }
   courses.upsert(data as UniCourse)
   return { id: (data as UniCourse).id }
 }
-export async function updateCourse(id: string, patch: Partial<Pick<UniCourse, 'name' | 'color'>>): Promise<string | null> {
+export async function updateCourse(id: string, patch: Partial<Pick<UniCourse, 'name'>>): Promise<string | null> {
   const old = courses.all().find((c) => c.id === id)
   if (old) courses.upsert({ ...old, ...patch })
   const { error } = await supabase.from('uni_courses').update(patch).eq('id', id)
