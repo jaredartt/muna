@@ -375,3 +375,6 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 
 ## Home layout is per person (3 Oct 2026)
 - It already saved to each person's own `profiles.home_layout` row (RLS: update own profile only; verified for Jared and Lidia, both null until someone drags). The on-device copy was a single shared key, so two accounts in one browser could mix; it is now `muna.homeLayout.v2.<user id>`.
+
+## Repeat editor number boxes (3 Oct 2026)
+- "Every N weeks" and "after N times" snapped back to 1 as soon as you cleared them (the number was forced on every keystroke). New `NumberBox` in RepeatEditor.tsx: keeps what you type, applies valid numbers at once, selects the number on tap, and only fixes an empty/invalid box (to 1..max) when you leave it. Other number boxes (Gym, Uni, Hobbies) already worked this way. Checked in a browser mock.

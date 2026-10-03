@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { IconRepeat } from '@tabler/icons-react'
 import { describeRepeat, type Repeat } from '../lib/recurrence'
 
@@ -8,6 +8,32 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const WEEKS: [number, string][] = [[1, '1st'], [2, '2nd'], [3, '3rd'], [4, '4th'], [-1, 'Last']]
 const NTHS: [number, string][] = [[1, 'first'], [2, 'second'], [3, 'third'], [4, 'fourth'], [-1, 'last']]
 const UNITS = { day: 'day(s)', week: 'week(s)', month: 'month(s)', year: 'year(s)' }
+
+/** A whole-number box you can clear and retype: it keeps what you type while you type, and only fixes it (1..max) when you leave it. */
+function NumberBox({ value, min = 1, max, onCommit }: { value: number; min?: number; max: number; onCommit: (n: number) => void }) {
+  const [text, setText] = useState(String(value))
+  useEffect(() => setText(String(value)), [value])
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      autoComplete="off"
+      value={text}
+      onFocus={(e) => e.target.select()}
+      onChange={(e) => {
+        const t = e.target.value.replace(/\D/g, '').slice(0, String(max).length)
+        setText(t)
+        const n = Number(t)
+        if (t !== '' && n >= min) onCommit(Math.min(max, n)) // valid numbers apply at once; an empty box waits
+      }}
+      onBlur={() => {
+        const n = Math.min(max, Math.max(min, Number(text) || min))
+        setText(String(n))
+        onCommit(n)
+      }}
+    />
+  )
+}
 
 function toggle(list: number[] | undefined, n: number): number[] {
   const l = list ?? []
@@ -95,7 +121,7 @@ export default function RepeatEditor({ value, onChange, date }: Props) {
         <>
           <div className="repeat-line">
             <span>Every</span>
-            <input type="number" inputMode="numeric" min={1} max={99} value={value.every} onChange={(e) => set({ every: Math.max(1, Number(e.target.value) || 1) })} />
+            <NumberBox value={value.every} max={99} onCommit={(n) => set({ every: n })} />
             <span>{UNITS[value.freq]}</span>
           </div>
 
@@ -183,7 +209,7 @@ export default function RepeatEditor({ value, onChange, date }: Props) {
             {endMode === 'until' && <input type="date" min={date} value={value.until ?? ''} onChange={(e) => set({ until: e.target.value || null })} />}
             {endMode === 'count' && (
               <>
-                <input type="number" inputMode="numeric" min={1} max={999} value={value.count ?? 10} onChange={(e) => set({ count: Math.max(1, Number(e.target.value) || 1) })} />
+                <NumberBox value={value.count ?? 10} max={999} onCommit={(n) => set({ count: n })} />
                 <span>times</span>
               </>
             )}
