@@ -33,7 +33,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/components/Confirm.tsx` (92 lines)
   - exports: ConfirmButton, ConfirmOptions, ConfirmProvider, useConfirm
   - used by: App.tsx, components/EventSheet.tsx, components/HomeRings.tsx, components/MyIcons.tsx, components/ProductSheet.tsx, components/RecipeSheet.tsx, components/TaskSheet.tsx, pages/Chat.tsx, pages/Hobbies.tsx, pages/Pantry.tsx, pages/Uni.tsx
-- `src/components/DayView.tsx` (337 lines)
+- `src/components/DayView.tsx` (351 lines)
   - exports: DayView
   - imports: lib/dayItems.ts, lib/icons.tsx
   - used by: pages/CalendarPage.tsx

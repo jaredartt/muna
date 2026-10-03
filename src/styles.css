@@ -372,7 +372,11 @@ input[type='checkbox']:focus-visible { outline: none; box-shadow: 0 0 0 4px colo
 .strip-day.selected .sd-letter, .strip-day.selected .sd-num { color: #fff; }
 .strip-day.selected .sd-dot.on { background: #fff; }
 
-.day-sticky { position: sticky; top: calc(env(safe-area-inset-top) - 6px); z-index: 20; background: var(--bg); margin: 0 -20px; padding: 6px 20px 10px; }
+.day-sticky { position: sticky; top: calc(env(safe-area-inset-top) + 4px); z-index: 20; background: var(--bg); margin: 0 -20px; padding: 6px 20px 10px; }
+/* stuck at the top: page colour above the block (so nothing shows over it), and a round-topped white cap under it so the calendar keeps its rounded top while it scrolls */
+.day-sticky.stuck::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: calc(env(safe-area-inset-top) + 8px); background: var(--bg); }
+.day-sticky.stuck::after { content: ''; position: absolute; left: 20px; right: 20px; top: 100%; height: 28px; pointer-events: none;
+  background: radial-gradient(circle at 100% 100%, transparent 27.5px, var(--bg) 28px) top left / 28px 28px no-repeat, radial-gradient(circle at 0 100%, transparent 27.5px, var(--bg) 28px) top right / 28px 28px no-repeat, var(--card); }
 .allday { background: var(--card); border-radius: 24px; box-shadow: var(--shadow); padding: 12px 14px 14px; transition: background 0.2s ease, box-shadow 0.2s ease; }
 .allday.drop { background: var(--peach-bg); box-shadow: 0 0 0 2px color-mix(in srgb, var(--coral) 55%, transparent); }
 .allday-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

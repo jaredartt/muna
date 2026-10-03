@@ -34,6 +34,20 @@ export default function DayView({ label, isToday, items, onMove, onAdd, onCreate
   const gridRef = useRef<HTMLDivElement>(null)
   const allRef = useRef<HTMLDivElement>(null)
   const stickyRef = useRef<HTMLDivElement>(null)
+  // true while the date block is stuck to the top of the screen (then it gets some air above it and the calendar keeps its round top)
+  const [stuck, setStuck] = useState(false)
+  useEffect(() => {
+    const el = stickyRef.current
+    if (!el) return
+    const check = () => setStuck(el.getBoundingClientRect().top <= (parseFloat(getComputedStyle(el).top) || 0) + 0.5)
+    check()
+    window.addEventListener('scroll', check, { passive: true })
+    window.addEventListener('resize', check)
+    return () => {
+      window.removeEventListener('scroll', check)
+      window.removeEventListener('resize', check)
+    }
+  }, [])
   const [drag, setDrag] = useState<Drag | null>(null)
   const dragRef = useRef<Drag | null>(null)
   const pending = useRef<Pending | null>(null)
@@ -249,7 +263,7 @@ export default function DayView({ label, isToday, items, onMove, onAdd, onCreate
 
   return (
     <div className="dayview">
-      <div className="day-sticky" ref={stickyRef}>
+      <div className={'day-sticky' + (stuck ? ' stuck' : '')} ref={stickyRef}>
         <div className={'allday' + (drag?.zone === 'all' ? ' drop' : '')} ref={allRef}>
           <div className="allday-head">
             <span className="allday-label">{label}</span>
