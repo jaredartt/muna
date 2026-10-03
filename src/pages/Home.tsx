@@ -79,7 +79,7 @@ export default function Home() {
   const hiddenCount = todays.length - shown.length + (todaysEvents.length - shownEvents.length)
 
   // blocks can be dragged (press and hold) to another place; the layout is saved on your profile
-  const [layout, setLayout] = useState<BlockId[][]>(() => normalizeLayout(profile?.home_layout ?? readLocalLayout()))
+  const [layout, setLayout] = useState<BlockId[][]>(() => normalizeLayout(profile?.home_layout ?? readLocalLayout(profile?.id)))
   const savedKey = JSON.stringify(profile?.home_layout ?? null)
   useEffect(() => {
     if (profile?.home_layout) setLayout(normalizeLayout(profile.home_layout))
@@ -90,7 +90,7 @@ export default function Home() {
     onChange: (next) => {
       const l = normalizeLayout(next)
       setLayout(l)
-      writeLocalLayout(l)
+      writeLocalLayout(profile?.id, l)
       if (profile) void supabase.from('profiles').update({ home_layout: l }).eq('id', profile.id)
     },
   })

@@ -1,5 +1,5 @@
 // Which white blocks the Home screen shows and where (two columns, plus a wide strip at the bottom). You change it by pressing and holding a block and dragging it.
-// It is saved on your profile (so every device of yours looks the same) and kept on the device for an instant first paint.
+// It is saved on YOUR OWN profile (each person arranges their own Home; every device of yours looks the same) and kept on the device for an instant first paint.
 export type BlockId = 'tasks' | 'sleep' | 'hobbies' | 'uni' | 'gym' | 'calories' | 'weather'
 export const ALL_BLOCKS: BlockId[] = ['tasks', 'sleep', 'hobbies', 'uni', 'gym', 'calories', 'weather']
 export const DEFAULT_LAYOUT: BlockId[][] = [
@@ -7,7 +7,8 @@ export const DEFAULT_LAYOUT: BlockId[][] = [
   ['uni', 'gym', 'calories'],
   ['weather'], // the wide strip at the bottom (index 2)
 ]
-const KEY = 'muna.homeLayout.v1'
+// one saved copy PER PERSON (so two people using the same browser never see each other's layout)
+const key = (uid: string) => `muna.homeLayout.v2.${uid}`
 
 /** Takes whatever was saved and makes a safe layout: unknown or double blocks dropped, new blocks added to the shorter column. */
 export function normalizeLayout(raw: unknown): BlockId[][] {
@@ -32,17 +33,19 @@ export function normalizeLayout(raw: unknown): BlockId[][] {
   return cols
 }
 
-export function readLocalLayout(): BlockId[][] | null {
+export function readLocalLayout(uid: string | undefined): BlockId[][] | null {
+  if (!uid) return null
   try {
-    const raw = localStorage.getItem(KEY)
+    const raw = localStorage.getItem(key(uid))
     return raw ? normalizeLayout(JSON.parse(raw)) : null
   } catch {
     return null
   }
 }
-export function writeLocalLayout(l: BlockId[][]) {
+export function writeLocalLayout(uid: string | undefined, l: BlockId[][]) {
+  if (!uid) return
   try {
-    localStorage.setItem(KEY, JSON.stringify(l))
+    localStorage.setItem(key(uid), JSON.stringify(l))
   } catch {
     /* fine */
   }

@@ -372,3 +372,6 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 ## Weather block fix: one block, very small (3 Oct 2026, later)
 - Bug: Home rendered all THREE layout zones inside the two-column grid (`layout.map`), so the wide-strip zone (Weather) appeared twice. Now `layout.slice(0, 2)` for the grid; the wide strip is rendered once below it.
 - The Home Weather block is now tiny (`wx-mini`): icon, temperature, condition, today's high/low, place name. The 7-day strip, rain/wind facts, outdoor-plan warnings and the "looks lovely" tip are gone from Home; everything is on the Weather page (tap the block). WeatherCard takes no props now; Home no longer builds the `plans` list.
+
+## Home layout is per person (3 Oct 2026)
+- It already saved to each person's own `profiles.home_layout` row (RLS: update own profile only; verified for Jared and Lidia, both null until someone drags). The on-device copy was a single shared key, so two accounts in one browser could mix; it is now `muna.homeLayout.v2.<user id>`.
