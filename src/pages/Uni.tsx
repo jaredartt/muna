@@ -176,7 +176,9 @@ function Row({ item, today }: { item: UniItem; today: string }) {
 
   async function tick() {
     if (st.done) {
+      // undo: the item and every block of it that was ticked
       await updateUniItem(item.id, { done: false })
+      for (const t of st.linked) if (t.completed) void toggleTask(t)
       return
     }
     await updateUniItem(item.id, { done: true })

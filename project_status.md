@@ -295,3 +295,9 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 - Task sheet: "Counts for" now reads Task / Uni / Goals. The sheet title follows it: Edit/New task, uni task, Goal; the Add button too. Choosing a kind also sets the look (Task: checklist/mint, uni: school/sky, Goal: star/butter) unless you already picked your own icon or colour (`KINDS`, `chooseCategory` in TaskSheet.tsx).
 - Uni tasks act as Uni across the app: tasks marked Uni (not the blocks Muna planned from the Uni list) that are due this calendar week, or overdue and open, appear on the Uni page under "Other uni tasks this week" and count in the Uni block on Home with their length (30 min when they have no times). `looseUniTasks` / `weekProgress(..., loose)` in src/lib/uni.ts.
 - Goals has no block on Home right now, so a Goal only gets the title, icon and colour. The muna-chat prompt still talks about rings for Uni and Goals (not redeployed).
+
+## Undo uni ticks, done button in the task sheet, sheet slide (Oct 3)
+- Uni page: un-ticking an item now also un-ticks its ticked calendar blocks (before, the item stayed done because all its blocks were still ticked).
+- Task sheet (existing tasks): a big "Mark as done / Mark as not done" button at the top, live (for a repeating task it ticks the day you opened: `occDate` in TasksContext). `done`, `onToggleDone`, `leaving` props of TaskSheet.
+- The task sheet slides up from the bottom and slides down on close (CSS `.sheet-anim`, `.leaving`; the provider keeps the sheet mounted 230 ms while it leaves: `closeEditor` in TasksContext). Only the task sheet has it; other sheets still appear/disappear instantly. The sheet has a key per task so opening another task never shows the old one's text.
+- The user does not want to be asked about billing (Gemini key / robotic voice): do not bring it up again.

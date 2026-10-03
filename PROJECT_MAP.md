@@ -106,7 +106,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
 - `src/components/TaskRow.tsx` (43 lines)
   - exports: TaskRow
   - imports: lib/dates.ts, lib/icons.tsx, lib/types.ts
-- `src/components/TaskSheet.tsx` (309 lines)
+- `src/components/TaskSheet.tsx` (326 lines)
   - exports: TaskSheet
   - imports: components/IconPicker.tsx, components/RepeatEditor.tsx, context/AuthContext.tsx, hooks/useSheetScrollGuard.ts, lib/icons.tsx, lib/meals.ts, lib/products.ts, lib/recurrence.ts, lib/types.ts
   - used by: context/TasksContext.tsx
@@ -132,7 +132,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: AuthProvider, useAuth
   - imports: lib/google.ts, lib/supabase.ts, lib/theme.ts, lib/types.ts
   - used by: App.tsx, components/EventRow.tsx, components/EventSheet.tsx, components/HobbiesCard.tsx, components/HobbySync.tsx, components/HolidaySync.tsx, components/HomeRings.tsx, components/IconSync.tsx, components/MyIcons.tsx, components/TaskSheet.tsx, components/WeatherPlaceCard.tsx, hooks/useGoogleEvents.ts, hooks/useHobbyPlanner.ts, hooks/useShopping.ts, hooks/useTasks.ts, lib/weather.ts, pages/CalendarPage.tsx, pages/Chat.tsx, pages/Hobbies.tsx, pages/Home.tsx, pages/Login.tsx, pages/Meals.tsx, pages/Pantry.tsx, pages/Products.tsx, pages/Profile.tsx, pages/Uni.tsx
-- `src/context/TasksContext.tsx` (94 lines)
+- `src/context/TasksContext.tsx` (118 lines)
   - exports: TasksProvider, useTasksCtx
   - imports: components/EventSheet.tsx, components/TaskSheet.tsx, hooks/useTasks.ts, lib/events.ts, lib/google.ts, lib/types.ts
   - used by: App.tsx, components/HobbiesCard.tsx, components/HobbySync.tsx, components/HomeRings.tsx, hooks/useHobbyPlanner.ts, hooks/useShopping.ts, pages/CalendarPage.tsx, pages/Hobbies.tsx, pages/Home.tsx, pages/Uni.tsx
@@ -298,7 +298,7 @@ Auto-made by `python3 tools/make_map.py`. Do not edit by hand. Read this before 
   - exports: Profile
   - imports: components/Avatar.tsx, components/IconPicker.tsx, components/MyIcons.tsx, components/WeatherPlaceCard.tsx, context/AuthContext.tsx, lib/icons.tsx, lib/router.ts, lib/supabase.ts, lib/types.ts
   - used by: App.tsx
-- `src/pages/Uni.tsx` (472 lines)
+- `src/pages/Uni.tsx` (474 lines)
   - exports: Uni
   - imports: context/AuthContext.tsx, context/TasksContext.tsx, hooks/useGoogleEvents.ts, hooks/useSheetScrollGuard.ts, lib/dates.ts, lib/router.ts, lib/uni.ts, lib/uniPlan.ts
   - used by: App.tsx

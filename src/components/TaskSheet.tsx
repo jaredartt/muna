@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSheetScrollGuard } from '../hooks/useSheetScrollGuard'
-import { IconCheck, IconPlus, IconTrashFilled, IconX } from '@tabler/icons-react'
+import { IconArrowBackUp, IconCheck, IconPlus, IconTrashFilled, IconX } from '@tabler/icons-react'
 import IconPicker from './IconPicker'
 import RepeatEditor from './RepeatEditor'
 import { cleanRepeat, firstOccurrence, type Repeat } from '../lib/recurrence'
@@ -19,6 +19,9 @@ type Props = {
   onDelete?: (id: string) => Promise<void>
   onChecklist?: (id: string, items: ChecklistItem[]) => void // saves the to-do list at once (ticks should not wait for Save)
   onAutosave?: (draft: TaskDraft, id: string) => Promise<void> // saves an existing task while you edit it (the sheet stays open)
+  done?: boolean // is this task ticked (for a repeating task: on the day you opened)
+  onToggleDone?: () => void
+  leaving?: boolean // the sheet is sliding away
   onClose: () => void
 }
 
@@ -30,7 +33,7 @@ const KINDS: Record<string, { noun: string; icon: string; color: string }> = {
 }
 const kindOf = (c: Category | null) => KINDS[c ?? 'none']
 
-export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd, onSave, onDelete, onChecklist, onAutosave, onClose }: Props) {
+export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd, onSave, onDelete, onChecklist, onAutosave, done, onToggleDone, leaving, onClose }: Props) {
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
   const { members, session, profile } = useAuth()
@@ -162,7 +165,7 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
   )
 
   return (
-    <div className="sheet-backdrop" ref={backdropRef} onClick={onClose}>
+    <div className={'sheet-backdrop sheet-anim' + (leaving ? ' leaving' : '')} ref={backdropRef} onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`${task ? 'Edit' : 'New'} ${kindOf(category).noun}`}>
         <div className="sheet-head">
           <h2>{task ? 'Edit' : 'New'} {kindOf(category).noun}</h2>
@@ -175,6 +178,20 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
             <IconX size={22} />
           </button>
         </div>
+
+        {task && onToggleDone && (
+          <button type="button" className={'btn ' + (done ? 'soft' : 'primary')} style={{ alignSelf: 'stretch' }} onClick={onToggleDone} aria-pressed={done}>
+            {done ? (
+              <>
+                <IconArrowBackUp size={20} /> Mark as not done
+              </>
+            ) : (
+              <>
+                <IconCheck size={20} stroke={2.6} /> Mark as done
+              </>
+            )}
+          </button>
+        )}
 
         <label className="field">
           <span>What needs to be done?</span>

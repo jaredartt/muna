@@ -665,3 +665,14 @@ input.sl-suggest { color: var(--muted); }
 .hobby-card .tile { background: var(--card); }
 .hobby-card .add-pill { background: var(--card); color: var(--coral-fg); }
 .hobby-head { text-align: left; width: 100%; }
+
+/* The task sheet slides up from the bottom and back down when it closes */
+@keyframes scrimIn { from { background-color: rgba(40, 30, 20, 0); } to { background-color: rgba(40, 30, 20, 0.4); } }
+@keyframes scrimOut { from { background-color: rgba(40, 30, 20, 0.4); } to { background-color: rgba(40, 30, 20, 0); } }
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes sheetDown { from { transform: none; } to { transform: translateY(100%); } }
+.sheet-anim { animation: scrimIn 0.25s ease-out; }
+.sheet-anim .sheet { animation: sheetUp 0.3s cubic-bezier(0.2, 0.85, 0.25, 1); }
+.sheet-anim.leaving { animation: scrimOut 0.23s ease-in forwards; pointer-events: none; }
+.sheet-anim.leaving .sheet { animation: sheetDown 0.23s ease-in forwards; }
+@media (prefers-reduced-motion: reduce) { .sheet-anim, .sheet-anim .sheet, .sheet-anim.leaving, .sheet-anim.leaving .sheet { animation: none; } }

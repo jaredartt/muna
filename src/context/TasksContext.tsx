@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTasks } from '../hooks/useTasks'
 import TaskSheet from '../components/TaskSheet'
 import EventSheet from '../components/EventSheet'
@@ -6,7 +6,7 @@ import { notifyTasksChanged } from '../lib/events'
 import type { GoogleEvent } from '../lib/google'
 import type { ChecklistItem, Occurrence, Task, TaskDraft } from '../lib/types'
 
-type Editor = { task: Task | null; defaultDate: string | null; defaultStart?: string | null; defaultEnd?: string | null } | null
+type Editor = { task: Task | null; occDate?: string | null; defaultDate: string | null; defaultStart?: string | null; defaultEnd?: string | null } | null
 
 type TasksState = ReturnType<typeof useTasks> & {
   /** Open the task sheet. Pass a task to edit, or { date } (and optionally { start, end } as HH:MM) to create one on a given day. */
@@ -21,24 +21,44 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   const t = useTasks()
   const [editor, setEditor] = useState<Editor>(null)
   const [eventEditor, setEventEditor] = useState<GoogleEvent | null>(null)
+  // the task sheet slides down before it disappears
+  const [leaving, setLeaving] = useState(false)
+  const closeTimer = useRef<number | undefined>(undefined)
   const openEvent = useCallback((ev: GoogleEvent) => setEventEditor(ev), [])
 
   const openEditor = useCallback((arg?: Task | Occurrence | { date?: string | null; start?: string | null; end?: string | null }) => {
+    // opening a sheet while the last one is still sliding away: keep the new one
+    if (closeTimer.current) {
+      window.clearTimeout(closeTimer.current)
+      closeTimer.current = undefined
+      setLeaving(false)
+    }
     // a repeating day opens the real task (the whole series), not just that one day
-    if (arg && 'id' in arg) setEditor({ task: (arg as Occurrence).series ?? arg, defaultDate: null })
+    if (arg && 'id' in arg) setEditor({ task: (arg as Occurrence).series ?? arg, occDate: (arg as Occurrence).series ? arg.due_date : null, defaultDate: null })
     else setEditor({ task: null, defaultDate: arg?.date ?? null, defaultStart: (arg as { start?: string | null } | undefined)?.start ?? null, defaultEnd: (arg as { end?: string | null } | undefined)?.end ?? null })
   }, [])
 
-  const { addTask, updateTask, deleteTask } = t
+  const { addTask, updateTask, deleteTask, toggleTask, occurrencesOn } = t
+  const closeEditor = useCallback(() => {
+    if (closeTimer.current) return
+    setLeaving(true)
+    closeTimer.current = window.setTimeout(() => {
+      closeTimer.current = undefined
+      setEditor(null)
+      setLeaving(false)
+    }, 230)
+  }, [])
+  // is the task being edited done (for a repeating task: on the day you opened)? Always read live, so the button follows ticks made elsewhere.
+  const liveEditing = editor?.task ? (editor.occDate ? occurrencesOn(editor.occDate).find((o) => o.id === editor.task!.id) : t.tasks.find((x) => x.id === editor.task!.id)) : undefined
   const handleChecklist = useCallback((id: string, items: ChecklistItem[]) => void updateTask(id, { checklist: items }), [updateTask])
 
   const handleSave = useCallback(
     async (draft: TaskDraft, id?: string) => {
       if (id) await updateTask(id, draft)
       else await addTask(draft)
-      setEditor(null)
+      closeEditor()
     },
-    [addTask, updateTask],
+    [addTask, updateTask, closeEditor],
   )
   // an existing task being edited: saved in place, the sheet stays open
   const handleAutosave = useCallback(
@@ -50,9 +70,9 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   const handleDelete = useCallback(
     async (id: string) => {
       await deleteTask(id)
-      setEditor(null)
+      closeEditor()
     },
-    [deleteTask],
+    [deleteTask, closeEditor],
   )
 
   const value = useMemo(() => ({ ...t, openEditor, openEvent }), [t, openEditor, openEvent])
@@ -62,6 +82,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       {children}
       {editor && (
         <TaskSheet
+          key={(editor.task?.id ?? 'new') + (editor.occDate ?? '')}
           task={editor.task}
           defaultDate={editor.defaultDate}
           defaultStart={editor.defaultStart}
@@ -70,7 +91,10 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           onDelete={handleDelete}
           onChecklist={handleChecklist}
           onAutosave={handleAutosave}
-          onClose={() => setEditor(null)}
+          done={liveEditing?.completed ?? false}
+          onToggleDone={liveEditing ? () => void toggleTask(liveEditing) : undefined}
+          leaving={leaving}
+          onClose={closeEditor}
         />
       )}
       {eventEditor && (
