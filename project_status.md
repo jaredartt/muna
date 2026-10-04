@@ -407,3 +407,8 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
   * STILL TO DO BY JARED: the function needs the secret VAPID_PRIVATE_KEY (Supabase dashboard > Edge Functions > Secrets). Claude is not allowed to store secrets. The key pair was generated in the cloud session (public key is in src/lib/push.ts and muna-push/index.ts; if the private key is ever lost, make a new pair and change BOTH public keys; everyone must then switch notifications off and on again). Without the secret the function answers 503 every minute (harmless).
   * An empty table public.push_config was created by mistake and could not be dropped (DDL timed out); it is unused and has no policies: drop it later.
   * Not tested on a real iPhone yet. Needs: iOS 16.4+, Muna added to the Home Screen and opened from there.
+
+## Per-task reminders (2026-10-04)
+- tasks.remind_minutes (null = none, 0 = at start, else minutes before). Chosen in the task sheet ("Remind me"). Profile card keeps only the master switch (tasks_on) + morning summary. notify_settings.lead_minutes is no longer used (column left in place).
+- muna-push must be redeployed after pushLogic.ts / index.ts changes (v2). Existing tasks have no reminder until chosen.
+- Reminder time moves with the task; repeating tasks remind on every occurrence.

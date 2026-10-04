@@ -42,6 +42,17 @@ const KINDS: Record<string, { noun: string; icon: string }> = {
 }
 const kindOf = (c: Category | null) => KINDS[c ?? 'none']
 
+/** The reminder choices of a task (null = no reminder). */
+const REMINDERS: { v: number | null; label: string }[] = [
+  { v: null, label: 'No reminder' },
+  { v: 0, label: 'At the start time' },
+  { v: 5, label: '5 minutes before' },
+  { v: 10, label: '10 minutes before' },
+  { v: 15, label: '15 minutes before' },
+  { v: 30, label: '30 minutes before' },
+  { v: 60, label: '1 hour before' },
+]
+
 export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd, onSave, onDelete, onChecklist, onAutosave, done, onToggleDone, leaving, onClose }: Props) {
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
@@ -57,6 +68,7 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
   const [assignee, setAssignee] = useState(task?.assigned_to ?? '')
   const [repeat, setRepeat] = useState<Repeat | null>(task?.repeat ?? null)
   const [category, setCategory] = useState<Category | null>(task?.category ?? null)
+  const [remind, setRemind] = useState<number | null>(task?.remind_minutes ?? null)
   const [items, setItems] = useState<ChecklistItem[]>(task?.checklist ?? [])
   // choosing who it is for also sets the colour (Jared orange, Lidia purple, both green); you can still pick another colour afterwards
   function chooseAssignee(v: string) {
@@ -145,6 +157,7 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
       notes: notes.trim(),
       due_date: rule && date ? firstOccurrence(date, rule) : date || null,
       repeat: rule,
+      remind_minutes: start ? remind : null,
       start_time: start || null,
       end_time: start && end ? end : null,
       icon,
@@ -198,7 +211,7 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
     setStatus('saving')
     window.clearTimeout(timer.current)
     timer.current = window.setTimeout(() => void autosaveRef.current(), 800)
-  }, [taskId, title, notes, date, start, end, icon, color, assignee, repeat, category])
+  }, [taskId, title, notes, date, start, end, icon, color, assignee, repeat, category, remind])
 
   // closing the sheet (or leaving) right after a change still saves it
   useEffect(
@@ -310,6 +323,18 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
             <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} disabled={!start} />
           </label>
         </div>
+
+        <label className="field">
+          <span>Remind me</span>
+          <select value={remind ?? ''} onChange={(e) => setRemind(e.target.value === '' ? null : Number(e.target.value))} disabled={!start} aria-label="Reminder on your phone">
+            {REMINDERS.map((r) => (
+              <option key={String(r.v)} value={r.v ?? ''}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+          {!start && <span className="muted small">Give the task a start time to get a reminder.</span>}
+        </label>
 
         <div className="field">
           <span>Counts for</span>

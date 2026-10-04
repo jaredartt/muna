@@ -2,15 +2,6 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { defaultNotify, deviceTz, disablePush, enablePush, loadNotify, pushState, saveNotify, sendTest, type NotifySettings, type PushState } from '../lib/push'
 
-const LEADS = [
-  { v: 0, label: 'At the start time' },
-  { v: 5, label: '5 minutes before' },
-  { v: 10, label: '10 minutes before' },
-  { v: 15, label: '15 minutes before' },
-  { v: 30, label: '30 minutes before' },
-  { v: 60, label: '1 hour before' },
-]
-
 /** Profile: turn reminders on for THIS phone, and choose what you get. */
 export default function NotificationsCard() {
   const { profile } = useAuth()
@@ -78,7 +69,7 @@ export default function NotificationsCard() {
       {state === 'denied' && <p className="muted small">Notifications are blocked for Muna. On iPhone open Settings → Notifications → Muna and allow them, then come back here.</p>}
       {state === 'off' && (
         <>
-          <p className="muted small">Get a reminder on this phone before your tasks, and a summary of your day each morning.</p>
+          <p className="muted small">Get a reminder on this phone for the tasks you choose, and a summary of your day each morning.</p>
           <button className="btn primary" onClick={() => void turnOn()} disabled={busy}>
             Turn on notifications
           </button>
@@ -88,23 +79,14 @@ export default function NotificationsCard() {
         <>
           <label className="check-row">
             <input type="checkbox" checked={s.tasks_on} onChange={(e) => void change({ tasks_on: e.target.checked })} />
-            <span>Remind me about tasks that have a start time</span>
+            <span>Send the reminders I choose on my tasks</span>
           </label>
-          {s.tasks_on && (
-            <select value={s.lead_minutes} onChange={(e) => void change({ lead_minutes: Number(e.target.value) })} aria-label="When to remind">
-              {LEADS.map((l) => (
-                <option key={l.v} value={l.v}>
-                  {l.label}
-                </option>
-              ))}
-            </select>
-          )}
           <label className="check-row">
             <input type="checkbox" checked={s.morning_on} onChange={(e) => void change({ morning_on: e.target.checked })} />
             <span>Morning summary of my day</span>
           </label>
           {s.morning_on && <input type="time" value={s.morning_at} onChange={(e) => e.target.value && void change({ morning_at: e.target.value })} aria-label="Morning summary time" />}
-          <p className="muted small">Only tasks assigned to you (or made by you with nobody else assigned) notify you.</p>
+          <p className="muted small">You choose the reminder inside each task (“Remind me”). Only tasks assigned to you (or made by you with nobody else assigned) notify you.</p>
           <div className="course-actions">
             <button className="ml-toggle" onClick={() => void test()} disabled={busy}>
               Send me a test

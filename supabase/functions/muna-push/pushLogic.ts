@@ -9,10 +9,11 @@ export type TaskRow = {
   created_by: string
   due_date: string | null
   start_time: string | null
+  remind_minutes: number | null
   completed: boolean
   repeat: Repeat | null
 }
-export type Settings = { user_id: string; tz: string; tasks_on: boolean; lead_minutes: number; morning_on: boolean; morning_at: string }
+export type Settings = { user_id: string; tz: string; tasks_on: boolean; morning_on: boolean; morning_at: string }
 export type Due = { kind: 'task' | 'morning'; ref: string; day: string; title: string; body: string; tag: string; url: string }
 
 const DAY = 86400000
@@ -52,9 +53,9 @@ export function dueNow(s: Settings, tasks: TaskRow[], done: Set<string>, now: Da
     for (const off of [0, 1]) {
       const day = addDay(ln.date, off)
       for (const t of tasks) {
-        if (!t.start_time || !mine(t, s.user_id) || !openOn(t, day, done)) continue
+        if (!t.start_time || t.remind_minutes == null || !mine(t, s.user_id) || !openOn(t, day, done)) continue
         const startAbs = off * 1440 + toMin(t.start_time)
-        const remindAt = startAbs - s.lead_minutes
+        const remindAt = startAbs - t.remind_minutes
         if (ln.min < remindAt || ln.min >= startAbs + GRACE) continue
         const inMin = startAbs - ln.min
         out.push({

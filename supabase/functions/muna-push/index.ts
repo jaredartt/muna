@@ -40,7 +40,7 @@ async function sendToUser(admin: ReturnType<typeof createClient>, subs: Sub[], p
 
 async function run(admin: ReturnType<typeof createClient>): Promise<Record<string, unknown>> {
   const now = new Date()
-  const { data: settings } = await admin.from('notify_settings').select('user_id, household_id, tz, tasks_on, lead_minutes, morning_on, morning_at').or('tasks_on.eq.true,morning_on.eq.true')
+  const { data: settings } = await admin.from('notify_settings').select('user_id, household_id, tz, tasks_on, morning_on, morning_at').or('tasks_on.eq.true,morning_on.eq.true')
   const people = (settings ?? []) as (Settings & { household_id: string })[]
   if (!people.length) return { users: 0 }
   const { data: subRows } = await admin.from('push_subscriptions').select('id, user_id, endpoint, p256dh, auth').in('user_id', people.map((p) => p.user_id))
@@ -54,7 +54,7 @@ async function run(admin: ReturnType<typeof createClient>): Promise<Record<strin
   const hids = [...new Set(withDevice.map((p) => p.household_id))]
   const { data: taskRows } = await admin
     .from('tasks')
-    .select('id, household_id, title, assigned_to, created_by, due_date, start_time, completed, repeat')
+    .select('id, household_id, title, assigned_to, created_by, due_date, start_time, remind_minutes, completed, repeat')
     .in('household_id', hids)
     .eq('completed', false)
     .or(`repeat.not.is.null,and(due_date.gte.${from},due_date.lte.${to})`)

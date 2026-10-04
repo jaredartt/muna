@@ -44,6 +44,7 @@ export type Task = {
   google_event_id: string | null
   google_owner: string | null
   repeat: Repeat | null // null = happens once
+  remind_minutes?: number | null // reminder on the phone: null = none, 0 = at the start time, else minutes before it
   checklist?: ChecklistItem[] // the to-do list inside the task
   category?: Category | null // what it counts for: uni, goal, hobby, pantry (null = a plain task)
 }
