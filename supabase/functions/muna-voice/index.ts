@@ -8,6 +8,15 @@ const KEY = Deno.env.get('GEMINI_API_KEY') ?? ''
 const MODELS = [Deno.env.get('GEMINI_TTS_MODEL') ?? 'gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts', 'gemini-3.1-flash-tts-preview']
 const VOICE = Deno.env.get('GEMINI_TTS_VOICE') ?? 'Leda'
 const STYLE = 'warm, gentle and cozy, like a kind little friend, natural pace'
+// When Muna speaks Spanish she sounds like she is from Andalusia (southern Spain), not Latin American. English stays as it was.
+const STYLE_ES = STYLE + '. Speak Spanish with a warm Andalusian accent from Seville, southern Spain: relaxed, melodic and soft, clearly Peninsular Spanish and NOT Latin American'
+const SPANISH_WORDS = /\b(el|la|los|las|que|qué|de|y|un|una|para|con|te|me|se|es|en|por|está|estás|hola|gracias|vale|bien|muy|pero|como|cómo|tu|tus|mi|mis|ya|no|sí|hoy|mañana)\b/gi
+/** Is this text Spanish? (accents and ¿¡ are a giveaway, otherwise many common Spanish words) */
+export function looksSpanish(t: string): boolean {
+  if (/[¿¡ñáéíóú]/i.test(t)) return true
+  const words = t.split(/\s+/).length
+  return (t.match(SPANISH_WORDS)?.length ?? 0) >= Math.max(3, words * 0.3)
+}
 const MAX_CHARS = 700
 // Each model has its OWN free daily limit (about 10 requests a day). When one says "limit reached" (429) it is skipped for a while,
 // so the next model can keep Muna's real voice going instead of the phone's robotic one.
@@ -83,7 +92,7 @@ async function tts(model: string, text: string, withMime: boolean): Promise<{ ok
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': KEY },
     body: JSON.stringify({
       model,
-      input: [{ type: 'user_input', content: [{ type: 'text', text, annotations: [{ type: 'speech_metadata', style: STYLE }] }] }],
+      input: [{ type: 'user_input', content: [{ type: 'text', text, annotations: [{ type: 'speech_metadata', style: looksSpanish(text) ? STYLE_ES : STYLE }] }] }],
       response_format: withMime ? { type: 'audio', mime_type: 'audio/wav' } : { type: 'audio' },
       generation_config: { speech_config: [{ voice: VOICE }] },
     }),

@@ -7,6 +7,7 @@ import Avatar from '../components/Avatar'
 import IconPicker from '../components/IconPicker'
 import MyIcons from '../components/MyIcons'
 import WeatherPlaceCard from '../components/WeatherPlaceCard'
+import NotificationsCard from '../components/NotificationsCard'
 import { AVATAR_SUGGESTIONS, TASK_COLORS } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -135,6 +136,8 @@ export default function Profile() {
       </section>
 
       <WeatherPlaceCard />
+
+      <NotificationsCard />
 
       <section className="card">
         <h3>Muna&rsquo;s personality</h3>

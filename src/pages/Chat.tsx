@@ -55,6 +55,23 @@ function voiceChunks(reply: string): string[] {
   return out.slice(0, 5)
 }
 
+const GENERIC_ERROR = 'Muna could not answer right now. Please try again in a moment.'
+
+/**
+ * The phone lost the connection while Muna was thinking (the answer is saved on the server anyway): look for it for a little while,
+ * so you get the answer instead of an error (and nothing gets sent twice).
+ */
+async function recoverReply(after: string): Promise<{ reply: string; transcript?: string } | null> {
+  for (let i = 0; i < 25; i++) {
+    await new Promise((r) => setTimeout(r, 3000))
+    const { data } = await supabase.from('chat_messages').select('role, content, created_at').gt('created_at', after).order('created_at', { ascending: true })
+    const rows = (data ?? []) as { role: string; content: string }[]
+    const reply = rows.find((x) => x.role === 'assistant')
+    if (reply) return { reply: reply.content, transcript: rows.find((x) => x.role === 'user')?.content }
+  }
+  return null
+}
+
 async function readFunctionError(err: unknown): Promise<string> {
   const ctx = (err as { context?: Response }).context
   if (ctx && typeof ctx.json === 'function') {
@@ -65,7 +82,7 @@ async function readFunctionError(err: unknown): Promise<string> {
       /* fall through */
     }
   }
-  return 'Muna could not answer right now. Please try again in a moment.'
+  return GENERIC_ERROR
 }
 
 // Remember the conversation while the app is open, so coming back to this tab shows it instantly (no empty flash).
@@ -274,10 +291,23 @@ export default function Chat() {
     setBusy(true)
     setError('')
     const tempId = 'tmp-' + Date.now()
+    // the newest message the server already has (to recognise Muna's answer if the connection drops)
+    const lastKnown = [...messages].reverse().find((x) => !x.id.startsWith('tmp-') && !x.id.startsWith('a-'))?.created_at ?? '1970-01-01T00:00:00Z'
     setMessages((m) => [...m, { id: tempId, role: 'user', content: bubbleText, created_at: new Date().toISOString() }])
     const { data, error: err } = await supabase.functions.invoke('muna-chat', {
       body: { ...body, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
     })
+    if (err && (await readFunctionError(err)) === GENERIC_ERROR) {
+      const got = await recoverReply(lastKnown)
+      if (got) {
+        busyRef.current = false
+        setBusy(false)
+        notifyTasksChanged() // she may have changed something
+        void refreshLastChange()
+        finish({ reply: got.reply, transcript: got.transcript }, tempId)
+        return
+      }
+    }
     busyRef.current = false
     setBusy(false)
     if (err || !data?.reply) {
