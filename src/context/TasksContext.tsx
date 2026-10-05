@@ -1,9 +1,11 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTasks } from '../hooks/useTasks'
-import TaskSheet from '../components/TaskSheet'
+import TaskSheet, { type Scope } from '../components/TaskSheet'
 import EventSheet from '../components/EventSheet'
 import { useAuth } from './AuthContext'
 import { linkNewUniTask } from '../lib/uni'
+import { supabase } from '../lib/supabase'
+import { addDaysStr, occurrencesBetween } from '../lib/recurrence'
 import { notifyTasksChanged } from '../lib/events'
 import type { GoogleEvent } from '../lib/google'
 import type { ChecklistItem, Occurrence, Task, TaskDraft } from '../lib/types'
@@ -41,7 +43,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     else setEditor({ task: null, defaultDate: arg?.date ?? null, defaultStart: (arg as { start?: string | null } | undefined)?.start ?? null, defaultEnd: (arg as { end?: string | null } | undefined)?.end ?? null })
   }, [])
 
-  const { addTask, updateTask, deleteTask, toggleTask, occurrencesOn } = t
+  const { addTask, updateTask, deleteTask, toggleTask, occurrencesOn, batch } = t
   const closeEditor = useCallback(() => {
     if (closeTimer.current) return
     setLeaving(true)
@@ -61,8 +63,12 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       else if (draft.category === 'uni' && uni && profile?.household_id && session) {
         // a new Uni task joins the Uni list (attached to the assignment you picked, or as a new one in your week)
         await addTask(draft, (taskId) => linkNewUniTask(taskId, draft, { householdId: profile.household_id, userId: session.user.id, itemId: uni.itemId, week: uni.week }))
-      } else await addTask(draft)
+      } else {
+        const err = await addTask(draft)
+        if (err) return err // the sheet stays open and shows what went wrong
+      }
       closeEditor()
+      return null
     },
     [addTask, updateTask, closeEditor, profile, session],
   )
@@ -81,6 +87,48 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     [deleteTask, closeEditor],
   )
 
+  // a day of a repeating task: change only that day (it becomes its own task and the series skips it), or that day and all after it (the series is cut and a new one starts)
+  const handleSeriesSave = useCallback(
+    async (draft: TaskDraft, id: string, occ: string, scope: Scope, date: string): Promise<string | null> => {
+      const s = t.tasks.find((x) => x.id === id)
+      if (!s?.repeat) return (await updateTask(id, draft)) ?? null
+      const rep = s.repeat
+      const res = { err: null as string | null }
+      if (scope === 'one') {
+        const wasDone = occurrencesOn(occ).find((o) => o.id === id)?.completed ?? false
+        await batch(async () => {
+          res.err = await addTask({ ...draft, repeat: null, due_date: date || occ, completed: wasDone, completed_at: wasDone ? new Date().toISOString() : null })
+          if (!res.err) res.err = await updateTask(id, { repeat: { ...rep, exceptDates: [...(rep.exceptDates ?? []), occ] } })
+        })
+        return res.err
+      }
+      if (occ <= (s.due_date ?? occ)) return (await updateTask(id, draft)) ?? null // it is the first day: that is the whole series
+      await batch(async () => {
+        const prev = addDaysStr(occ, -1)
+        let rule = draft.repeat ?? rep
+        if (rule.count && rep.count) rule = { ...rule, count: Math.max(1, rep.count - occurrencesBetween(s.due_date, rep, s.due_date ?? occ, prev).length) }
+        res.err = await addTask({ ...draft, repeat: rule }, async (newId) => {
+          // the ticks of the days from here on follow the new series
+          await supabase.from('task_completions').update({ task_id: newId }).eq('task_id', id).gte('occ_date', occ)
+        })
+        if (!res.err) res.err = await updateTask(id, { repeat: { ...rep, until: prev, count: null } })
+      })
+      return res.err
+    },
+    [t.tasks, addTask, updateTask, batch, occurrencesOn],
+  )
+  const handleSeriesDelete = useCallback(
+    async (id: string, occ: string, scope: Scope) => {
+      const s = t.tasks.find((x) => x.id === id)
+      if (!s?.repeat) await deleteTask(id)
+      else if (scope === 'one') await updateTask(id, { repeat: { ...s.repeat, exceptDates: [...(s.repeat.exceptDates ?? []), occ] } })
+      else if (occ <= (s.due_date ?? occ)) await deleteTask(id)
+      else await updateTask(id, { repeat: { ...s.repeat, until: addDaysStr(occ, -1), count: null } })
+      closeEditor()
+    },
+    [t.tasks, deleteTask, updateTask, closeEditor],
+  )
+
   const value = useMemo(() => ({ ...t, openEditor, openEvent }), [t, openEditor, openEvent])
 
   return (
@@ -90,6 +138,9 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         <TaskSheet
           key={(editor.task?.id ?? 'new') + (editor.occDate ?? '')}
           task={editor.task}
+          occDate={editor.occDate}
+          onSeriesSave={handleSeriesSave}
+          onSeriesDelete={handleSeriesDelete}
           defaultDate={editor.defaultDate}
           defaultStart={editor.defaultStart}
           defaultEnd={editor.defaultEnd}

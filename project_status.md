@@ -412,3 +412,9 @@ Cause (most likely, not reproducible on desktop): `html:has(.sheet-backdrop), bo
 - tasks.remind_minutes (null = none, 0 = at start, else minutes before). Chosen in the task sheet ("Remind me"). Profile card keeps only the master switch (tasks_on) + morning summary. notify_settings.lead_minutes is no longer used (column left in place).
 - muna-push must be redeployed after pushLogic.ts / index.ts changes (v2). Existing tasks have no reminder until chosen.
 - Reminder time moves with the task; repeating tasks remind on every occurrence.
+
+## Repeating tasks: scope pop-up (2026-10-05)
+- Editing a day of a repeating task: no autosave; "Save changes" (or closing) asks "Only this one" / "This and all following". One = new single task + exceptDates on the series. Following = old series gets until=day before, new series starts that day (ticks from that day move to the new series; count adjusted). First day = whole series.
+- Deleting asks the same two choices (one = exceptDates; following = until=day before, or delete whole series if first day).
+- Opened without a day (occDate null) the old behaviour stays (whole series).
+- New task save errors now keep the sheet open and show the message (before: sheet closed silently). PostgREST schema cache was reloaded (notify pgrst) after adding tasks.remind_minutes.

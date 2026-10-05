@@ -17,12 +17,17 @@ import { useTasksCtx } from '../context/TasksContext'
 import { todayStr } from '../lib/dates'
 import type { Category, ChecklistItem, Task, TaskDraft } from '../lib/types'
 
+export type Scope = 'one' | 'following'
+
 type Props = {
   task?: Task | null
   defaultDate?: string | null
   defaultStart?: string | null // HH:MM, for a new task made by long-pressing the calendar
   defaultEnd?: string | null
-  onSave: (draft: TaskDraft, id?: string, uni?: { itemId?: string | null; week: number | null }) => Promise<void>
+  onSave: (draft: TaskDraft, id?: string, uni?: { itemId?: string | null; week: number | null }) => Promise<string | null | void> // an error text keeps the sheet open
+  occDate?: string | null // the day of a repeating task you opened (so changes can be for that day only, or for it and the days after)
+  onSeriesSave?: (draft: TaskDraft, id: string, occ: string, scope: Scope, date: string) => Promise<string | null>
+  onSeriesDelete?: (id: string, occ: string, scope: Scope) => Promise<void>
   onDelete?: (id: string) => Promise<void>
   onChecklist?: (id: string, items: ChecklistItem[]) => void // saves the to-do list at once (ticks should not wait for Save)
   onAutosave?: (draft: TaskDraft, id: string) => Promise<void> // saves an existing task while you edit it (the sheet stays open)
@@ -53,14 +58,18 @@ const REMINDERS: { v: number | null; label: string }[] = [
   { v: 60, label: '1 hour before' },
 ]
 
-export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd, onSave, onDelete, onChecklist, onAutosave, done, onToggleDone, leaving, onClose }: Props) {
+export default function TaskSheet({ task, occDate, onSeriesSave, onSeriesDelete, defaultDate, defaultStart, defaultEnd, onSave, onDelete, onChecklist, onAutosave, done, onToggleDone, leaving, onClose }: Props) {
   const backdropRef = useRef<HTMLDivElement>(null)
   useSheetScrollGuard(backdropRef)
   const { members, session, profile } = useAuth()
-  const { confirm } = useConfirm()
+  const { confirm, choose } = useConfirm()
+  // a day of a repeating task: changes are NOT saved while you type; Save asks if they are for this day only or for it and all the days after
+  const seriesMode = !!(task?.repeat && occDate && onSeriesSave)
+  const [pending, setPending] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [title, setTitle] = useState(task?.title ?? '')
   const [notes, setNotes] = useState(task?.notes ?? '')
-  const [date, setDate] = useState(task ? task.due_date ?? '' : defaultDate ?? '')
+  const [date, setDate] = useState(task ? (seriesMode ? occDate! : task.due_date ?? '') : defaultDate ?? '')
   const [start, setStart] = useState(task?.start_time?.slice(0, 5) ?? (task ? '' : defaultStart ?? ''))
   const [end, setEnd] = useState(task?.end_time?.slice(0, 5) ?? (task ? '' : defaultEnd ?? ''))
   const [icon, setIcon] = useState(task?.icon ?? 'checklist')
@@ -173,8 +182,44 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
   async function save() {
     if (!title.trim() || saving) return
     setSaving(true)
-    await onSave(makeDraft(true), task?.id, category === 'uni' ? { itemId: uniItemId, week: uniWeek } : undefined)
+    setSaveError('')
+    const err = await onSave(makeDraft(true), task?.id, category === 'uni' ? { itemId: uniItemId, week: uniWeek } : undefined)
+    if (err) setSaveError(err)
     setSaving(false)
+  }
+
+  const SCOPES = [
+    { label: 'Only this one', value: 'one', tone: 'primary' as const },
+    { label: 'This and all following', value: 'following', tone: 'primary' as const },
+  ]
+  // repeating task: ask whether the changes are for this day only or for it and the days after, then save
+  async function saveSeries(): Promise<boolean> {
+    if (!task || !occDate || !onSeriesSave || !title.trim()) return false
+    const a = await choose({ title: 'Repeated task', message: 'Do you want to change only this one, or this one and all the following ones?', buttons: SCOPES, cancelLabel: 'Cancel' })
+    if (!a) return false
+    setSaveError('')
+    const err = await onSeriesSave(makeDraft(false), task.id, occDate, a as Scope, date)
+    if (err) {
+      setSaveError(err)
+      return false
+    }
+    setPending(false)
+    return true
+  }
+  async function requestClose() {
+    if (seriesMode && pending) {
+      const a = await choose({
+        title: 'Save your changes?',
+        message: 'This task repeats. Do you want to change only this one, or this one and all the following ones?',
+        buttons: [...SCOPES, { label: 'Discard changes', value: 'discard', tone: 'danger' as const }],
+        cancelLabel: 'Keep editing',
+      })
+      if (!a) return
+      if (a === 'discard') return onClose()
+      const err = await onSeriesSave!(makeDraft(false), task!.id, occDate!, a as Scope, date)
+      if (err) return setSaveError(err)
+    }
+    onClose()
   }
 
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'name'>('idle')
@@ -207,6 +252,10 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
       return
     }
     if (!taskId) return
+    if (seriesMode) {
+      setPending(true)
+      return
+    }
     dirty.current = true
     setStatus('saving')
     window.clearTimeout(timer.current)
@@ -223,16 +272,17 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
   )
 
   return (
-    <div className={'sheet-backdrop sheet-anim' + (leaving ? ' leaving' : '')} ref={backdropRef} onClick={onClose}>
+    <div className={'sheet-backdrop sheet-anim' + (leaving ? ' leaving' : '')} ref={backdropRef} onClick={() => void requestClose()}>
       <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`${task ? 'Edit' : 'New'} ${kindOf(category).noun}`}>
         <div className="sheet-head">
           <h2>{task ? 'Edit' : 'New'} {kindOf(category).noun}</h2>
-          {task && status !== 'idle' && (
+          {seriesMode && pending && <span className="muted small autosave-state">Not saved yet</span>}
+          {task && !seriesMode && status !== 'idle' && (
             <span className={'muted small autosave-state' + (status === 'name' ? ' warn' : '')} role="status" aria-live="polite">
               {status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved ✓' : 'Give it a name to save'}
             </span>
           )}
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
+          <button className="icon-btn" onClick={() => void requestClose()} aria-label="Close">
             <IconX size={22} />
           </button>
         </div>
@@ -430,11 +480,25 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
           <IconPicker value={icon} onChange={setIcon} suggestions={Object.keys(TASK_ICONS)} colorClass={`c-${color}`} />
         </div>
 
+        {saveError && <p className="autosave-state warn" role="alert">Could not save: {saveError}</p>}
+
         <div className="sheet-actions">
           {task && onDelete && (
             <button
               className="btn danger"
               onClick={async () => {
+                if (task.repeat && occDate && onSeriesDelete) {
+                  const a = await choose({
+                    title: 'Delete repeated task',
+                    message: <>Delete only this one of <strong>{task.title}</strong>, or this one and all the following ones?</>,
+                    buttons: [
+                      { label: 'Only this one', value: 'one', tone: 'danger' },
+                      { label: 'This and all following', value: 'following', tone: 'danger' },
+                    ],
+                  })
+                  if (a) void onSeriesDelete(task.id, occDate, a as Scope)
+                  return
+                }
                 const ok = await confirm({
                   message: task.repeat ? <>Delete <strong>{task.title}</strong> and all its repeats?</> : <>Delete <strong>{task.title}</strong>?</>,
                   confirmLabel: task.repeat ? 'Delete all' : 'Delete',
@@ -443,6 +507,11 @@ export default function TaskSheet({ task, defaultDate, defaultStart, defaultEnd,
               }}
             >
               <IconTrashFilled size={18} /> {task.repeat ? 'Delete all' : 'Delete'}
+            </button>
+          )}
+          {task && seriesMode && (
+            <button className="btn primary grow" onClick={() => void saveSeries().then((ok) => ok && onClose())} disabled={!pending || !title.trim()}>
+              Save changes
             </button>
           )}
           {!task && (
